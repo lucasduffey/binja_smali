@@ -44,52 +44,35 @@ InstructionNames = [
 	'''
 ]
 
+# FIXME TODO
+class DEX(Architecture):
+	name = "??"
+	address_size = 2 # TODO
+        default_int_size = 1 # TODO
+        regs = {
+                "a": RegisterInfo("a", 1), # TODO
+                "x": RegisterInfo("x", 1), # TODO
+                "y": RegisterInfo("y", 1), # TODO
+                "s": RegisterInfo("s", 1) # TODO
+        }
+        stack_pointer = "s" # TODO
+        flags = ["c", "z", "i", "d", "b", "v", "s"] # TODO
+        flag_write_types = ["*", "czs", "zvs", "zs"] # TODO
 
-class APKViewUpdateNotification(BinaryDataNotification):
-        def __init__(self, view):
-                self.view = view
-
-	# FIXME: don't trust - pulled from NES.py
-        def data_written(self, view, offset, length):
-                addr = offset - self.view.rom_offset
-                while length > 0:
-                        bank_ofs = addr & 0x3fff
-                        if (bank_ofs + length) > 0x4000:
-                                to_read = 0x4000 - bank_ofs
-                        else:
-                                to_read = length
-                        if length < to_read:
-                                to_read = length
-                        if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
-                                self.view.notify_data_written(0x8000 + bank_ofs, to_read)
-                        elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
-                                self.view.notify_data_written(0xc000 + bank_ofs, to_read)
-                        length -= to_read
-                        addr += to_read
-
-	# FIXME: don't trust - pulled from NES.py
-        def data_inserted(self, view, offset, length):
-                self.view.notify_data_written(0x8000, 0x8000)
-
-	# FIXME: don't trust - pulled from NES.py
-        def data_removed(self, view, offset, length):
-                self.view.notify_data_written(0x8000, 0x8000)
-
-# TODO: this will be used to carve out useful stuff
-class APK():
-	def __init__(self):
+	def decode_instruction(self, data, addr):
 		pass
 
 
+
 # see NESView Example
-class APKView(BinaryView):
-        name = "APK"
-        long_name = "android APK"
+class DEXView(BinaryView):
+        name = "DEX"
+        long_name = "android DEX"
 
         def __init__(self, data):
                 BinaryView.__init__(self, data.file)
                 self.data = data
-                self.notification = APKViewUpdateNotification(self) # TODO
+                self.notification = DEXViewUpdateNotification(self) # TODO
                 self.data.register_notification(self.notification)
 
 	@classmethod
@@ -197,33 +180,18 @@ class APKView(BinaryView):
 
 '''
 
-# TODO: how do you get apk - to run APK(blah) against it?
-
 print("dexBinja")
-class APKViewBank(APKView):
-	name = "APK"
-	long_name = "android APK"
+class DEXViewBank(DEXView):
+	name = "DEX"
+	long_name = "android DEX"
 
 	def __init__(self, data):
-		APKView.__init__(self, data)
+		DEXView.__init__(self, data)
 		
-		# TODO: since APK is effectively a zip file
-		#	* extract it 
 
-		# unzipped = unzip(binary_blob)
-		'''
-		contents: 
-			AndroidManifest.xml
-			classes2.dex
-			classes.dex
-			instant-run.zip
-			META-INF/
-			res/
-			resources.arsc
-		'''
+DEXViewBank.register()
 
-APKViewBank.register()
-
+#DEX.register() # TODO
 
 
 # Architecture.register
