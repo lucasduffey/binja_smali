@@ -93,6 +93,11 @@ class APKViewUpdateNotification(BinaryDataNotification):
         def data_removed(self, view, offset, length):
                 self.view.notify_data_written(0x8000, 0x8000)
 
+# TODO: this will be used to carve out useful stuff
+class APK():
+	def __init__(self):
+		pass
+
 
 # see NESView Example
 class APKView(BinaryView):
@@ -219,6 +224,21 @@ class APKViewBank(APKView):
 
 	def __init__(self, data):
 		APKView.__init__(self, data)
+		
+		# TODO: since APK is effectively a zip file
+		#	* extract it 
+
+		# unzipped = unzip(binary_blob)
+		'''
+		contents: 
+			AndroidManifest.xml
+			classes2.dex
+			classes.dex
+			instant-run.zip
+			META-INF/
+			res/
+			resources.arsc
+		'''
 
 APKViewBank.register()
 
