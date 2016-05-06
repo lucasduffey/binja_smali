@@ -44,6 +44,37 @@ InstructionNames = [
 	'''
 ]
 
+class DEXViewUpdateNotification(BinaryDataNotification):
+        def __init__(self, view):
+                self.view = view
+
+        # FIXME: don't trust - pulled from NES.py
+        def data_written(self, view, offset, length):
+                addr = offset - self.view.rom_offset
+                while length > 0:
+                        bank_ofs = addr & 0x3fff
+                        if (bank_ofs + length) > 0x4000:
+                                to_read = 0x4000 - bank_ofs
+                        else:
+                                to_read = length
+                        if length < to_read:
+                                to_read = length
+                        if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
+                                self.view.notify_data_written(0x8000 + bank_ofs, to_read)
+                        elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
+                                self.view.notify_data_written(0xc000 + bank_ofs, to_read)
+                        length -= to_read
+                        addr += to_read
+
+        # FIXME: don't trust - pulled from NES.py
+        def data_inserted(self, view, offset, length):
+                self.view.notify_data_written(0x8000, 0x8000)
+
+        # FIXME: don't trust - pulled from NES.py
+        def data_removed(self, view, offset, length):
+                self.view.notify_data_written(0x8000, 0x8000)
+
+
 # FIXME TODO
 class DEX(Architecture):
 	name = "??"
@@ -67,7 +98,7 @@ class DEX(Architecture):
 # see NESView Example
 class DEXView(BinaryView):
         name = "DEX"
-        long_name = "android DEX"
+        long_name = "Dalvik Executable"
 
         def __init__(self, data):
                 BinaryView.__init__(self, data.file)
@@ -81,7 +112,7 @@ class DEXView(BinaryView):
                 if len(hdr) < 16:
                         return False
                 # magic - https://en.wikipedia.org/wiki/List_of_file_signatures
-                if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
+                if hdr[0:8] != "dex\x0a035\x00": # dex file format
                         return False
                 return True
 
@@ -180,10 +211,10 @@ class DEXView(BinaryView):
 
 '''
 
-print("dexBinja")
+print("dexBinja - for real")
 class DEXViewBank(DEXView):
 	name = "DEX"
-	long_name = "android DEX"
+	long_name = "Dalvik Executable"
 
 	def __init__(self, data):
 		DEXView.__init__(self, data)
