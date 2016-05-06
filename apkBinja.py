@@ -208,6 +208,7 @@ class APKViewBank(APKView):
 		APKView.__init__(self, data)
 		
 		# TODO: since APK is effectively a zip file
+		#	* WARNING: not exactly zip - if you unzip the AndroidManifest.xml is corrupted or something
 		#	* extract it 
 
 		# unzipped = unzip(binary_blob)

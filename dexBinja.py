@@ -4,45 +4,82 @@ import traceback
 import os
 
 # style guideline: https://google.github.io/styleguide/pyguide.html
+# 010Editor: https://github.com/strazzere/010Editor-stuff/blob/master/Templates/DEXTemplate.bt
 # export PYTHONPATH=$PYTHONPATH:$HOME/binaryninja/python
 
 # https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+
+'''
+./dalvik/libdex/DexFile.h
+
+./dalvik/libdex/InstrUtils.h
+./dalvik/libdex/DexDebugInfo.h
+./dalvik/libdex/DexCatch.h
+./dalvik/libdex/DexClass.h
+./dalvik/libdex/DexOpcodes.h
+./dalvik/libdex/ZipArchive.h
+./dalvik/libdex/SysUtil.h
+./dalvik/libdex/OptInvocation.h
+./dalvik/libdex/CmdUtils.h
+./dalvik/libdex/DexUtf.h
+./dalvik/libdex/DexOptData.h
+./dalvik/libdex/Leb128.h
+./dalvik/libdex/DexDataMap.h
+./dalvik/libdex/DexProto.h
+./art/dexdump/dexdump.h
+./art/runtime/dex_file-inl.h
+./art/runtime/dex_instruction.h
+./art/runtime/dex_method_iterator.h
+./art/runtime/dex_file_verifier.h
+./art/runtime/dex_instruction_utils.h
+./art/runtime/dex_cache_resolved_classes.h
+./art/runtime/dex_instruction-inl.h
+./art/runtime/utils/dex_cache_arrays_layout.h
+./art/runtime/utils/dex_cache_arrays_layout-inl.h
+./art/runtime/dex_instruction_list.h
+./art/runtime/dex_instruction_visitor.h
+./art/runtime/dex_file.h
+./art/runtime/mirror/dex_cache-inl.h
+./art/runtime/mirror/dex_cache.h
+./art/compiler/dex/quick/dex_file_to_method_inliner_map.h
+./art/compiler/dex/quick/dex_file_method_inliner.h
+./art/compiler/dex/dex_to_dex_compiler.h
+./art/compiler/dex/quick_compiler_callbacks.h
+./art/compiler/dex/verification_results.h
+./art/compiler/dex/verified_method.h
+./art/compiler/dex/compiler_enums.h
+./art/compiler/optimizing/dex_cache_array_fixups_arm.h
+./art/compiler/utils/test_dex_file_builder.h
+./art/compiler/driver/dex_compilation_unit.h
+
+'''
+
 InstructionNames = [
 	'''
-        "brk", "ora", None, None, None, "ora", "asl", None, # 0x00
-        "php", "ora", "asl@", None, None, "ora", "asl", None, # 0x08
-        "bpl", "ora", None, None, None, "ora", "asl", None, # 0x10
-        "clc", "ora", None, None, None, "ora", "asl", None, # 0x18
-        "jsr", "and", None, None, "bit", "and", "rol", None, # 0x20
-        "plp", "and", "rol@", None, "bit", "and", "rol", None, # 0x28
-        "bmi", "and", None, None, None, "and", "rol", None, # 0x30
-        "sec", "and", None, None, None, "and", "rol", None, # 0x38
-        "rti", "eor", None, None, None, "eor", "lsr", None, # 0x40
-        "pha", "eor", "lsr@", None, "jmp", "eor", "lsr", None, # 0x48
-        "bvc", "eor", None, None, None, "eor", "lsr", None, # 0x50
-        "cli", "eor", None, None, None, "eor", "lsr", None, # 0x58
-        "rts", "adc", None, None, None, "adc", "ror", None, # 0x60
-        "pla", "adc", "ror@", None, "jmp", "adc", "ror", None, # 0x68
-        "bvs", "adc", None, None, None, "adc", "ror", None, # 0x70
-        "sei", "adc", None, None, None, "adc", "ror", None, # 0x78
-        None, "sta", None, None, "sty", "sta", "stx", None, # 0x80
-        "dey", None, "txa", None, "sty", "sta", "stx", None, # 0x88
-        "bcc", "sta", None, None, "sty", "sta", "stx", None, # 0x90
-        "tya", "sta", "txs", None, None, "sta", None, None, # 0x98
-        "ldy", "lda", "ldx", None, "ldy", "lda", "ldx", None, # 0xa0
-        "tay", "lda", "tax", None, "ldy", "lda", "ldx", None, # 0xa8
-        "bcs", "lda", None, None, "ldy", "lda", "ldx", None, # 0xb0
-        "clv", "lda", "tsx", None, "ldy", "lda", "ldx", None, # 0xb8
-        "cpy", "cmp", None, None, "cpy", "cmp", "dec", None, # 0xc0
-        "iny", "cmp", "dex", None, "cpy", "cmp", "dec", None, # 0xc8
-        "bne", "cmp", None, None, None, "cmp", "dec", None, # 0xd0
-        "cld", "cmp", None, None, None, "cmp", "dec", None, # 0xd8
-        "cpx", "sbc", None, None, "cpx", "sbc", "inc", None, # 0xe0
-        "inx", "sbc", "nop", None, "cpx", "sbc", "inc", None, # 0xe8
-        "beq", "sbc", None, None, None, "sbc", "inc", None, # 0xf0
-        "sed", "sbc", None, None, None, "sbc", "inc", None # 0xf8
 	'''
 ]
+
+
+# sizes of fields
+DexFile = {
+			"DexOptHeader": 40, # - sizeof == 40 
+			"DexHeader": 112, # - sizeof == 112
+			"DexStringId": 4,
+			"DexTypeId": 4,
+			"DexFieldId": 8,
+			"DexMethodId": 8,
+			"DexProtoId": 12,
+			"DexClassDef": 32,
+
+			"DexLink": 1,
+			"DexClassLookup": 20,
+			"pRegisterMapPool": 8, # void*
+'''
+			
+			baseAddr # so this is at position 249 or 250
+			overhead
+'''
+}
 
 class DEXViewUpdateNotification(BinaryDataNotification):
         def __init__(self, view):
@@ -200,7 +237,28 @@ class DEXView(BinaryView):
 	# FIXME
         def perform_get_entry_point(self):
                 #return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
-                return struct.unpack("<H", "APPLE")[0] # FIXME: being triggered
+
+		'''
+			[DexOptHeader] - sizeof == 40 
+			[DexHeader] - sizeof == 112
+			[DexStringId]
+			[DexTypeId
+			[DexFieldId
+			[DexMethodId]
+			[DexProtoId]
+			[DexClassDef]
+			[DexLink]
+			
+			[DexClassLookup]
+			[void * pRegisterMapPool]
+			[baseAddr]
+			[overhead]
+			
+		'''
+
+                return struct.unpack("<H", "APPLE")[0] # FIXME: I believe it's a ptr @ 249, need to use self.perform_read
+							# I'm Betting ptr @ 250 to be even..
+							# in my classes2.dex in tmp that ptr is 0x98e3 - this might be wrong
 
 
 '''
@@ -212,6 +270,7 @@ class DEXView(BinaryView):
 '''
 
 print("dexBinja - for real")
+print("test against classes2.dex - because there is actually dex code..")
 class DEXViewBank(DEXView):
 	name = "DEX"
 	long_name = "Dalvik Executable"
