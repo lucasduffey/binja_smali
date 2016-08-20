@@ -33,29 +33,29 @@ struct DexHeader {
     u1  magic[8];           /* includes version number */
     u4  checksum;           /* adler32 checksum */
     u1  signature[kSHA1DigestLen]; /* SHA-1 hash */
-    u4  fileSize;           /* length of entire file */
-    u4  headerSize;         /* offset to start of next section */
-    u4  endianTag;
-    u4  linkSize;
-    u4  linkOff;
-    u4  mapOff;
-    u4  stringIdsSize;
-    u4  stringIdsOff;
-    u4  typeIdsSize;
-    u4  typeIdsOff;
-    u4  protoIdsSize;
-    u4  protoIdsOff;
-    u4  fieldIdsSize;
-    u4  fieldIdsOff;
-    u4  methodIdsSize;
-    u4  methodIdsOff;
-    u4  classDefsSize;
-    u4  classDefsOff;
+    u4  fileSize;           /* length of entire file */     // <== 32
+    u4  headerSize;         /* offset to start of next section */ // <== 36
+    u4  endianTag;  // <== 40
+    u4  linkSize; // <== 44
+    u4  linkOff; // <== 48
+    u4  mapOff; // <== 52
+    u4  stringIdsSize; // <== 56
+    u4  stringIdsOff; // <== 60
+    u4  typeIdsSize; // <== 64
+    u4  typeIdsOff; // <== 68
+    u4  protoIdsSize; // <== 72
+    u4  protoIdsOff; // <== 76
+    u4  fieldIdsSize; // 80
+    u4  fieldIdsOff; // 84
+    u4  methodIdsSize; // 88
+    u4  methodIdsOff; // 92
+    u4  classDefsSize; // 96
+    u4  classDefsOff; // 100
     u4  dataSize;
-    u4  dataOff;
+    u4  dataOff; // 108
 };
 
-// sizeof: 
+// sizeof:
 struct DexOptHeader {
     u1  magic[8];           /* includes version number */
 
@@ -75,10 +75,10 @@ struct DexOptHeader {
 
 /*
 struct DexFile {
-    // directly-mapped "opt" header 
+    // directly-mapped "opt" header
     const DexOptHeader* pOptHeader;
 
-    // pointers to directly-mapped structs and arrays in base DEX 
+    // pointers to directly-mapped structs and arrays in base DEX
     const DexHeader*    pHeader;
     const DexStringId*  pStringIds;
     const DexTypeId*    pTypeIds;
@@ -95,13 +95,13 @@ struct DexFile {
     const DexClassLookup* pClassLookup;
     const void*         pRegisterMapPool;       // RegisterMapClassPool
 
-    // points to start of DEX file data 
+    // points to start of DEX file data
     const u1*           baseAddr;
 
-    // track memory overhead for auxillary structures 
+    // track memory overhead for auxillary structures
     int                 overhead;
 
-    // additional app-specific data structures associated with the DEX 
+    // additional app-specific data structures associated with the DEX
     //void*               auxData;
 };*/
 
@@ -113,6 +113,6 @@ int main(){
 	printf("sizeof DexOptHeader: %i\n", sizeof(struct DexOptHeader)); // sizeof: 40
 	printf("sizeof DexStringId: %i\n", sizeof(struct DexStringId)); // sizeof: 4
 	printf("sizeof DexClassLookup: %i\n", sizeof(struct DexClassLookup)); // sizeof: 4
-	
+
 	printf("sizeof pRegisterMapPool: %i\n", sizeof(pRegisterMapPool)); // sizeof: 4
 }
