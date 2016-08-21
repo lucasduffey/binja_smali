@@ -6,6 +6,8 @@ import hashlib # to validate SHA1 signature
 import zlib # to validate adler32 checksum
 import os
 
+DEX_MAGIC = "dex\x0a035\x00"
+
 '''
 DEX Structure - https://source.android.com/devices/tech/dalvik/dex-format.html (best resource)
 http://elinux.org/images/d/d9/A_deep_dive_into_dex_file_format--chiossi.pdf
@@ -25,14 +27,17 @@ IMPORTANT
 # in dexparse.py - the fp seeks to dexOptHdr.dexOffset
 #
 class dexHeader():
-	def __init__(self):
-		#dexOptHeader.__init__(self)
+	def __init__(self, binary_blob, binary_blob_length):
+		# how do I make it so it just inherits it, and compiler thingy doesn't complain?
+		self.binary_blob = binary_blob
+		self.binary_blob_length = binary_blob_length
+
 		pass
 
 	# returns hex
 	# ubyte[8] = DEX_FILE_MAGIC
 	def magic(self):
-		result = self.data.read(0, 8) # FIXME: it says data is not defined
+		result = self.binary_blob[0:8] # FIXME: it says data is not defined
 
 		assert len(result) != 0
 
@@ -51,10 +56,12 @@ class dexHeader():
 		offset = 8
 		checksum_size = 4
 
-		result = self.data.read(offset, checksum_size)
+		result = self.binary_blob[offset: offset+checksum_size]
 		result = struct.unpack("<I", result)[0] # unsigned int
 
-		adler32 = zlib.adler32(self.data.read(offset+checksum_size, self.file_size()-offset-checksum_size)) & (2**32-1)
+		idx_start = offset+checksum_size
+		idx_end = idx_start + self.file_size()-offset-checksum_size
+		adler32 = zlib.adler32(self.binary_blob[idx_start: idx_end]) & (2**32-1)
 		# 32 bit: & (2**32-1)
 		# 64 bit: & (2**64-1)
 
@@ -70,10 +77,12 @@ class dexHeader():
 		offset = 12  # why 16? - this must be wrong. I validated file_size which starts at offset 32
 		signature_size = 20
 
-		result = self.data.read(offset, signature_size) # I'm not sure why this is longer than "20"
+		result = self.binary_blob[offset: offset+signature_size] # I'm not sure why this is longer than "20"
 		result = result.encode('hex')
 
-		sha1 = hashlib.sha1(self.data.read(offset+signature_size, self.file_size()-offset-signature_size)).hexdigest()
+		idx_start = offset+signature_size
+		idx_end = idx_start + self.file_size()-offset-signature_size
+		sha1 = hashlib.sha1(self.binary_blob[idx_start:idx_end]).hexdigest()
 
 		if result != sha1:
 			print "sha1: ", sha1, " signature: ", result
@@ -85,12 +94,12 @@ class dexHeader():
 	def file_size(self):
 		offset = 32
 
-		result = self.data.read(offset, offset+4)[0:4]
+		result = self.binary_blob[offset: offset+4]
 		result = struct.unpack("<I", result)[0] # is currently printing correct info
 
 		# dex file validation
-		if result != len(self.data.file.raw):
-			print "file_size method: ", hex(result), ", self.file.raw: ", hex(len(self.data.file.raw))
+		if result != self.binary_blob_length: # FIXME GREPME - was self.data.file.raw
+			print "file_size method: ", hex(result), ", self.file.raw: ", hex(binary_blob_length)
 			assert False
 
 		# binary string => unsigned int
@@ -99,7 +108,7 @@ class dexHeader():
 	# format: unit = 0x70
 	def header_size(self):
 		offset = 36
-		result = self.data.read(offset, 4)
+		result = self.binary_blob[offset: offset+4]
 		result = struct.unpack("<I", result)[0] # uint
 
 		if result != 0x70:
@@ -147,7 +156,7 @@ class dexHeader():
 	# TODO - validate
 	def protoIdsOff(self):
 		offset = 76
-		_protoIdsOff = self.data.read(offset, 4)
+		_protoIdsOff = self.binary_blob[offset: offset+4]
 
 		return struct.unpack("<I", _protoIdsOff)[0] # TODO: verify
 
@@ -157,7 +166,7 @@ class dexHeader():
 	# TODO - validate
 	def methodIdsOff(self):
 		offset = 92
-		_methodIdsOff = self.data.read(offset, 4)[0:4]
+		_methodIdsOff = self.binary_blob[offset: offset+4]
 
 		return struct.unpack("<I", _methodIdsOff)[0] # TODO: verify
 
@@ -173,7 +182,7 @@ class dexHeader():
 
 		#results = [] # list of class_def_item
 		_class_defs_bytes = _class_defs_size*8*4 # class_def_item has 8 uints
-		raw_class_defs = self.data.read(_class_defs_off, _class_defs_bytes)
+		raw_class_defs = self.binary_blob[_class_defs_off: _class_defs_off+ _class_defs_bytes]
 
 		# split by class_def_item_size
 		class_def_item_size = 8*4 # 8 uints
@@ -197,13 +206,14 @@ class dexHeader():
 
 			#log(1, "example debug log 1")
 			#log(2, "example debug log 2")
+
+
 			self.data.create_user_function(Architecture['dex'].standalone_platform, class_data_off) # AFAIK
 			# 1st arg was self.data.file.platform
 			# "bv.platform" - "bv" is not defined
 			# "self.platform" - might be valid....???
 
 			print "class_data_off:", hex(class_data_off)
-
 
 
 		print "\n===============================\n"
@@ -229,7 +239,7 @@ class dexHeader():
 	def class_defs_size(self):
 		offset = 96 # AFAIK
 
-		result = self.data.read(offset, 4)
+		result = self.binary_blob[offset: offset+4]
 		result = struct.unpack("<I", result)[0]
 
 		#print "\nclass_defs_size: ", result, "\n"
@@ -242,27 +252,29 @@ class dexHeader():
 	def class_defs_off(self):
 		offset = 100 # AFAIK
 
-		result = self.data.read(offset, 4)
+		result = self.binary_blob[offset: offset+4]
 		result = struct.unpack("<I", result)[0]
 
 		#print "\nclass_defs_off: ", result, "\n"
 
-		assert result < len(self.data.file.raw)
+		assert result < self.binary_blob_length
 
 		return result
 
 	# dataSize, dataOff (108)
 	# TODO - validate
+
+	# complicated - becaus
 	def dataSize(self):
 		offset = 104 # unknown if this is correct..
-		_dataOff = self.data.read(offset, 4)[0:4]
+		_dataOff = self.binary_blob[offset: offset+4]
 
 		return struct.unpack("<I", _dataOff)[0] # TODO: verify
 
 	# TODO - validate
 	def dataOff(self):
 		offset = 108 # I believe this is correct
-		_dataOff = self.data.read(offset, 4)[0:4]
+		_dataOff = self.binary_blob[offset:offset + 4]
 
 		# print len(_dataOff)
 		assert len(_dataOff) > 0 # TODO: be more specific
@@ -293,8 +305,11 @@ class dexHeader():
 #	* alignment: none (byte-aligned)
 
 class DexFile(dexHeader):
-	def __init__(self): # data is binaryView
-		dexHeader.__init__(self)
+	def __init__(self, binary_blob, binary_blob_length): # data is binaryView
+		self.binary_blob = binary_blob
+		self.binary_blob_length = binary_blob_length
+
+		dexHeader.__init__(self, binary_blob, binary_blob_length)
 
 	'''
 	header

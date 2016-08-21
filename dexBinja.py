@@ -1,5 +1,5 @@
 from binaryninja import *
-from dexFile import DexFile, dexHeader, dexOptHeader
+from dexFile import DexFile
 import struct
 import traceback
 import hashlib # to validate SHA1 signature
@@ -414,48 +414,52 @@ class DEX(Architecture):
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers
 class DEXView(BinaryView, DexFile):
-	name = "DEX"
-	long_name = "Dalvik Executable"
+    name = "DEX"
+    long_name = "Dalvik Executable"
 
-	# data == BinaryView datatype
-	def __init__(self, data):
-		print "DEXView::__init__"
-		BinaryView.__init__(self, data.file)
+    # data == BinaryView datatype
+    def __init__(self, data):
+        print "DEXView::__init__"
+        BinaryView.__init__(self, data.file) # FIXME: is len(data.file.raw) right?
 
-		self.data = data # FIXME: is this what we can do DexFile() on?
-		DexFile.__init__(self) # how do I make sure this has access to BinaryView... (to read from it)
+        self.data = data # FIXME: is this what we can do DexFile() on?
 
-		self.notification = DEXViewUpdateNotification(self) # TODO
-		self.data.register_notification(self.notification)
+        raw_binary_length = len(data.file.raw)
+        raw_binary = data.read(0, raw_binary_length)
 
-		self.print_metadata()
+        DexFile.__init__(self, raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
+
+        self.notification = DEXViewUpdateNotification(self) # TODO
+        self.data.register_notification(self.notification)
+
+        self.print_metadata()
 
 		# this might be a better way to do it. Just create functions
 		#data.create_user_function(bv.platform, 0) # FAILURE TO CREATE VIEW..
 
-	@classmethod
-	def is_valid_for_data(self, data):
-		print "DEXView::is_valid_for_data"
+    @classmethod
+    def is_valid_for_data(self, data):
+        print "DEXView::is_valid_for_data"
 
-		hdr = data.read(0, 16)
-		if len(hdr) < 16:
-				return False
-		# magic - https://en.wikipedia.org/wiki/List_of_file_signatures
-		if hdr[0:8] != DEX_MAGIC: # dex file format
-				return False
+        hdr = data.read(0, 16)
+        if len(hdr) < 16:
+        		return False
+        # magic - https://en.wikipedia.org/wiki/List_of_file_signatures
+        if hdr[0:8] != DEX_MAGIC: # dex file format
+        		return False
 
-		return True
+        return True
 
 
-	def init(self):
-		try:
-			# TODO: look at NES.py
-			self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
+    def init(self):
+        try:
+        	# TODO: look at NES.py
+        	self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
 
-			return True
-		except:
-			log_error(traceback.format_exc())
-			return False
+        	return True
+        except:
+        	log_error(traceback.format_exc())
+        	return False
 
 
 
@@ -493,54 +497,70 @@ class DEXView(BinaryView, DexFile):
 
 	# FIXME
 	def perform_write(self, addr, value):
-			if addr < 0x8000:
-					return 0
-			if addr >= (0x8000 + self.rom_length):
-					return 0
-			if (addr + len(value)) > (0x8000):
-					length = (0x8000) - addr
-			else:
-					length = len(value)
-			if (addr + length) > 0x10000:
-					length = 0x10000 - addr
-			offset = 0
-			while length > 0:
-					bank_ofs = addr & 0x3fff
-					if (bank_ofs + length) > 0x4000:
-							to_write = 0x4000 - bank_ofs
-					else:
-							to_write = length
-					written = self.data.write(s+ bank_ofs + (0x4000), value[offset : offset + to_write])
-					if written < to_write:
-							break
-					length -= to_write
-					addr += to_write
-					offset += to_write
-			return offset
+		if addr < 0x8000:
+				return 0
+		if addr >= (0x8000 + self.rom_length):
+				return 0
+		if (addr + len(value)) > (0x8000):
+				length = (0x8000) - addr
+		else:
+				length = len(value)
+		if (addr + length) > 0x10000:
+				length = 0x10000 - addr
+		offset = 0
+		while length > 0:
+				bank_ofs = addr & 0x3fff
+				if (bank_ofs + length) > 0x4000:
+						to_write = 0x4000 - bank_ofs
+				else:
+						to_write = length
+				written = self.data.write(s+ bank_ofs + (0x4000), value[offset : offset + to_write])
+				if written < to_write:
+						break
+				length -= to_write
+				addr += to_write
+				offset += to_write
+		return offset
 
 	# FIXME
 	def perform_get_start(self):
 	#print("[perform_get_start]") # NOTE: seems to infinite loop (for both 0 or 1 return, haven't tested others)
-			return 0
+	   return 0
 
 
 	# FIXME
-	def perform_get_length(self):
-			return 0x10000
+    def perform_get_length(self):
+        return 0x10000
 
-	def perform_is_executable(self):
-			return True
+    def perform_is_executable(self):
+        return True
 
 	# FIXME
-	def perform_get_entry_point(self):
-		dataOff = self.dataOff()
-		fileSize = len(self.data.file.raw) # TODO: is this checking size of APK, or size of dex...
+    def perform_get_entry_point(self):
+        # complicated because this is called without self really existing
+        #   * not really sure what self provides...
 
-		print "dexBinja::perform_get_entry_point: ", dataOff, "hex(dataOff): ", hex(dataOff), ", file size: ", fileSize
 
-		assert dataOff <= fileSize
+        #self.data = data # FIXME: is this what we can do DexFile() on?
 
-		return dataOff
+        # FOLLOWING CODE DOENS'T WORK..
+        #binary_blob_length = len(self.data.raw)
+        #binary_blob = self.data.file.read(0, binary_blob_length)
+        #tmp = DexFile(binary_blob, binary_blob_length) # how do I make sure this has access to BinaryView... (to read from it)
+
+
+
+        #dataOff = tmp.dataOff()
+        #fileSize = len(self.data.file.raw) # TODO: is this checking size of APK, or size of dex...
+
+        #print "dexBinja::perform_get_entry_point: ", dataOff, "hex(dataOff): ", hex(dataOff), ", file size: ", fileSize
+
+        #assert dataOff <= fileSize
+
+        #return dataOff
+
+        # return 0 for now, since perform_get_entry_point gets called before __init__ it overcomplicates some stuff...
+        return int(0) # for some reason I frequently get "0x0 isn't valid entry point"..
 
 
 	'''

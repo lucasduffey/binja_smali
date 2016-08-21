@@ -9,7 +9,7 @@ import shutil
 import dexBinja
 from dexBinja import *
 from dexBinja import DEXViewBank
-from dexFile import DexFile, dexHeader, dexOptHeader
+from dexFile import DexFile
 
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames
@@ -242,10 +242,5 @@ class APKViewBank(APKView):
 		'''
 
 APKViewBank.register()
-
-dexBinja.DEXViewBank.register() # so, currently depending on apkBinja NOT dexBinja.py....
-dexBinja.DEX.register() # TODO
-
-
 
 # Architecture.register
