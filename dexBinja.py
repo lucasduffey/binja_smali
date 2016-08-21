@@ -289,13 +289,13 @@ class dexHeader(dexOptHeader):
 
 		return DEX_MAGIC
 
-	# format: uint
 	# adler32 checksum of the rest of the file (everything but magic and this field); used to detect file corruption
+	# format: uint
 	def checksum(self):
-		offset = 8 # seems correct
-		checksum_size = 4 # seems correct
+		offset = 8
+		checksum_size = 4
 
-		result = self.data.read(offset, checksum_size) # why 16?
+		result = self.data.read(offset, checksum_size)
 		result = struct.unpack("<I", result)[0] # unsigned int
 
 		adler32 = zlib.adler32(self.data.read(offset+checksum_size, self.file_size()-offset-checksum_size)) & (2**32-1)
