@@ -74,7 +74,7 @@ class APKView(BinaryView):
 
 			tmp_dir_path = tempfile.mkdtemp()
 			tmp_apk_path = tmp_dir_path + "/binja.apk"
-			apk_size = os.path.getsize(data.file.filename)
+			apk_size = len(data.file.raw)
 
 			# copy apk to tmp directory
 			shutil.copyfile(data.file.filename, tmp_apk_path)
@@ -96,9 +96,6 @@ class APKView(BinaryView):
 			# read dex blob into memory
 			dex_blob = open(dex_path).read()
 
-			# pass dexPath to dexBinja.py - unnecessary, because we will kick this off in DEXViewBank
-			#global_DexFile = dexBinja.DexFile(dex_blob) # unnecessary
-
 			# do we just do:
 			# write(addr, data) # start at 0, and write everything?
 			fluff_size = apk_size - len(dex_blob)
@@ -106,7 +103,8 @@ class APKView(BinaryView):
 			print "about to overwrite everything with dex_blob"
 
 			# NOTE: this will switch control over to "DEXViewBank"
-			data.write(0, dex_blob + "\xff" * fluff_size) # how do we zero the rest? perform_remove?
+			data.write(0, dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
+			data.remove(len(dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 
 
 			# FIXME

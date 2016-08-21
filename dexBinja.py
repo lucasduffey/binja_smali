@@ -1,7 +1,10 @@
 from binaryninja import *
 import struct
 import traceback
+import hashlib
 import os
+
+DEX_MAGIC = "dex\x0a035\x00"
 
 # ~/binaryninja/binaryninja /home/noot/CTF/tmp/classes2.dex
 	# they already did it https://gist.github.com/ezterry/1239615
@@ -270,30 +273,71 @@ class dexHeader(dexOptHeader):
 		pass
 
 
-	# in both DexHeader and DexOptHeader, this is the first item
+	# returns hex
 	def magic(self):
-		hdr = self.data.read(0, 16)
+		result = self.data.read(0, 8) # why 16?
 
-		assert len(hdr) != 0
+		assert len(result) != 0
 
-		print "len(hdr): ", len(hdr), ", hdr: ", hdr
+		#result = struct.unpack("<Q", hdr[0:8])[0] # "dex\x0a035\x00"
 
-		# FIXME: this is really messy..
-		return hex(struct.unpack("<Q", hdr[0:8])[0]) # "dex\x0a035\x00"
+		# dex file validation
+		if result != DEX_MAGIC:
+			print "magic result: ", hex(result), " correct magic: ", hex(DEX_MAGIC)
+			assert False
 
+		return DEX_MAGIC
+
+	# TODO: validate checksum
+	# suposedly each dex file has an Adler32 and a SHA-1 signature
+	# adler32 checksum of the rest of the file (everything but magic and this field); used to detect file corruption
 	def checksum(self):
-		pass
+		offset = 8
+		result = self.data.read(offset, offset+8) # why 16?
 
+		# TODO: result is binary, how do we get printable binary?
+
+		# FIXME: do adler32, not sha1...
+		#sha1 = hashlib.sha1(self.data.read(0, self.file_size())).hexdigest()
+
+		#print "[adler32: ", sha1, " checksum: ", map(hex,map(ord, result)), "]"
+
+		return result
+
+	# sha-1 signature of the rest of the file (excluding magic, checksum, and signature)
+	# format: ubyte[20]
 	def signature(self):
-		pass
+		offset = 12  # why 16? - this must be wrong. I validated file_size which starts at offset 32
+		signature_size = 20
 
-	def fileSize(self):
-		_fileSize = self.data.read(32, 36)[0:4]
+		result = self.data.read(offset, signature_size) # I'm not sure why this is longer than "20"
+		result = result.encode('hex')
+
+		sha1 = hashlib.sha1(self.data.read(offset+signature_size, self.file_size()-offset-signature_size)).hexdigest()
+
+		if result != sha1:
+			print "sha1: ", sha1, " signature: ", result
+			assert False
+
+		return result
+
+	# returns unsigned int
+	def file_size(self):
+		offset = 32
+
+		result = self.data.read(offset, offset+4)[0:4]
+		result = struct.unpack("<I", result)[0] # is currently printing correct info
+
+		# dex file validation
+		if result != len(self.data.file.raw):
+			print "file_size method: ", hex(result), ", self.file.raw: ", hex(len(self.data.file.raw))
+			assert False
 
 		# binary string => unsigned int
-		return struct.unpack("<I", _fileSize)[0] # is currently printing correct info
+		return result
 
-	def headerSize(self):
+	# TODO
+	def header_size(self):
 		pass
 
 	# linkSize (44 offset), linkOff
@@ -360,11 +404,62 @@ class dexHeader(dexOptHeader):
 '''
 
 # I DO NOT believe DexOptHeader is the first header..
-global_DexFile = False # populated by is_valid_for_data, the first function called (even before init)
+
+# https://source.android.com/devices/tech/dalvik/dex-format.html
+# Decompiling Android book is very useful, but it's 4 years old..
+# ~/Documents/dexinfo/a.out
+'''
+.dex
+	header
+	strings_ids
+	type_ids
+	proto_ids
+	fields
+	methods
+	classes
+	data
+
+'''
 
 class DexFile(dexHeader): # DexOptHeader not defined...
 	def __init__(self): # data is binaryView
 		dexHeader.__init__(self)
+
+	'''
+	header
+		self.magic() - believed correct
+		self.checksum()
+		self.signature()  - believed correct
+		self.file_size() - believed correct
+		header_size
+		endian_tag
+		link_size
+		link_offset
+		map_offset
+		string_ids_size
+		string_ids_offset
+		type_ids_size
+		type_ids_offset
+		proto_ids_size
+		proto_ids_offset
+		field_ids_size
+		field_ids_offset
+		method_ids_size
+		method_ids_offset
+		class_defs_size
+		class_defs_offset
+		data_size
+		data_offset
+	'''
+	def header(self):
+		results = []
+
+		results += [self.magic()]
+		results += [self.checksum()]
+		results += [self.signature()]
+		results += [self.file_size()]
+
+		pass
 
 	# I believe "data" is the whole file
 	def print_metadata(self):
@@ -383,7 +478,8 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 		# FIXME: we now inheirit these functions, which may need to be renamed to DexHeader_magic, dex_header_checksum, etc...
 		print "magic: ", self.magic()
 		print "checksum: ", self.checksum()
-		print "fileSize: ", self.fileSize()
+		print "signature: ", self.signature()
+		print "fileSize: ", self.file_size()
 		print "protoIdsOff: ", self.protoIdsOff()
 		print "methodIdsOff: ", self.methodIdsOff()
 		print "dataSize: ", self.dataSize()
@@ -476,15 +572,10 @@ class DEXView(BinaryView, DexFile):
 		BinaryView.__init__(self, data.file)
 		DexFile.__init__(self) # how do I make sure this has access to BinaryView... (to read from it)
 
-
 		self.notification = DEXViewUpdateNotification(self) # TODO
 		self.data.register_notification(self.notification)
 
 		self.print_metadata()
-
-		#if global_DexFile == False:
-			# where will I get the dex blob from?
-		#	pass
 
 		# this might be a better way to do it. Just create functions
 		#data.create_user_function(bv.platform, 0) # FAILURE TO CREATE VIEW..
@@ -497,7 +588,7 @@ class DEXView(BinaryView, DexFile):
 		if len(hdr) < 16:
 				return False
 		# magic - https://en.wikipedia.org/wiki/List_of_file_signatures
-		if hdr[0:8] != "dex\x0a035\x00": # dex file format
+		if hdr[0:8] != DEX_MAGIC: # dex file format
 				return False
 
 		return True
@@ -588,18 +679,14 @@ class DEXView(BinaryView, DexFile):
 
 	# FIXME
 	def perform_get_entry_point(self):
-		#assert global_DexFile != False
+		dataOff = self.dataOff()
+		fileSize = len(self.data.file.raw) # TODO: is this checking size of APK, or size of dex...
 
-		#print "dexBinja::perform_get_entry_point", global_DexFile.getDexHeader().dataOff()
+		print "dexBinja::perform_get_entry_point: ", hex(dataOff), ", file size: ", hex(fileSize)
 
-			#return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
+		assert dataOff <= fileSize
 
-		#return struct.unpack("<H", "APPLE")[0] # FIXME: I believe it's a ptr @ 249, need to use self.perform_read
-						# I'm Betting ptr @ 250 to be even..
-						# in my classes2.dex in tmp that ptr is 0x98e3 - this might be wrong
-
-		# GREPME
-		return self.dataOff()
+		return dataOff
 
 		return 0
 
