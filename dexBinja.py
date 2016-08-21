@@ -126,78 +126,12 @@ InstructionIL = {
 }
 
 '''
-DEX Structure - http://elinux.org/images/d/d9/A_deep_dive_into_dex_file_format--chiossi.pdf
+DEX Structure - https://source.android.com/devices/tech/dalvik/dex-format.html (best resource)
+http://elinux.org/images/d/d9/A_deep_dive_into_dex_file_format--chiossi.pdf
 https://android.googlesource.com/platform/art/+/master/tools/dexfuzz/src/dexfuzz/rawdex/HeaderItem.java
-
-[magic] - 8 bytes
-[checksum] - uint
-[signature] - 20 bytes
-[file_size] - uint, and the rest are uints
-[header_size]
-[endian_tag]
-[link_size]
-[link_off]
-[map_off]
-[strings_ids_size]
-[strings_ids_off]
-[type_ids_size]
-[type_ids_off]
-[proto_ids_size]
-[proto_ids_off]
-[field_ids_size]
-[field_ids_off]
-[method_ids_size]
-[method_ids_off]
-[class_defs_size]
-[class_defs_off]
-[data_size]
-[data_off]
-
 
 IMPORTANT
 .read(offset, 4) # last arg is the "count", not the "last idex to read"
-
-./dalvik/libdex/DexFile.h
-
-./dalvik/libdex/InstrUtils.h
-./dalvik/libdex/DexDebugInfo.h
-./dalvik/libdex/DexCatch.h
-./dalvik/libdex/DexClass.h
-./dalvik/libdex/DexOpcodes.h
-./dalvik/libdex/ZipArchive.h
-./dalvik/libdex/SysUtil.h
-./dalvik/libdex/OptInvocation.h
-./dalvik/libdex/CmdUtils.h
-./dalvik/libdex/DexUtf.h
-./dalvik/libdex/DexOptData.h
-./dalvik/libdex/Leb128.h
-./dalvik/libdex/DexDataMap.h
-./dalvik/libdex/DexProto.h
-./art/dexdump/dexdump.h
-./art/runtime/dex_file-inl.h
-./art/runtime/dex_instruction.h
-./art/runtime/dex_method_iterator.h
-./art/runtime/dex_file_verifier.h
-./art/runtime/dex_instruction_utils.h
-./art/runtime/dex_cache_resolved_classes.h
-./art/runtime/dex_instruction-inl.h
-./art/runtime/utils/dex_cache_arrays_layout.h
-./art/runtime/utils/dex_cache_arrays_layout-inl.h
-./art/runtime/dex_instruction_list.h
-./art/runtime/dex_instruction_visitor.h
-./art/runtime/dex_file.h
-./art/runtime/mirror/dex_cache-inl.h
-./art/runtime/mirror/dex_cache.h
-./art/compiler/dex/quick/dex_file_to_method_inliner_map.h
-./art/compiler/dex/quick/dex_file_method_inliner.h
-./art/compiler/dex/dex_to_dex_compiler.h
-./art/compiler/dex/quick_compiler_callbacks.h
-./art/compiler/dex/verification_results.h
-./art/compiler/dex/verified_method.h
-./art/compiler/dex/compiler_enums.h
-./art/compiler/optimizing/dex_cache_array_fixups_arm.h
-./art/compiler/utils/test_dex_file_builder.h
-./art/compiler/driver/dex_compilation_unit.h
 
 '''
 
@@ -268,11 +202,6 @@ class dexHeader(dexOptHeader):
 	def __init__(self):
 		dexOptHeader.__init__(self)
 
-		#dexOptHdr = self.getDexOptHeader() # seek
-		#offset = self.dexOffset() #
-		#print "[dexHeader] offset: ", offset
-		pass
-
 	# returns hex
 	# ubyte[8] = DEX_FILE_MAGIC
 	def magic(self):
@@ -340,8 +269,27 @@ class dexHeader(dexOptHeader):
 		# binary string => unsigned int
 		return result
 
-	# TODO
+	# format: unit = 0x70
 	def header_size(self):
+		offset = 36
+		result = self.data.read(offset, 4)
+		result = struct.unpack("<I", result)[0] # uint
+
+		if result != 0x70:
+			print "header_size: ", result
+			assert False
+
+		return 0x70
+
+	###############################################3
+
+
+	# TODO - validate
+	def endian_tag(self):
+		pass
+
+	# TODO - validate
+	def link_size(self):
 		pass
 
 	# linkSize (44 offset), linkOff
@@ -351,6 +299,7 @@ class dexHeader(dexOptHeader):
 	# protoIdsSize, protoIdsOff,
 
 	# 76 offset
+	# TODO - validate
 	def protoIdsOff(self):
 		offset = 76
 		_protoIdsOff = self.data.read(offset, 4)[0:4]
@@ -360,6 +309,7 @@ class dexHeader(dexOptHeader):
 	# fieldIdsSize, fieldIdsOff
 
 	# methodIdsSize, methodIdsOff (92 offset)
+	# TODO - validate
 	def methodIdsOff(self):
 		offset = 92
 		_methodIdsOff = self.data.read(offset, 4)[0:4]
@@ -369,12 +319,14 @@ class dexHeader(dexOptHeader):
 	# classDefsSize, classDefsOff
 
 	# dataSize, dataOff (108)
+	# TODO - validate
 	def dataSize(self):
 		offset = 104 # unknown if this is correct..
 		_dataOff = self.data.read(offset, 4)[0:4]
 
 		return struct.unpack("<I", _dataOff)[0] # TODO: verify
 
+	# TODO - validate
 	def dataOff(self):
 		offset = 108 # I believe this is correct
 		_dataOff = self.data.read(offset, 4)[0:4]
@@ -409,7 +361,7 @@ class dexHeader(dexOptHeader):
 
 # I DO NOT believe DexOptHeader is the first header..
 
-# https://source.android.com/devices/tech/dalvik/dex-format.html
+# https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
 # Decompiling Android book is very useful, but it's 4 years old..
 # ~/Documents/dexinfo/a.out
 '''
@@ -425,6 +377,7 @@ class dexHeader(dexOptHeader):
 
 '''
 
+# TODO: DexFile should be passed bv.binary.raw, and parse that...
 class DexFile(dexHeader): # DexOptHeader not defined...
 	def __init__(self): # data is binaryView
 		dexHeader.__init__(self)
@@ -435,7 +388,7 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 		self.checksum() - validated
 		self.signature() - validated
 		self.file_size() - validated
-		header_size
+		self.header_size  - validated
 		endian_tag
 		link_size
 		link_offset
@@ -483,11 +436,14 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 		print "magic: ", self.magic()
 		print "checksum: ", self.checksum()
 		print "signature: ", self.signature()
-		print "fileSize: ", self.file_size()
+		print "file_size: ", self.file_size()
+		print "header_size: ", self.header_size()
+
+		# unvalidated
 		print "protoIdsOff: ", self.protoIdsOff()
 		print "methodIdsOff: ", self.methodIdsOff()
 		print "dataSize: ", self.dataSize()
-		print "dataOff: ", self.dataOff()
+		#print "dataOff: ", self.dataOff()
 
 
 		# the following may be wrong -
