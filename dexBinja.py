@@ -65,6 +65,24 @@ None, "sta", None, None, "sty", "sta", "stx", None, # 0x80
 "sed", "sbc", None, None, None, "sbc", "inc", None # 0xf8
 '''
 
+RegisterNames = [
+	"v0", # I believe 0 == v0
+	"v1",
+	"v2",
+	"v3",
+	"v4",
+	"v5",
+	"v8", # last one I saw that seems to map "X" to vX - but it makes sense to go to v15 since 0xF is max
+    "v9",
+    "v10", # 0xa
+    "v11", # 0xB
+    "v12", # 0xC
+    "v13", # 0xD
+    "v14", # 0xE
+    "v15"  # 0xF
+
+]
+
 NONE = 0
 MOVE = 1
 #ABS = 1
@@ -129,7 +147,8 @@ InstructionOperandTypes = [
 
 OperandLengths = [
 	0, # NONE
-	2, # MOVE - TODO: validate/verify
+	1, # MOVE - TODO: validate/verify
+
 	2, # ABS_DEST
 	2, # ABS_X
 	2, # ABS_X_DEST
@@ -155,47 +174,10 @@ OperandLengths = [
 # used for perform_get_instruction_text
 OperandTokens = [
 	lambda value: [], # NONE
-	lambda value: [InstructionTextToken(PossibleAddressToken, "%.4x," % value, value)], # MOVE - FIXME: this is wrong FIXME  move, vx, vy
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]), # last byte
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])] # MOVE - FIXME: this is wrong FIXME  move, vx, vy
 ]
-# below comment is for OperandTokens
-'''
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ABS
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ABS_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ABS_X
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ABS_X_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ABS_Y
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ABS_Y_DEST
-	lambda value: [InstructionTextToken(RegisterToken, "a")], # ACCUM
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ADDR
-	lambda value: [InstructionTextToken(TextToken, "#"), InstructionTextToken(IntegerToken, "$%.2x" % value, value)], # IMMED
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, "]")], # IND
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x"),
-		InstructionTextToken(TextToken, "]")], # IND_X
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x"),
-		InstructionTextToken(TextToken, "]")], # IND_X_DEST
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, "], "), InstructionTextToken(RegisterToken, "y")], # IND_Y
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, "], "), InstructionTextToken(RegisterToken, "y")], # IND_Y_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # REL
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value)], # ZERO
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value)], # ZERO_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ZERO_X
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ZERO_X_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ZERO_Y
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")] # ZERO_Y_DEST
-'''
 
 InstructionIL = {
 	"adc": lambda il, operand: il.set_reg(1, "a", il.add_carry(1, il.reg(1, "a"), operand, flags = "*")),
@@ -308,19 +290,29 @@ class DEX(Architecture):
 	default_int_size = 1 # TODO
 	regs = {
 		# register-based, and frames are fixed in size upon creation
-		"r0": RegisterInfo("r0", 1), # TODO
-		"r1": RegisterInfo("r1", 1), # TODO
-		"r2": RegisterInfo("r2", 1), # TODO
-		"r3": RegisterInfo("r3", 1), # TODO
-		"r4": RegisterInfo("r4", 1), # TODO
-		"r5": RegisterInfo("r5", 1), # TODO
+		"v0": RegisterInfo("v0", 1), # TODO
+		"v1": RegisterInfo("v1", 1), # TODO
+		"v2": RegisterInfo("v2", 1), # TODO
+		"v3": RegisterInfo("v3", 1), # TODO
+		"v4": RegisterInfo("v4", 1), # TODO
+		"v5": RegisterInfo("v5", 1), # TODO
+        "v6": RegisterInfo("v6", 1), # TODO
+        "v7": RegisterInfo("v7", 1), # TODO
+        "v8": RegisterInfo("v8", 1), # TODO
+        "v9": RegisterInfo("v9", 1), # TODO
+        "v10": RegisterInfo("v10", 1), # 0xA
+        "v11": RegisterInfo("v11", 1), # 0xB
+        "v12": RegisterInfo("v12", 1), # 0xC
+        "v13": RegisterInfo("v13", 1), # 0xD
+        "v14": RegisterInfo("v14", 1), # 0xE
+        "v15": RegisterInfo("v15", 1), # 0xF
 
-		# TODO: are parameter registers different than local registers (r0-r5)?
+		# TODO: are parameter registers different than local registers (v0-v5)?
 		"p0": RegisterInfo("p0", 1), # TODO
 		"p1": RegisterInfo("p1", 1), # TODO
 		"p2": RegisterInfo("p2", 1), # TODO
 
-		"r13": RegisterInfo("r5", 1) # stack pointer (SP), which isn't used in dalvik
+		"r13": RegisterInfo("r13", 1) # stack pointer (SP), which isn't used in dalvik
 		# TODO: more
 
 
@@ -390,21 +382,21 @@ class DEX(Architecture):
 
 
 	def perform_get_instruction_text(self, data, addr):
-		#log(2, "perform_get_instruction_text")
-
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
 
 		# I don't think we control "InstructionTextToken"
 
-		print "value: ", value
+		print "value: ", value # it's the bytes
+		print "type(value): ", type(value) # type "int"
 
 		# FIXME: current crash
 		log(2, "perform_get_instruction_text is about to mess with tokens")
 		tokens = []
-		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr.replace("@", ""))) # FIXME: error?
+		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr.replace("@", ""))) # FIXME: error? this is "move" for example??
 		tokens += OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
+			# FIXME: ^ needs to be split up
 
 		print "================"
 		print "tokens: ", tokens
