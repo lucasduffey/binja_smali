@@ -1,7 +1,8 @@
 from binaryninja import *
 import struct
 import traceback
-import hashlib
+import hashlib # to validate SHA1 signature
+import zlib # to validate adler32 checksum
 import os
 
 DEX_MAGIC = "dex\x0a035\x00"
@@ -272,10 +273,10 @@ class dexHeader(dexOptHeader):
 		#print "[dexHeader] offset: ", offset
 		pass
 
-
 	# returns hex
+	# ubyte[8] = DEX_FILE_MAGIC
 	def magic(self):
-		result = self.data.read(0, 8) # why 16?
+		result = self.data.read(0, 8)
 
 		assert len(result) != 0
 
@@ -288,19 +289,22 @@ class dexHeader(dexOptHeader):
 
 		return DEX_MAGIC
 
-	# TODO: validate checksum
-	# suposedly each dex file has an Adler32 and a SHA-1 signature
+	# format: uint
 	# adler32 checksum of the rest of the file (everything but magic and this field); used to detect file corruption
 	def checksum(self):
-		offset = 8
-		result = self.data.read(offset, offset+8) # why 16?
+		offset = 8 # seems correct
+		checksum_size = 4 # seems correct
 
-		# TODO: result is binary, how do we get printable binary?
+		result = self.data.read(offset, checksum_size) # why 16?
+		result = struct.unpack("<I", result)[0] # unsigned int
 
-		# FIXME: do adler32, not sha1...
-		#sha1 = hashlib.sha1(self.data.read(0, self.file_size())).hexdigest()
+		adler32 = zlib.adler32(self.data.read(offset+checksum_size, self.file_size()-offset-checksum_size)) & (2**32-1)
+		# 32 bit: & (2**32-1)
+		# 64 bit: & (2**64-1)
 
-		#print "[adler32: ", sha1, " checksum: ", map(hex,map(ord, result)), "]"
+		if adler32 != result:
+			print "adler32: ", hex(adler32), " checksum: ", hex(result)
+			assert False
 
 		return result
 
@@ -428,9 +432,9 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 	'''
 	header
 		self.magic() - believed correct
-		self.checksum()
-		self.signature()  - believed correct
-		self.file_size() - believed correct
+		self.checksum() - validated
+		self.signature() - validated
+		self.file_size() - validated
 		header_size
 		endian_tag
 		link_size
