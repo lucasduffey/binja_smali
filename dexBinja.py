@@ -210,14 +210,13 @@ InstructionNames = [
 # https://gist.github.com/ezterry/1239615
 
 class dexOptHeader:
-	def __init__(self, dexFile):
-		self.dexFile = dexFile
-		self.binary_blob = dexFile.binary_blob
+	def __init__(self):
+		pass
 
 	def dexOffset(self):
 		offset = 4
 
-		tmp = self.binary_blob.read(offset, 4)
+		tmp = self.data.read(offset, 4)
 
 		print "|", len(tmp), "|"
 
@@ -227,55 +226,57 @@ class dexOptHeader:
 	def dexLength(self):
 		offset = 8
 
-		tmp = self.binary_blob.read(offset, 4)
+		tmp = self.data.read(offset, 4)
 		return struct.unpack("<I", tmp)[0]
 
 	# assuming DexOptHeader is first header
 	def depsOffset(self):
 		offset = 16
 
-		tmp = self.binary_blob.read(offset, 4)
+		tmp = self.data.read(offset, 4)
 		return struct.unpack("<I", tmp)[0]
 
 	# assuming DexOptHeader is first header
 	def depsLength(self):
 		offset = 20
 
-		tmp = self.binary_blob.read(offset, 4)
+		tmp = self.data.read(offset, 4)
 		return struct.unpack("<I", tmp)[0]
 
 	# assuming DexOptHeader is first header
 	def optOffset(self):
 		offset = 24
 
-		tmp = self.binary_blob.read(offset, 4)
+		tmp = self.data.read(offset, 4)
 		return struct.unpack("<I", tmp)[0]
 
 	# assuming DexOptHeader is first header
 	def optLength(self):
 		offset = 28
 
-		tmp = self.binary_blob.read(offset, 4)
+		tmp = self.data.read(offset, 4)
 		return struct.unpack("<I", tmp)[0]
 
 #
 # in dexparse.py - the fp seeks to dexOptHdr.dexOffset
 #
-class dexHeader:
-	def __init__(self, dexFile): # I believe binary_blob is pulled from "self"
-		self.dexFile = dexFile
-		self.binary_blob = dexFile.binary_blob
+class dexHeader(dexOptHeader):
+	def __init__(self):
+		dexOptHeader.__init__(self)
 
-		dexOptHdr = self.dexFile.getDexOptHeader() # seek
-		offset = dexOptHdr.dexOffset
-		print "[dexHeader] offset: ", offset
-
+		#dexOptHdr = self.getDexOptHeader() # seek
+		#offset = self.dexOffset() #
+		#print "[dexHeader] offset: ", offset
 		pass
+
 
 	# in both DexHeader and DexOptHeader, this is the first item
 	def magic(self):
-		hdr = self.binary_blob.read(0, 16)
+		hdr = self.data.read(0, 16)
 
+		assert len(hdr) != 0
+
+		print "len(hdr): ", len(hdr), ", hdr: ", hdr
 
 		# FIXME: this is really messy..
 		return hex(struct.unpack("<Q", hdr[0:8])[0]) # "dex\x0a035\x00"
@@ -287,7 +288,7 @@ class dexHeader:
 		pass
 
 	def fileSize(self):
-		_fileSize = self.binary_blob.read(32, 36)[0:4]
+		_fileSize = self.data.read(32, 36)[0:4]
 
 		# binary string => unsigned int
 		return struct.unpack("<I", _fileSize)[0] # is currently printing correct info
@@ -304,7 +305,7 @@ class dexHeader:
 	# 76 offset
 	def protoIdsOff(self):
 		offset = 76
-		_protoIdsOff = self.binary_blob.read(offset, 4)[0:4]
+		_protoIdsOff = self.data.read(offset, 4)[0:4]
 
 		return struct.unpack("<I", _protoIdsOff)[0] # TODO: verify
 
@@ -313,15 +314,26 @@ class dexHeader:
 	# methodIdsSize, methodIdsOff (92 offset)
 	def methodIdsOff(self):
 		offset = 92
-		_methodIdsOff = self.binary_blob.read(offset, 4)[0:4]
+		_methodIdsOff = self.data.read(offset, 4)[0:4]
 
 		return struct.unpack("<I", _methodIdsOff)[0] # TODO: verify
 
 	# classDefsSize, classDefsOff
+
 	# dataSize, dataOff (108)
+	def dataSize(self):
+		offset = 104 # unknown if this is correct..
+		_dataOff = self.data.read(offset, 4)[0:4]
+
+		return struct.unpack("<I", _dataOff)[0] # TODO: verify
+
 	def dataOff(self):
-		offset = 108
-		_dataOff = self.binary_blob.read(offset, 4)[0:4]
+		offset = 108 # I believe this is correct
+		_dataOff = self.data.read(offset, 4)[0:4]
+
+		# print len(_dataOff)
+		assert len(_dataOff) > 0 # TODO: be more specific
+
 
 		return struct.unpack("<I", _dataOff)[0] # TODO: verify
 
@@ -348,56 +360,86 @@ class dexHeader:
 '''
 
 # I DO NOT believe DexOptHeader is the first header..
-class DexFile:
-	def __init__(self, binary_blob):
-		self.dexHeader = None
-		self.dexOptHeader = None
-		self.binary_blob = binary_blob
+global_DexFile = False # populated by is_valid_for_data, the first function called (even before init)
 
-	# HONESTLY NOT SURE WHAT THE POINT OF THIS IS
-	def getDexOptHeader(self):
-		if self.dexOptHeader is None:
-			self.dexOptHeader = dexOptHeader(self) # FIXME??
+class DexFile(dexHeader): # DexOptHeader not defined...
+	def __init__(self): # data is binaryView
+		dexHeader.__init__(self)
 
-		return self.dexOptHeader
+	# I believe "data" is the whole file
+	def print_metadata(self):
+		# https://docs.python.org/2/library/struct.html
+		# pretty sure we want "unpack" to take binary string, and print in readable format
 
-	def getDexHeader(self):
-		if self.dexHeader is None:
-			self.dexHeader = dexHeader(self)  # FIXME??
+		# DexOptHeader - these values seem wrong
+		#print "dexOffset: ", DexOptHeader_data.dexOffset()
+		#print "dexLength: ", DexOptHeader_data.dexLength()
+		#print "depsOffset: ", DexOptHeader_data.depsOffset()
+		#print "depsLength: ", DexOptHeader_data.depsLength()
+		#print "optOffset: ", DexOptHeader_data.optOffset()
+		#print "optLength: ", DexOptHeader_data.optLength()
 
-		return self.dexHeader
+		# DexHeader
+		# FIXME: we now inheirit these functions, which may need to be renamed to DexHeader_magic, dex_header_checksum, etc...
+		print "magic: ", self.magic()
+		print "checksum: ", self.checksum()
+		print "fileSize: ", self.fileSize()
+		print "protoIdsOff: ", self.protoIdsOff()
+		print "methodIdsOff: ", self.methodIdsOff()
+		print "dataSize: ", self.dataSize()
+		print "dataOff: ", self.dataOff()
 
+
+		# the following may be wrong -
+		'''
+		print "="*50
+		print "fileSize: ", dex_data.fileSize()
+		print "protoIdsOff", dex_data.protoIdsOff()
+		print "methodIdsOff", dex_data.methodIdsOff()
+		print "dataOff", dex_data.dataOff()
+		'''
+
+		print "="*50
+
+		#print "fileSize (?): ", fileSize
+		print ""
+
+
+	def getData(self):
+		# dataOffset is in dexHeader (I think) - pull the data starting at the offset and figure out what it is
+
+		pass
 
 
 class DEXViewUpdateNotification(BinaryDataNotification):
-		def __init__(self, view):
-				self.view = view
+	def __init__(self, view):
+		self.view = view
 
-		# FIXME: don't trust - pulled from NES.py
-		def data_written(self, view, offset, length):
-				addr = offset - self.view.rom_offset
-				while length > 0:
-						bank_ofs = addr & 0x3fff
-						if (bank_ofs + length) > 0x4000:
-								to_read = 0x4000 - bank_ofs
-						else:
-								to_read = length
-						if length < to_read:
-								to_read = length
-						if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
-								self.view.notify_data_written(0x8000 + bank_ofs, to_read)
-						elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
-								self.view.notify_data_written(0xc000 + bank_ofs, to_read)
-						length -= to_read
-						addr += to_read
+	# FIXME: don't trust - pulled from NES.py
+	def data_written(self, view, offset, length):
+		addr = offset - self.view.rom_offset
+		while length > 0:
+				bank_ofs = addr & 0x3fff
+				if (bank_ofs + length) > 0x4000:
+						to_read = 0x4000 - bank_ofs
+				else:
+						to_read = length
+				if length < to_read:
+						to_read = length
+				if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
+						self.view.notify_data_written(0x8000 + bank_ofs, to_read)
+				elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
+						self.view.notify_data_written(0xc000 + bank_ofs, to_read)
+				length -= to_read
+				addr += to_read
 
-		# FIXME: don't trust - pulled from NES.py
-		def data_inserted(self, view, offset, length):
-				self.view.notify_data_written(0x8000, 0x8000)
+	# FIXME: don't trust - pulled from NES.py
+	def data_inserted(self, view, offset, length):
+		self.view.notify_data_written(0x8000, 0x8000)
 
-		# FIXME: don't trust - pulled from NES.py
-		def data_removed(self, view, offset, length):
-				self.view.notify_data_written(0x8000, 0x8000)
+	# FIXME: don't trust - pulled from NES.py
+	def data_removed(self, view, offset, length):
+		self.view.notify_data_written(0x8000, 0x8000)
 
 
 # FIXME TODO
@@ -418,74 +460,45 @@ class DEX(Architecture):
 	def decode_instruction(self, data, addr):
 		pass
 
-# I believe "data" is the whole file
-def print_file_metadata(data):
-	dex_data = DexFile(data)
-
-	#DexOptHeader_data = dex_data.getDexOptHeader()
-	DexHeader_data = dex_data.getDexHeader()
-
-	# https://docs.python.org/2/library/struct.html
-	# pretty sure we want "unpack" to take binary string, and print in readable format
-
-	#print "magic: ", dex_data.magic()
-
-
-	# DexOptHeader - these values seem wrong
-	#print "dexOffset: ", DexOptHeader_data.dexOffset()
-	#print "dexLength: ", DexOptHeader_data.dexLength()
-	#print "depsOffset: ", DexOptHeader_data.depsOffset()
-	#print "depsLength: ", DexOptHeader_data.depsLength()
-	#print "optOffset: ", DexOptHeader_data.optOffset()
-	#print "optLength: ", DexOptHeader_data.optLength()
-
-	# DexHeader
-	print "magic: ", DexHeader_data.magic()
-	print "checksum: ", DexHeader_data.checksum()
-	print "fileSize: ", DexHeader_data.fileSize()
-	print "protoIdsOff: ", DexHeader_data.protoIdsOff()
-	print "methodIdsOff: ", DexHeader_data.methodIdsOff()
-	print "dataOff: ", DexHeader_data.dataOff()
-
-
-	# the following may be wrong -
-	'''
-	print "="*50
-	print "fileSize: ", dex_data.fileSize()
-	print "protoIdsOff", dex_data.protoIdsOff()
-	print "methodIdsOff", dex_data.methodIdsOff()
-	print "dataOff", dex_data.dataOff()
-	'''
-
-	print "="*50
-
-	#print "fileSize (?): ", fileSize
-	print ""
-
-
 
 # see NESView Example
-class DEXView(BinaryView):
+# pretty sure this is triggered when we do the "write" call...
+class DEXView(BinaryView, DexFile):
 	name = "DEX"
 	long_name = "Dalvik Executable"
 
 	def __init__(self, data):
-			BinaryView.__init__(self, data.file)
-			self.data = data
-			self.notification = DEXViewUpdateNotification(self) # TODO
-			self.data.register_notification(self.notification)
+		print "DEXView::__init__"
+
+		# data == BinaryView datatype
+		self.data = data # FIXME: is this what we can do DexFile() on?
+
+		BinaryView.__init__(self, data.file)
+		DexFile.__init__(self) # how do I make sure this has access to BinaryView... (to read from it)
+
+
+		self.notification = DEXViewUpdateNotification(self) # TODO
+		self.data.register_notification(self.notification)
+
+		self.print_metadata()
+
+		#if global_DexFile == False:
+			# where will I get the dex blob from?
+		#	pass
+
+		# this might be a better way to do it. Just create functions
+		#data.create_user_function(bv.platform, 0) # FAILURE TO CREATE VIEW..
 
 	@classmethod
 	def is_valid_for_data(self, data):
+		print "DEXView::is_valid_for_data"
+
 		hdr = data.read(0, 16)
 		if len(hdr) < 16:
 				return False
 		# magic - https://en.wikipedia.org/wiki/List_of_file_signatures
 		if hdr[0:8] != "dex\x0a035\x00": # dex file format
 				return False
-
-		# time to print debug headers
-		print_file_metadata(data)
 
 		return True
 
@@ -575,13 +588,21 @@ class DEXView(BinaryView):
 
 	# FIXME
 	def perform_get_entry_point(self):
-		print("[perform_get_entry_point]") # NOTE: not getting hit
+		#assert global_DexFile != False
+
+		#print "dexBinja::perform_get_entry_point", global_DexFile.getDexHeader().dataOff()
 
 			#return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
 
-		return struct.unpack("<H", "APPLE")[0] # FIXME: I believe it's a ptr @ 249, need to use self.perform_read
+		#return struct.unpack("<H", "APPLE")[0] # FIXME: I believe it's a ptr @ 249, need to use self.perform_read
 						# I'm Betting ptr @ 250 to be even..
 						# in my classes2.dex in tmp that ptr is 0x98e3 - this might be wrong
+
+		# GREPME
+		return self.dataOff()
+
+		return 0
+
 	'''
 		[DexOptHeader] - sizeof == 40
 		[DexHeader] - sizeof == 112
@@ -618,9 +639,9 @@ class DEXViewBank(DEXView):
 		DEXView.__init__(self, data)
 
 
-DEXViewBank.register()
+DEXViewBank.register() # so, currently depending on apkBinja NOT dexBinja.py....
 
-#DEX.register() # TODO
+DEX.register() # TODO
 
 
 # Architecture.register

@@ -6,7 +6,12 @@ import zipfile
 import tempfile
 import shutil
 
+#import dexBinja
 from dexBinja import *
+
+# just pull from dexBinja.py forf now
+#InstructionNames = dexBinja.InstructionNames
+#InstructionIL = dexBinja.InstructionIL
 
 class APKViewUpdateNotification(BinaryDataNotification):
 		def __init__(self, view):
@@ -43,6 +48,7 @@ class APK():
 	def __init__(self):
 		pass
 
+#global_DexFile = False
 
 # see NESView Example
 class APKView(BinaryView):
@@ -57,6 +63,8 @@ class APKView(BinaryView):
 
 	@classmethod
 	def is_valid_for_data(self, data):
+			# data == binaryninja.BinaryView
+
 			hdr = data.read(0, 16)
 			if len(hdr) < 16:
 					return False
@@ -66,18 +74,20 @@ class APKView(BinaryView):
 
 			tmp_dir_path = tempfile.mkdtemp()
 			tmp_apk_path = tmp_dir_path + "/binja.apk"
+			apk_size = os.path.getsize(data.file.filename)
 
 			# copy apk to tmp directory
 			shutil.copyfile(data.file.filename, tmp_apk_path)
 
 			z = zipfile.ZipFile(tmp_apk_path) # I don't think you can do from memory...
-			for item in z.filelist:
-				print item.filename # also ".orig_filename" might be useful
+			#for item in z.filelist:
+			#	print item.filename # also ".orig_filename" might be useful
 
 				# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
 
 			dex_file = "classes.dex"
 			dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
+
 
 			print "=================="
 			print dex_path
@@ -86,13 +96,30 @@ class APKView(BinaryView):
 			# read dex blob into memory
 			dex_blob = open(dex_path).read()
 
-			# pass dexPath to dexBinja.py
-			d = DexFile(dex_blob)
+			# pass dexPath to dexBinja.py - unnecessary, because we will kick this off in DEXViewBank
+			#global_DexFile = dexBinja.DexFile(dex_blob) # unnecessary
+
+			# do we just do:
+			# write(addr, data) # start at 0, and write everything?
+			fluff_size = apk_size - len(dex_blob)
+
+			print "about to overwrite everything with dex_blob"
+
+			# NOTE: this will switch control over to "DEXViewBank"
+			data.write(0, dex_blob + "\xff" * fluff_size) # how do we zero the rest? perform_remove?
+
+
+			# FIXME
+			# FIXME: "write" will want to overwrite the ACTUAL FILE, when in "hex view" it really should show the file..
+			# FIXME
+
+			# FIXME: we don't want to overwrite the hex view - or do we? the real goal is to have "dalvik executable" mode point to something useful like OnCreate
+			# FIXME: obviously this ^^ isn't correct
+
 
 			#
 			# TODO: now I have to operate on the classes.dex
 			#
-
 
 			return True
 
@@ -183,7 +210,10 @@ class APKView(BinaryView):
 			#return struct.unpack("<H", "APPLE")[0] # FIXME: being triggered - might crash it...
 
 			# how do I find this?
-			return 0
+			#print "apkBinja::perform_get_entry_point: ", global_DexFile.dataOff()
+			#return global_DexFile.dataOff() # unsure if correct
+
+			return 0 # currently this value will never be used, dexBinja will be used instead
 
 # TODO: how do you get apk - to run APK(blah) against it?
 
