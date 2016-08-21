@@ -1,5 +1,5 @@
 from binaryninja import *
-from dexFile import *
+from dexFile import DexFile, dexHeader, dexOptHeader
 import struct
 import traceback
 import hashlib # to validate SHA1 signature

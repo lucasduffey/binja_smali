@@ -6,8 +6,10 @@ import zipfile
 import tempfile
 import shutil
 
-#import dexBinja
+import dexBinja
 from dexBinja import *
+from dexBinja import DEXViewBank
+from dexFile import DexFile, dexHeader, dexOptHeader
 
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames
@@ -215,7 +217,7 @@ class APKView(BinaryView):
 
 # TODO: how do you get apk - to run APK(blah) against it?
 
-print("dexBinja")
+print("apkBinja")
 class APKViewBank(APKView):
 	name = "APK"
 	long_name = "android APK"
@@ -240,6 +242,9 @@ class APKViewBank(APKView):
 		'''
 
 APKViewBank.register()
+
+dexBinja.DEXViewBank.register() # so, currently depending on apkBinja NOT dexBinja.py....
+dexBinja.DEX.register() # TODO
 
 
 

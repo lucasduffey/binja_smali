@@ -1,3 +1,11 @@
+from binaryninja import *
+from dexFile import *
+import struct
+import traceback
+import hashlib # to validate SHA1 signature
+import zlib # to validate adler32 checksum
+import os
+
 '''
 DEX Structure - https://source.android.com/devices/tech/dalvik/dex-format.html (best resource)
 http://elinux.org/images/d/d9/A_deep_dive_into_dex_file_format--chiossi.pdf
@@ -14,7 +22,7 @@ IMPORTANT
 	# looking at dexparse.py - DexOptHeader seems to be the first header..
 # https://docs.python.org/2/library/struct.html
 # https://gist.github.com/ezterry/1239615
-
+'''
 class dexOptHeader:
 	def __init__(self):
 		pass
@@ -62,18 +70,20 @@ class dexOptHeader:
 
 		tmp = self.data.read(offset, 4)
 		return struct.unpack("<I", tmp)[0]
+'''
 
 #
 # in dexparse.py - the fp seeks to dexOptHdr.dexOffset
 #
-class dexHeader(dexOptHeader):
+class dexHeader():
 	def __init__(self):
-		dexOptHeader.__init__(self)
+		#dexOptHeader.__init__(self)
+		pass
 
 	# returns hex
 	# ubyte[8] = DEX_FILE_MAGIC
 	def magic(self):
-		result = self.data.read(0, 8)
+		result = self.data.read(0, 8) # FIXME: it says data is not defined
 
 		assert len(result) != 0
 
