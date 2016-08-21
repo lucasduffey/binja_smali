@@ -16,61 +16,10 @@ IMPORTANT
 
 '''
 
-
 # sizes of fields
 # look at dex.c -  DexHeader is the first header (is what it really seems to be)
-	# looking at dexparse.py - DexOptHeader seems to be the first header..
 # https://docs.python.org/2/library/struct.html
 # https://gist.github.com/ezterry/1239615
-'''
-class dexOptHeader:
-	def __init__(self):
-		pass
-
-	def dexOffset(self):
-		offset = 4
-
-		tmp = self.data.read(offset, 4)
-
-		print "|", len(tmp), "|"
-
-		return struct.unpack("<I", tmp)[0]
-
-	# assuming DexOptHeader is first header
-	def dexLength(self):
-		offset = 8
-
-		tmp = self.data.read(offset, 4)
-		return struct.unpack("<I", tmp)[0]
-
-	# assuming DexOptHeader is first header
-	def depsOffset(self):
-		offset = 16
-
-		tmp = self.data.read(offset, 4)
-		return struct.unpack("<I", tmp)[0]
-
-	# assuming DexOptHeader is first header
-	def depsLength(self):
-		offset = 20
-
-		tmp = self.data.read(offset, 4)
-		return struct.unpack("<I", tmp)[0]
-
-	# assuming DexOptHeader is first header
-	def optOffset(self):
-		offset = 24
-
-		tmp = self.data.read(offset, 4)
-		return struct.unpack("<I", tmp)[0]
-
-	# assuming DexOptHeader is first header
-	def optLength(self):
-		offset = 28
-
-		tmp = self.data.read(offset, 4)
-		return struct.unpack("<I", tmp)[0]
-'''
 
 #
 # in dexparse.py - the fp seeks to dexOptHdr.dexOffset
@@ -320,8 +269,6 @@ class dexHeader():
 
 		return struct.unpack("<I", _dataOff)[0] # TODO: verify
 
-# I DO NOT believe DexOptHeader is the first header..
-
 # https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
 # Decompiling Android book is very useful, but it's 4 years old..
 # ~/Documents/dexinfo/a.out
@@ -345,7 +292,7 @@ class dexHeader():
 #	* appears in the data section
 #	* alignment: none (byte-aligned)
 
-class DexFile(dexHeader): # DexOptHeader not defined...
+class DexFile(dexHeader):
 	def __init__(self): # data is binaryView
 		dexHeader.__init__(self)
 
@@ -389,14 +336,6 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 	def print_metadata(self):
 		# https://docs.python.org/2/library/struct.html
 		# pretty sure we want "unpack" to take binary string, and print in readable format
-
-		# DexOptHeader - these values seem wrong
-		#print "dexOffset: ", DexOptHeader_data.dexOffset()
-		#print "dexLength: ", DexOptHeader_data.dexLength()
-		#print "depsOffset: ", DexOptHeader_data.depsOffset()
-		#print "depsLength: ", DexOptHeader_data.depsLength()
-		#print "optOffset: ", DexOptHeader_data.optOffset()
-		#print "optLength: ", DexOptHeader_data.optLength()
 
 		# DexHeader
 		# FIXME: we now inheirit these functions, which may need to be renamed to DexHeader_magic, dex_header_checksum, etc...
