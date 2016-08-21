@@ -285,14 +285,36 @@ class dexHeader(dexOptHeader):
 
 
 	# TODO - validate
+	# format: uint = 0x12345678
 	def endian_tag(self):
-		pass
+
+		# int ENDIAN_CONSTANT = 0x12345678;
+
+		print "endian_tag isn't implemented"
+		assert False
 
 	# TODO - validate
+	# format: uint
 	def link_size(self):
 		pass
 
-	# linkSize (44 offset), linkOff
+	# TODO - validate
+	# format: uint
+	def link_off(self):
+		pass
+
+	# TODO - validate
+	# format: uint
+	# Purpose: offset from the start of the file to the map item. The offset, which must be non-zero, should be to an offset into the data section,
+	#  				and the data should be in the format specified by "map_list" below.
+	# Questions: what is the "map item"?
+	def map_off(self):
+		pass
+
+
+
+
+
 	# mapOff
 	# stringIdsSize, stringIdsOff,
 	# typeIdsSize, typeIdsOff
@@ -302,7 +324,7 @@ class dexHeader(dexOptHeader):
 	# TODO - validate
 	def protoIdsOff(self):
 		offset = 76
-		_protoIdsOff = self.data.read(offset, 4)[0:4]
+		_protoIdsOff = self.data.read(offset, 4)
 
 		return struct.unpack("<I", _protoIdsOff)[0] # TODO: verify
 
@@ -316,7 +338,88 @@ class dexHeader(dexOptHeader):
 
 		return struct.unpack("<I", _methodIdsOff)[0] # TODO: verify
 
-	# classDefsSize, classDefsOff
+
+	# each class_defs instance has a "class_data_off" field
+	def class_defs(self):
+		_class_defs_size = self.class_defs_size()
+		_class_defs_off = self.class_defs_off()
+
+		print "\nclass_defs_size: ", _class_defs_size, "\n"
+		print "\nclass_defs_off: ", hex(_class_defs_off), "\n"
+
+		#results = [] # list of class_def_item
+		raw_class_defs = self.data.read(_class_defs_off, _class_defs_size)
+
+		# split by class_def_item_size
+		class_def_item_size = 8*4 # 8 uints
+		results = [raw_class_defs[i:i+class_def_item_size] for i in range(0, len(raw_class_defs), class_def_item_size)]
+
+		# TODO: parse each all_class_defs - into a dict maybe?
+		for idx, result in enumerate(results):
+
+			print "class_defs: in enumerate loop"
+
+
+
+			class_data_off = result[4*6: 4*7]
+
+			print "len(class_data_off)", len(class_data_off)
+
+			class_data_off = struct.unpack("<I", class_data_off)[0]
+
+			# add the dex function to function list, TODO: finish
+			self.data.create_user_function(Architecture['dex'].standalone_platform, class_data_off) # AFAIK
+			# 1st arg was self.data.file.platform
+			# "bv.platform" - "bv" is not defined
+			# "self.platform" - might be valid....???
+
+			print "class_data_off:", hex(class_data_off)
+
+			pass
+
+		class_def_item = {
+			"class_idx": 0,
+			"access_flags": 0,
+			"superclass_idx": 0,
+			"interfaces_off": 0,
+			"source_file_idx": 0,
+			"annotations_off": 0,
+			"class_data_off": 0,
+			"static_values_off": 0
+		}
+
+		# TODO: get list of "class_data_off" items (a struct with 8 uints)
+		#print "class_def_item"
+
+		pass
+
+	# GREPME
+	# format: uint
+	# TODO - validate
+	def class_defs_size(self):
+		offset = 96 # AFAIK
+
+		result = self.data.read(offset, 4)
+		result = struct.unpack("<I", result)[0]
+
+		#print "\nclass_defs_size: ", result, "\n"
+
+		return result
+
+	# format: uint
+	# TODO - validate
+	# offset from the start of the file to the class definitions list, or 0 if class_defs_size == 0 (admittedly a strange edge case). The offset, if non-zero, should be to the start of the class_defs section.
+	def class_defs_off(self):
+		offset = 100 # AFAIK
+
+		result = self.data.read(offset, 4)
+		result = struct.unpack("<I", result)[0]
+
+		#print "\nclass_defs_off: ", result, "\n"
+
+		assert result < len(self.data.file.raw)
+
+		return result
 
 	# dataSize, dataOff (108)
 	# TODO - validate
@@ -378,6 +481,12 @@ class dexHeader(dexOptHeader):
 '''
 
 # TODO: DexFile should be passed bv.binary.raw, and parse that...
+
+# class_data_item - the juicy item AFAIK
+#	* referenced in class_def_item
+#	* appears in the data section
+#	* alignment: none (byte-aligned)
+
 class DexFile(dexHeader): # DexOptHeader not defined...
 	def __init__(self): # data is binaryView
 		dexHeader.__init__(self)
@@ -389,7 +498,7 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 		self.signature() - validated
 		self.file_size() - validated
 		self.header_size  - validated
-		endian_tag
+		endian_tag - skipped
 		link_size
 		link_offset
 		map_offset
@@ -440,6 +549,10 @@ class DexFile(dexHeader): # DexOptHeader not defined...
 		print "header_size: ", self.header_size()
 
 		# unvalidated
+		self.class_defs() # return object that includes: size, off
+		#print "class_defs_size: ",  # currently testing
+		#print "class_defs_off: ", self.class_defs() # currently testing
+
 		print "protoIdsOff: ", self.protoIdsOff()
 		print "methodIdsOff: ", self.methodIdsOff()
 		print "dataSize: ", self.dataSize()
@@ -472,6 +585,8 @@ class DEXViewUpdateNotification(BinaryDataNotification):
 		self.view = view
 
 	# FIXME: don't trust - pulled from NES.py
+	# NOTE: when you patche and write dex code
+	#	* must update checksum + signature + file size + something else?
 	def data_written(self, view, offset, length):
 		addr = offset - self.view.rom_offset
 		while length > 0:
@@ -500,7 +615,7 @@ class DEXViewUpdateNotification(BinaryDataNotification):
 
 # FIXME TODO
 class DEX(Architecture):
-	name = "??"
+	name = "dex"
 	address_size = 2 # TODO
 	default_int_size = 1 # TODO
 	regs = {
