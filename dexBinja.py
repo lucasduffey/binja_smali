@@ -26,41 +26,172 @@ DEX_MAGIC = "dex\x0a035\x00"
 
 # https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
 InstructionNames = [
-	'''
-        "nop", # "ora", None, None, None, "ora", "asl", None, # 0x00
-        "php", "ora", "asl@", None, None, "ora", "asl", None, # 0x08
-        "bpl", "ora", None, None, None, "ora", "asl", None, # 0x10
-        "clc", "ora", None, None, None, "ora", "asl", None, # 0x18
-        "jsr", "and", None, None, "bit", "and", "rol", None, # 0x20
-        "plp", "and", "rol@", None, "bit", "and", "rol", None, # 0x28
-        "bmi", "and", None, None, None, "and", "rol", None, # 0x30
-        "sec", "and", None, None, None, "and", "rol", None, # 0x38
-        "rti", "eor", None, None, None, "eor", "lsr", None, # 0x40
-        "pha", "eor", "lsr@", None, "jmp", "eor", "lsr", None, # 0x48
-        "bvc", "eor", None, None, None, "eor", "lsr", None, # 0x50
-        "cli", "eor", None, None, None, "eor", "lsr", None, # 0x58
-        "rts", "adc", None, None, None, "adc", "ror", None, # 0x60
-        "pla", "adc", "ror@", None, "jmp", "adc", "ror", None, # 0x68
-        "bvs", "adc", None, None, None, "adc", "ror", None, # 0x70
-        "sei", "adc", None, None, None, "adc", "ror", None, # 0x78
-        None, "sta", None, None, "sty", "sta", "stx", None, # 0x80
-        "dey", None, "txa", None, "sty", "sta", "stx", None, # 0x88
-        "bcc", "sta", None, None, "sty", "sta", "stx", None, # 0x90
-        "tya", "sta", "txs", None, None, "sta", None, None, # 0x98
-        "ldy", "lda", "ldx", None, "ldy", "lda", "ldx", None, # 0xa0
-        "tay", "lda", "tax", None, "ldy", "lda", "ldx", None, # 0xa8
-        "bcs", "lda", None, None, "ldy", "lda", "ldx", None, # 0xb0
-        "clv", "lda", "tsx", None, "ldy", "lda", "ldx", None, # 0xb8
-        "cpy", "cmp", None, None, "cpy", "cmp", "dec", None, # 0xc0
-        "iny", "cmp", "dex", None, "cpy", "cmp", "dec", None, # 0xc8
-        "bne", "cmp", None, None, None, "cmp", "dec", None, # 0xd0
-        "cld", "cmp", None, None, None, "cmp", "dec", None, # 0xd8
-        "cpx", "sbc", None, None, "cpx", "sbc", "inc", None, # 0xe0
-        "inx", "sbc", "nop", None, "cpx", "sbc", "inc", None, # 0xe8
-        "beq", "sbc", None, None, None, "sbc", "inc", None, # 0xf0
-        "sed", "sbc", None, None, None, "sbc", "inc", None # 0xf8
-	'''
+        "nop" # "ora", None, None, None, "ora", "asl", None, # 0x00
 ]
+# following list is for ^^
+'''
+"php", "ora", "asl@", None, None, "ora", "asl", None, # 0x08
+"bpl", "ora", None, None, None, "ora", "asl", None, # 0x10
+"clc", "ora", None, None, None, "ora", "asl", None, # 0x18
+"jsr", "and", None, None, "bit", "and", "rol", None, # 0x20
+"plp", "and", "rol@", None, "bit", "and", "rol", None, # 0x28
+"bmi", "and", None, None, None, "and", "rol", None, # 0x30
+"sec", "and", None, None, None, "and", "rol", None, # 0x38
+"rti", "eor", None, None, None, "eor", "lsr", None, # 0x40
+"pha", "eor", "lsr@", None, "jmp", "eor", "lsr", None, # 0x48
+"bvc", "eor", None, None, None, "eor", "lsr", None, # 0x50
+"cli", "eor", None, None, None, "eor", "lsr", None, # 0x58
+"rts", "adc", None, None, None, "adc", "ror", None, # 0x60
+"pla", "adc", "ror@", None, "jmp", "adc", "ror", None, # 0x68
+"bvs", "adc", None, None, None, "adc", "ror", None, # 0x70
+"sei", "adc", None, None, None, "adc", "ror", None, # 0x78
+None, "sta", None, None, "sty", "sta", "stx", None, # 0x80
+"dey", None, "txa", None, "sty", "sta", "stx", None, # 0x88
+"bcc", "sta", None, None, "sty", "sta", "stx", None, # 0x90
+"tya", "sta", "txs", None, None, "sta", None, None, # 0x98
+"ldy", "lda", "ldx", None, "ldy", "lda", "ldx", None, # 0xa0
+"tay", "lda", "tax", None, "ldy", "lda", "ldx", None, # 0xa8
+"bcs", "lda", None, None, "ldy", "lda", "ldx", None, # 0xb0
+"clv", "lda", "tsx", None, "ldy", "lda", "ldx", None, # 0xb8
+"cpy", "cmp", None, None, "cpy", "cmp", "dec", None, # 0xc0
+"iny", "cmp", "dex", None, "cpy", "cmp", "dec", None, # 0xc8
+"bne", "cmp", None, None, None, "cmp", "dec", None, # 0xd0
+"cld", "cmp", None, None, None, "cmp", "dec", None, # 0xd8
+"cpx", "sbc", None, None, "cpx", "sbc", "inc", None, # 0xe0
+"inx", "sbc", "nop", None, "cpx", "sbc", "inc", None, # 0xe8
+"beq", "sbc", None, None, None, "sbc", "inc", None, # 0xf0
+"sed", "sbc", None, None, None, "sbc", "inc", None # 0xf8
+'''
+
+NONE = 0
+ABS = 1
+ABS_DEST = 2
+ABS_X = 3
+ABS_X_DEST = 4
+ABS_Y = 5
+ABS_Y_DEST = 6
+ACCUM = 7
+ADDR = 8
+IMMED = 9
+IND = 10
+IND_X = 11
+IND_X_DEST = 12
+IND_Y = 13
+IND_Y_DEST = 14
+REL = 15
+ZERO = 16
+ZERO_DEST = 17
+ZERO_X = 18
+ZERO_X_DEST = 19
+ZERO_Y = 20
+ZERO_Y_DEST = 21
+
+InstructionOperandTypes = [
+	NONE
+]
+'''
+	IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x00
+	NONE, IMMED, ACCUM, NONE, NONE, ABS, ABS_DEST, NONE, # 0x08
+	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x10
+	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x18
+	ADDR, IND_X, NONE, NONE, ZERO, ZERO, ZERO_DEST, NONE, # 0x20
+	NONE, IMMED, ACCUM, NONE, ABS, ABS, ABS_DEST, NONE, # 0x28
+	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x30
+	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x38
+	NONE, IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x40
+	NONE, IMMED, ACCUM, NONE, ADDR, ABS, ABS_DEST, NONE, # 0x48
+	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x50
+	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x58
+	NONE, IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x60
+	NONE, IMMED, ACCUM, NONE, IND, ABS, ABS_DEST, NONE, # 0x68
+	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x70
+	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x78
+	NONE, IND_X_DEST, NONE, NONE, ZERO_DEST, ZERO_DEST, ZERO_DEST, NONE, # 0x80
+	NONE, NONE, NONE, NONE, ABS_DEST, ABS_DEST, ABS_DEST, NONE, # 0x88
+	REL, IND_Y_DEST, NONE, NONE, ZERO_X_DEST, ZERO_X_DEST, ZERO_Y_DEST, NONE, # 0x90
+	NONE, ABS_Y_DEST, NONE, NONE, NONE, ABS_X_DEST, NONE, NONE, # 0x98
+	IMMED, IND_X, IMMED, NONE, ZERO, ZERO, ZERO, NONE, # 0xa0
+	NONE, IMMED, NONE, NONE, ABS, ABS, ABS, NONE, # 0xa8
+	REL, IND_Y, NONE, NONE, ZERO_X, ZERO_X, ZERO_Y, NONE, # 0xb0
+	NONE, ABS_Y, NONE, NONE, ABS_X, ABS_X, ABS_Y, NONE, # 0xb8
+	IMMED, IND_X, NONE, NONE, ZERO, ZERO, ZERO_DEST, NONE, # 0xc0
+	NONE, IMMED, NONE, NONE, ABS, ABS, ABS_DEST, NONE, # 0xc8
+	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0xd0
+	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0xd8
+	IMMED, IND_X, NONE, NONE, ZERO, ZERO, ZERO_DEST, NONE, # 0xe0
+	NONE, IMMED, NONE, NONE, ABS, ABS, ABS_DEST, NONE, # 0xe8
+	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0xf0
+	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE # 0xf8
+'''
+
+OperandLengths = [
+	0, # NONE
+	2, # ABS
+	2, # ABS_DEST
+	2, # ABS_X
+	2, # ABS_X_DEST
+	2, # ABS_Y
+	2, # ABS_Y_DEST
+	0, # ACCUM
+	2, # ADDR
+	1, # IMMED
+	2, # IND
+	1, # IND_X
+	1, # IND_X_DEST
+	1, # IND_Y
+	1, # IND_Y_DEST
+	1, # REL
+	1, # ZERO
+	1, # ZREO_DEST
+	1, # ZERO_X
+	1, # ZERO_X_DEST
+	1, # ZERO_Y
+	1  # ZERO_Y_DEST
+]
+
+# used for perform_get_instruction_text
+OperandTokens = [
+	lambda value: [] # NONE
+]
+# below comment is for OperandTokens
+'''
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ABS
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ABS_DEST
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ABS_X
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ABS_X_DEST
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ABS_Y
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ABS_Y_DEST
+	lambda value: [InstructionTextToken(RegisterToken, "a")], # ACCUM
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ADDR
+	lambda value: [InstructionTextToken(TextToken, "#"), InstructionTextToken(IntegerToken, "$%.2x" % value, value)], # IMMED
+	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(TextToken, "]")], # IND
+	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x"),
+		InstructionTextToken(TextToken, "]")], # IND_X
+	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x"),
+		InstructionTextToken(TextToken, "]")], # IND_X_DEST
+	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, "], "), InstructionTextToken(RegisterToken, "y")], # IND_Y
+	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, "], "), InstructionTextToken(RegisterToken, "y")], # IND_Y_DEST
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # REL
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value)], # ZERO
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value)], # ZERO_DEST
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ZERO_X
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ZERO_X_DEST
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ZERO_Y
+	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")] # ZERO_Y_DEST
+'''
 
 InstructionIL = {
 	"adc": lambda il, operand: il.set_reg(1, "a", il.add_carry(1, il.reg(1, "a"), operand, flags = "*")),
@@ -134,11 +265,6 @@ IMPORTANT
 .read(offset, 4) # last arg is the "count", not the "last idex to read"
 
 '''
-
-InstructionNames = [
-	'''
-	'''
-]
 
 
 # sizes of fields
@@ -355,7 +481,9 @@ class dexHeader(dexOptHeader):
 		results = [raw_class_defs[i:i+class_def_item_size] for i in range(0, len(raw_class_defs), class_def_item_size)]
 
 		# TODO: parse each all_class_defs - into a dict maybe?
-		for idx, result in enumerate(results):
+		#for idx, result in enumerate(results):
+		for idx in range(3): # FIXME: so, when it crashes for some reason it actually shows the functions.. maybe because the Arch hasn't failed....??
+			result = results[idx]
 
 			print "class_defs: in enumerate loop"
 
@@ -368,12 +496,18 @@ class dexHeader(dexOptHeader):
 			class_data_off = struct.unpack("<I", class_data_off)[0]
 
 			# add the dex function to function list, TODO: finish
+			print "create_user_function: ", hex(class_data_off)
+
+			#log(1, "example debug log 1")
+			#log(2, "example debug log 2")
 			self.data.create_user_function(Architecture['dex'].standalone_platform, class_data_off) # AFAIK
 			# 1st arg was self.data.file.platform
 			# "bv.platform" - "bv" is not defined
 			# "self.platform" - might be valid....???
 
 			print "class_data_off:", hex(class_data_off)
+
+
 
 			pass
 
@@ -614,23 +748,101 @@ class DEXViewUpdateNotification(BinaryDataNotification):
 
 
 # FIXME TODO
+# https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+# https://source.android.com/devices/tech/dalvik/dex-format.html
+# smali is the "bytecode"
+'''
+registers are considered 32 bits wide. Adjacent register pairs are used for 64-bit values. There is no alignment requirement for register pairs.
+
+The storage unit in the instruction stream is a 16-bit unsigned quantity. Some bits in some instructions are ignored / must-be-zero.
+'''
 class DEX(Architecture):
 	name = "dex"
-	address_size = 2 # TODO
+	address_size = 2 # TODO - doesn't seem to impact size of data in "decode_instruction"
 	default_int_size = 1 # TODO
 	regs = {
-			"a": RegisterInfo("a", 1), # TODO
-			"x": RegisterInfo("x", 1), # TODO
-			"y": RegisterInfo("y", 1), # TODO
-			"s": RegisterInfo("s", 1) # TODO
+		# register-based, and frames are fixed in size upon creation
+		"r0": RegisterInfo("r0", 1), # TODO
+		"r1": RegisterInfo("r1", 1), # TODO
+		"r2": RegisterInfo("r2", 1), # TODO
+		"r3": RegisterInfo("r3", 1), # TODO
+		"r4": RegisterInfo("r4", 1), # TODO
+		"r5": RegisterInfo("r5", 1), # TODO
+
+		"r13": RegisterInfo("r5", 1) # stack pointer (SP), which isn't used in dalvik
+		# TODO: more
+
+
 	}
-	stack_pointer = "s" # TODO
+	stack_pointer = "r13" # TODO - no stack in dalvik? - techically R13 or SP, FIXME: this shouldn't be required by binja
 	flags = ["c", "z", "i", "d", "b", "v", "s"] # TODO
 	flag_write_types = ["*", "czs", "zvs", "zs"] # TODO
 
 	def decode_instruction(self, data, addr):
-		pass
+		if len(data) < 1:
+			return None, None, None, None
 
+		opcode = ord(data[0])
+
+		# temp hack - will be elimated when I fully populate InstructionNames list
+		if opcode >= len(InstructionNames):
+			return None, None, None, None
+
+		#log(2, "opcode: %s" % str(opcode))
+
+		instr = InstructionNames[opcode]
+		if instr is None:
+			return None, None, None, None
+
+		operand = InstructionOperandTypes[opcode] # TODO
+		#log(2, "operand: %s" % str(operand))
+
+		length = 1 + OperandLengths[operand] # TODO
+		#log(2, "length: %s" % str(length))
+
+		if len(data) < length:
+			return None, None, None, None
+
+		# len(data) == 16, why??
+		#log(2, "decode_instruction, len(data): %i" % len(data))
+
+		print data.encode('hex')
+
+		value = None # for the NOP
+		return instr, operand, length, value
+
+	# first one called
+	def perform_get_instruction_info(self, data, addr):
+		#log(2, "perform_get_instruction_info")
+
+		instr, operand, length, value = self.decode_instruction(data, addr)
+		if instr is None:
+			return None
+
+		result = InstructionInfo()
+		result.length = length
+
+		#
+		# TODO: implement jumps and other oddities
+		#
+
+		return result
+
+
+	def perform_get_instruction_text(self, data, addr):
+		#log(2, "perform_get_instruction_text")
+
+		instr, operand, length, value = self.decode_instruction(data, addr)
+		if instr is None:
+			return None
+
+		# I don't think we control "InstructionTextToken"
+
+		tokens = []
+		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr.replace("@", "")))
+		tokens += OperandTokens[operand](value)
+		return tokens, length
+	
 
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
@@ -638,13 +850,12 @@ class DEXView(BinaryView, DexFile):
 	name = "DEX"
 	long_name = "Dalvik Executable"
 
+	# data == BinaryView datatype
 	def __init__(self, data):
 		print "DEXView::__init__"
-
-		# data == BinaryView datatype
-		self.data = data # FIXME: is this what we can do DexFile() on?
-
 		BinaryView.__init__(self, data.file)
+
+		self.data = data # FIXME: is this what we can do DexFile() on?
 		DexFile.__init__(self) # how do I make sure this has access to BinaryView... (to read from it)
 
 		self.notification = DEXViewUpdateNotification(self) # TODO
@@ -672,6 +883,7 @@ class DEXView(BinaryView, DexFile):
 	def init(self):
 		try:
 			# TODO: look at NES.py
+			self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
 
 			return True
 		except:
@@ -757,13 +969,12 @@ class DEXView(BinaryView, DexFile):
 		dataOff = self.dataOff()
 		fileSize = len(self.data.file.raw) # TODO: is this checking size of APK, or size of dex...
 
-		print "dexBinja::perform_get_entry_point: ", hex(dataOff), ", file size: ", hex(fileSize)
+		print "dexBinja::perform_get_entry_point: ", dataOff, "hex(dataOff): ", hex(dataOff), ", file size: ", fileSize
 
 		assert dataOff <= fileSize
 
 		return dataOff
 
-		return 0
 
 	'''
 		[DexOptHeader] - sizeof == 40
