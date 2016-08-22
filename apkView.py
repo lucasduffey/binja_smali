@@ -6,9 +6,8 @@ import zipfile
 import tempfile
 import shutil
 
-import dexBinja
-from dexBinja import *
-from dexBinja import DEXViewBank
+import dexView # TODO: remove this line?
+from dexView import *
 from dexFile import DexFile
 
 # just pull from dexBinja.py forf now
