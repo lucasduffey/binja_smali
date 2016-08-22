@@ -269,9 +269,9 @@ OperandTokens = [
 	lambda value: [], # TODO: actually implement....
 
 	# MOVE_16
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value >> 8]), # maybe?  - FAIL: (value >> 8), (value >> 16)
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
 		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF])], # definitely wrong
+		InstructionTextToken(RegisterToken, RegisterNames[value >> 8])],
 
 	# MOVE_WIDE
 	lambda value: [], # NONE
@@ -544,7 +544,7 @@ class DEX(Architecture):
 
 		# I don't think we control "InstructionTextToken"
 
-		'''
+
 		if operand == 3:
 			print "value: ", value # it's the bytes
 			print "type(value): ", type(value) # type "int"
@@ -555,7 +555,7 @@ class DEX(Architecture):
 			print "value >> 6: ", (value >> 6)
 			print "value >> 8: ", (value >> 8) # pretty sure this is supposed to be first one..
 			print "================"
-		'''
+		
 
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")

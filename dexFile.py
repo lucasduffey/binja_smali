@@ -146,43 +146,91 @@ class dexHeader():
 	def map_off(self):
 		pass
 
+	########################################
 
-	# mapOff
-	# stringIdsSize, stringIdsOff,
-	# typeIdsSize, typeIdsOff
-	# protoIdsSize, protoIdsOff,
+	# string_ids_size, string_ids_off
+	def string_ids(self):
+		string_ids_size_offset = 56
+		string_ids_off_offset = 60
 
-	# 76 offset
+		string_ids_size = self.binary_blob[string_ids_size_offset: string_ids_size_offset+4]
+		string_ids_size = struct.unpack("<I", string_ids_size)[0]
+		# FIXME: loot at class_defs for how to calculate size in bytes
+
+		string_ids_off = self.binary_blob[string_ids_off_offset: string_ids_off_offset+4]
+		string_ids_off = struct.unpack("<I", string_ids_off)[0]
+
+	# type_ids_size, type_ids_off
+	def type_ids(self):
+		type_ids_size_offset = 64
+		type_ids_off_offset = 68
+
+		type_ids_size = self.binary_blob[type_ids_size_offset: type_ids_size_offset+4]
+		type_ids_size = struct.unpack("<I", type_ids_size)[0]
+		# FIXME: loot at class_defs for how to calculate size in bytes
+
+		type_ids_off = self.binary_blob[type_ids_off_offset: type_ids_off_offset+4]
+		type_ids_off = struct.unpack("<I", type_ids_off)[0]
+
+	# pulls proto_ids_size, proto_ids_off
+	def proto_ids(self):
+		proto_ids_size_offset = 72
+		proto_ids_off_offset = 76
+
+		proto_ids_size = self.binary_blob[proto_ids_size_offset: proto_ids_size_offset+4]
+		proto_ids_size = struct.unpack("<I", proto_ids_size)[0]
+		# FIXME: loot at class_defs for how to calculate size in bytes
+
+		proto_ids_off = self.binary_blob[proto_ids_off_offset: proto_ids_off_offset+4]
+		proto_ids_off = struct.unpack("<I", proto_ids_off)[0]
+
+	# pulls field_ids_size, field_ids_off
+	def field_ids(self):
+		field_ids_size_offset = 80
+		field_ids_off_offset = 84
+
+		field_ids_size = self.binary_blob[field_ids_size_offset: field_ids_size_offset+4]
+		field_ids_size = struct.unpack("<I", field_ids_size)[0]
+		# FIXME: loot at class_defs for how to calculate size in bytes
+
+		field_ids_off = self.binary_blob[field_ids_off_offset: field_ids_off_offset+4]
+		field_ids_off = struct.unpack("<I", field_ids_off)[0]
+
+
 	# TODO - validate
-	def protoIdsOff(self):
-		offset = 76
-		_protoIdsOff = self.binary_blob[offset: offset+4]
+	# pulls method_ids_size, method_ids_off
+	def method_ids(self):
+		method_ids_size_offset = 88
+		method_ids_off_offset = 92
 
-		return struct.unpack("<I", _protoIdsOff)[0] # TODO: verify
+		method_ids_size = self.binary_blob[method_ids_size_offset: method_ids_size_offset+4]
+		method_ids_size = struct.unpack("<I", method_ids_size)[0]
+		# FIXME: loot at class_defs for how to calculate size in bytes
 
-	# fieldIdsSize, fieldIdsOff
+		method_ids_off = self.binary_blob[method_ids_off_offset: method_ids_off_offset+4]
+		method_ids_off = struct.unpack("<I", _methodIdsOff)[0]
 
-	# methodIdsSize, methodIdsOff (92 offset)
-	# TODO - validate
-	def methodIdsOff(self):
-		offset = 92
-		_methodIdsOff = self.binary_blob[offset: offset+4]
-
-		return struct.unpack("<I", _methodIdsOff)[0] # TODO: verify
-
+		# TODO: now carve out method_ids
+		method_ids_data = self.binary_blob[method_ids_off: method_ids_off+method_ids_size]
 
 	# each class_defs instance has a "class_data_off" field
 	def class_defs(self):
-		_class_defs_size = self.class_defs_size()
-		_class_defs_off = self.class_defs_off()
+		class_defs_size_offset = 96 # AFAIK
+		class_defs_off_offset = 100 # AFAIK
+
+		class_defs_size = self.binary_blob[class_defs_size_offset: class_defs_size_offset+4]
+		class_defs_size = struct.unpack("<I", class_defs_size)[0]
+
+		class_defs_off = self.binary_blob[class_defs_off_offset: class_defs_off_offset+4]
+		class_defs_off = struct.unpack("<I", class_defs_off)[0]
 
 		print "\n===============================\n"
-		print "class_defs_size: ", _class_defs_size, "\n"
-		print "class_defs_off: ", hex(_class_defs_off), "\n"
+		print "class_defs_size: ", class_defs_size, "\n"
+		print "class_defs_off: ", hex(class_defs_off), "\n"
 
 		#results = [] # list of class_def_item
-		_class_defs_bytes = _class_defs_size*8*4 # class_def_item has 8 uints
-		raw_class_defs = self.binary_blob[_class_defs_off: _class_defs_off+ _class_defs_bytes]
+		_class_defs_bytes = class_defs_size*8*4 # class_def_item has 8 uints
+		raw_class_defs = self.binary_blob[class_defs_off: class_defs_off+ _class_defs_bytes]
 
 		# split by class_def_item_size
 		class_def_item_size = 8*4 # 8 uints
@@ -232,54 +280,25 @@ class dexHeader():
 		# TODO: get list of "class_data_off" items (a struct with 8 uints)
 		#print "class_def_item"
 
-
-	# GREPME
-	# format: uint
-	# TODO - validate
-	def class_defs_size(self):
-		offset = 96 # AFAIK
-
-		result = self.binary_blob[offset: offset+4]
-		result = struct.unpack("<I", result)[0]
-
-		#print "\nclass_defs_size: ", result, "\n"
-
-		return result
-
-	# format: uint
-	# TODO - validate
-	# offset from the start of the file to the class definitions list, or 0 if class_defs_size == 0 (admittedly a strange edge case). The offset, if non-zero, should be to the start of the class_defs section.
-	def class_defs_off(self):
-		offset = 100 # AFAIK
-
-		result = self.binary_blob[offset: offset+4]
-		result = struct.unpack("<I", result)[0]
-
-		#print "\nclass_defs_off: ", result, "\n"
-
-		assert result < self.binary_blob_length
-
-		return result
-
 	# dataSize, dataOff (108)
 	# TODO - validate
 
-	# complicated - becaus
-	def dataSize(self):
-		offset = 104 # unknown if this is correct..
-		_dataOff = self.binary_blob[offset: offset+4]
+	# collision?
+	# handles data_size, data_off
+	def data(self):
+		data_size_offset = 104
+		data_off_offset = 108
 
-		return struct.unpack("<I", _dataOff)[0] # TODO: verify
+		data_size = self.binary_blob[data_off_offset: data_off_offset+4]
+		data_size = struct.unpack("<I", data_size)[0]
+		# FIXME: loot at class_defs for how to calculate size in bytes
 
-	# TODO - validate
-	def dataOff(self):
-		offset = 108 # I believe this is correct
-		_dataOff = self.binary_blob[offset:offset + 4]
+		data_off = self.binary_blob[data_off_offset:data_off_offset + 4]
+		data_off = struct.unpack("<I", data_off)[0]
 
-		# print len(_dataOff)
-		assert len(_dataOff) > 0 # TODO: be more specific
-
-		return struct.unpack("<I", _dataOff)[0] # TODO: verify
+	def link_data(self):
+		print "link_data not yet implemented"
+		assert False
 
 # https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
 # Decompiling Android book is very useful, but it's 4 years old..
@@ -362,28 +381,7 @@ class DexFile(dexHeader):
 
 		# unvalidated
 		self.class_defs() # return object that includes: size, off
-		#print "class_defs_size: ",  # currently testing
-		#print "class_defs_off: ", self.class_defs() # currently testing
 
-		print "protoIdsOff: ", self.protoIdsOff()
-		print "methodIdsOff: ", self.methodIdsOff()
-		print "dataSize: ", self.dataSize()
-		#print "dataOff: ", self.dataOff()
-
-
-		# the following may be wrong -
-		'''
-		print "="*50
-		print "fileSize: ", dex_data.fileSize()
-		print "protoIdsOff", dex_data.protoIdsOff()
-		print "methodIdsOff", dex_data.methodIdsOff()
-		print "dataOff", dex_data.dataOff()
-		'''
-
-		print "="*50
-
-		#print "fileSize (?): ", fileSize
-		print ""
 
 
 	def getData(self):
