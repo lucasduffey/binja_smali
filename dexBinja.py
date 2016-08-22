@@ -26,9 +26,19 @@ DEX_MAGIC = "dex\x0a035\x00"
 # export PYTHONPATH=$PYTHONPATH:$HOME/binaryninja/python
 
 # https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+# https://source.android.com/devices/tech/dalvik/instruction-formats.html
 # http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
+
+# TODO: verify accuracy - http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
+# the "None" ones - are ones I didn't feel like copy-pasting
 InstructionNames = [
-		"nop", "move" # "ora", None, None, None, "ora", "asl", None, # 0x00
+	"nop", "move", "move/from16", "move/16", "move-wide", "move-wide/from16", "move-wide/16", "move-object", "move-object/from16", # 0x00
+    "move-object/16", "move-result", "move-result-wide", "move-result-object", "move-exception", "return-void", "return", "return-wide", # 0x8
+    "return-object", "const/4", "const/16", "const", "const/high16", "const-wide/16", "const-wide/32", "const-wide", "const-wide/high16"
+    "const-string", "const-string-jumbo", "const-class", "monitor-enter", "monitor-exit", "check-cast", "instance-of", "array-length",
+    "new-instance", "new-array", "filled-new-array", None, None, None, "throw", "goto", None, None, None, None, None
+
+    # etc.. there are a LOT
 ]
 # following list is for ^^
 '''
@@ -146,7 +156,7 @@ InstructionOperandTypes = [
 '''
 
 OperandLengths = [
-	0, # NONE
+	0, # NONE - nop is either '00' or '0000' - not 100% certain
 	1, # MOVE - TODO: validate/verify
 
 	2, # ABS_DEST
@@ -174,9 +184,9 @@ OperandLengths = [
 # used for perform_get_instruction_text
 OperandTokens = [
 	lambda value: [], # NONE
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]), # last byte
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
 		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])] # MOVE - FIXME: this is wrong FIXME  move, vx, vy
+		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])] # MOVE
 ]
 
 InstructionIL = {
