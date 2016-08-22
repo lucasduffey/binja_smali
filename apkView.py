@@ -219,7 +219,7 @@ class APKView(BinaryView):
 
 # TODO: how do you get apk - to run APK(blah) against it?
 
-print("apkBinja")
+print("apkView")
 class APKViewBank(APKView):
 	name = "APK"
 	long_name = "android APK"
