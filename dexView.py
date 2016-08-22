@@ -600,7 +600,7 @@ class DEXView(BinaryView, DexFile):
 		#dataOff = tmp.dataOff()
 		#fileSize = len(self.data.file.raw) # TODO: is this checking size of APK, or size of dex...
 
-		#print "dexBinja::perform_get_entry_point: ", dataOff, "hex(dataOff): ", hex(dataOff), ", file size: ", fileSize
+		#print "dexView::perform_get_entry_point: ", dataOff, "hex(dataOff): ", hex(dataOff), ", file size: ", fileSize
 
 		#assert dataOff <= fileSize
 
@@ -609,7 +609,7 @@ class DEXView(BinaryView, DexFile):
 		# return 0 for now, since perform_get_entry_point gets called before __init__ it overcomplicates some stuff...
 		return int(0) # for some reason I frequently get "0x0 isn't valid entry point"..
 
-print("dexBinja - for real")
+print("dexView - for real")
 print("test against classes2.dex - because there is actually dex code..")
 class DEXViewBank(DEXView):
 	name = "DEX"
