@@ -46,40 +46,6 @@ InstructionNames = [
 
 	# etc.. there are a LOT
 ]
-# following list is for ^^
-'''
-"php", "ora", "asl@", None, None, "ora", "asl", None, # 0x08
-"bpl", "ora", None, None, None, "ora", "asl", None, # 0x10
-"clc", "ora", None, None, None, "ora", "asl", None, # 0x18
-"jsr", "and", None, None, "bit", "and", "rol", None, # 0x20
-"plp", "and", "rol@", None, "bit", "and", "rol", None, # 0x28
-"bmi", "and", None, None, None, "and", "rol", None, # 0x30
-"sec", "and", None, None, None, "and", "rol", None, # 0x38
-"rti", "eor", None, None, None, "eor", "lsr", None, # 0x40
-"pha", "eor", "lsr@", None, "jmp", "eor", "lsr", None, # 0x48
-"bvc", "eor", None, None, None, "eor", "lsr", None, # 0x50
-"cli", "eor", None, None, None, "eor", "lsr", None, # 0x58
-"rts", "adc", None, None, None, "adc", "ror", None, # 0x60
-"pla", "adc", "ror@", None, "jmp", "adc", "ror", None, # 0x68
-"bvs", "adc", None, None, None, "adc", "ror", None, # 0x70
-"sei", "adc", None, None, None, "adc", "ror", None, # 0x78
-None, "sta", None, None, "sty", "sta", "stx", None, # 0x80
-"dey", None, "txa", None, "sty", "sta", "stx", None, # 0x88
-"bcc", "sta", None, None, "sty", "sta", "stx", None, # 0x90
-"tya", "sta", "txs", None, None, "sta", None, None, # 0x98
-"ldy", "lda", "ldx", None, "ldy", "lda", "ldx", None, # 0xa0
-"tay", "lda", "tax", None, "ldy", "lda", "ldx", None, # 0xa8
-"bcs", "lda", None, None, "ldy", "lda", "ldx", None, # 0xb0
-"clv", "lda", "tsx", None, "ldy", "lda", "ldx", None, # 0xb8
-"cpy", "cmp", None, None, "cpy", "cmp", "dec", None, # 0xc0
-"iny", "cmp", "dex", None, "cpy", "cmp", "dec", None, # 0xc8
-"bne", "cmp", None, None, None, "cmp", "dec", None, # 0xd0
-"cld", "cmp", None, None, None, "cmp", "dec", None, # 0xd8
-"cpx", "sbc", None, None, "cpx", "sbc", "inc", None, # 0xe0
-"inx", "sbc", "nop", None, "cpx", "sbc", "inc", None, # 0xe8
-"beq", "sbc", None, None, None, "sbc", "inc", None, # 0xf0
-"sed", "sbc", None, None, None, "sbc", "inc", None # 0xf8
-'''
 
 RegisterNames = [
 	"v0", # I believe 0 == v0
@@ -135,28 +101,6 @@ CONST = 20
 CONST_HIGH16 = 21
 CONST_WIDE16 = 22
 
-#ABS = 1
-ABS_DEST = 2
-ABS_X = 3
-ABS_X_DEST = 4
-ABS_Y = 5
-ABS_Y_DEST = 6
-ACCUM = 7
-ADDR = 8
-IMMED = 9
-IND = 10
-IND_X = 11
-IND_X_DEST = 12
-IND_Y = 13
-IND_Y_DEST = 14
-REL = 15
-ZERO = 16
-ZERO_DEST = 17
-ZERO_X = 18
-ZERO_X_DEST = 19
-ZERO_Y = 20
-ZERO_Y_DEST = 21
-
 InstructionOperandTypes = [
 	NONE, MOVE,
 
@@ -186,40 +130,6 @@ InstructionOperandTypes = [
 	# FIXME TODO
 	NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,
 ]
-'''
-	IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x00
-	NONE, IMMED, ACCUM, NONE, NONE, ABS, ABS_DEST, NONE, # 0x08
-	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x10
-	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x18
-	ADDR, IND_X, NONE, NONE, ZERO, ZERO, ZERO_DEST, NONE, # 0x20
-	NONE, IMMED, ACCUM, NONE, ABS, ABS, ABS_DEST, NONE, # 0x28
-	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x30
-	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x38
-	NONE, IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x40
-	NONE, IMMED, ACCUM, NONE, ADDR, ABS, ABS_DEST, NONE, # 0x48
-	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x50
-	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x58
-	NONE, IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x60
-	NONE, IMMED, ACCUM, NONE, IND, ABS, ABS_DEST, NONE, # 0x68
-	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0x70
-	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0x78
-	NONE, IND_X_DEST, NONE, NONE, ZERO_DEST, ZERO_DEST, ZERO_DEST, NONE, # 0x80
-	NONE, NONE, NONE, NONE, ABS_DEST, ABS_DEST, ABS_DEST, NONE, # 0x88
-	REL, IND_Y_DEST, NONE, NONE, ZERO_X_DEST, ZERO_X_DEST, ZERO_Y_DEST, NONE, # 0x90
-	NONE, ABS_Y_DEST, NONE, NONE, NONE, ABS_X_DEST, NONE, NONE, # 0x98
-	IMMED, IND_X, IMMED, NONE, ZERO, ZERO, ZERO, NONE, # 0xa0
-	NONE, IMMED, NONE, NONE, ABS, ABS, ABS, NONE, # 0xa8
-	REL, IND_Y, NONE, NONE, ZERO_X, ZERO_X, ZERO_Y, NONE, # 0xb0
-	NONE, ABS_Y, NONE, NONE, ABS_X, ABS_X, ABS_Y, NONE, # 0xb8
-	IMMED, IND_X, NONE, NONE, ZERO, ZERO, ZERO_DEST, NONE, # 0xc0
-	NONE, IMMED, NONE, NONE, ABS, ABS, ABS_DEST, NONE, # 0xc8
-	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0xd0
-	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE, # 0xd8
-	IMMED, IND_X, NONE, NONE, ZERO, ZERO, ZERO_DEST, NONE, # 0xe0
-	NONE, IMMED, NONE, NONE, ABS, ABS, ABS_DEST, NONE, # 0xe8
-	REL, IND_Y, NONE, NONE, NONE, ZERO_X, ZERO_X_DEST, NONE, # 0xf0
-	NONE, ABS_Y, NONE, NONE, NONE, ABS_X, ABS_X_DEST, NONE # 0xf8
-'''
 
 OperandLengths = [
 	0, # NONE - nop is either '00' or '0000' - not 100% certain
