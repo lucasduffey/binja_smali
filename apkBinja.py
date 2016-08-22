@@ -105,6 +105,8 @@ class APKView(BinaryView):
 			print "about to overwrite everything with dex_blob"
 
 			# NOTE: this will switch control over to "DEXViewBank"
+
+			# FIXME: replace "data" with "self"??
 			data.write(0, dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
 			data.remove(len(dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 

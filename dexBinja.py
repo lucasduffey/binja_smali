@@ -8,6 +8,12 @@ import os
 
 DEX_MAGIC = "dex\x0a035\x00"
 
+'''
+OPCODES NEEDED
+* B3
+'''
+
+
 # ~/binaryninja/binaryninja /home/noot/CTF/tmp/classes2.dex
 	# they already did it https://gist.github.com/ezterry/1239615
 
@@ -33,12 +39,12 @@ DEX_MAGIC = "dex\x0a035\x00"
 # the "None" ones - are ones I didn't feel like copy-pasting
 InstructionNames = [
 	"nop", "move", "move/from16", "move/16", "move-wide", "move-wide/from16", "move-wide/16", "move-object", "move-object/from16", # 0x00
-    "move-object/16", "move-result", "move-result-wide", "move-result-object", "move-exception", "return-void", "return", "return-wide", # 0x8
-    "return-object", "const/4", "const/16", "const", "const/high16", "const-wide/16", "const-wide/32", "const-wide", "const-wide/high16"
-    "const-string", "const-string-jumbo", "const-class", "monitor-enter", "monitor-exit", "check-cast", "instance-of", "array-length",
-    "new-instance", "new-array", "filled-new-array", None, None, None, "throw", "goto", None, None, None, None, None
+	"move-object/16", "move-result", "move-result-wide", "move-result-object", "move-exception", "return-void", "return", "return-wide", # 0x8
+	"return-object", "const/4", "const/16", "const", "const/high16", "const-wide/16", "const-wide/32", "const-wide", "const-wide/high16"
+	"const-string", "const-string-jumbo", "const-class", "monitor-enter", "monitor-exit", "check-cast", "instance-of", "array-length",
+	"new-instance", "new-array", "filled-new-array", None, None, None, "throw", "goto", None, None, None, None, None
 
-    # etc.. there are a LOT
+	# etc.. there are a LOT
 ]
 # following list is for ^^
 '''
@@ -83,18 +89,52 @@ RegisterNames = [
 	"v4",
 	"v5",
 	"v8", # last one I saw that seems to map "X" to vX - but it makes sense to go to v15 since 0xF is max
-    "v9",
-    "v10", # 0xa
-    "v11", # 0xB
-    "v12", # 0xC
-    "v13", # 0xD
-    "v14", # 0xE
-    "v15"  # 0xF
+	"v9",
+	"v10", # 0xa
+	"v11", # 0xB
+	"v12", # 0xC
+	"v13", # 0xD
+	"v14", # 0xE
+	"v15",  # 0xF
+
+	# EXTENDED registers
+	"v16",
+	"v17",
+	"v18",
+	"v19",
+	"v20",
+	"v21",
+	"v22",
+	"v23",
+	"v24",
+	"v25",
 
 ]
 
 NONE = 0
 MOVE = 1
+MOVE_FROM16 = 2
+MOVE_16 = 3
+MOVE_WIDE = 4
+MOVE_WIDE_FROM_16 = 5
+MOVE_WIDE_16 = 6
+MOVE_OBJECT = 7
+MOVE_OBJECT_FROM_16 = 8
+MOVE_OBJECT_16 = 9
+MOVE_RESULT = 10
+MOVE_RESULT_WIDE = 11
+MOVE_RESULT_OBJECT = 12
+MOVE_EXCEPTION = 13
+RETURN_VOID = 14
+RETURN = 15
+RETURN_WIDE = 16
+RETURN_OBJECT = 17
+CONST_4 = 18
+CONST_16 = 19
+CONST = 20
+CONST_HIGH16 = 21
+CONST_WIDE16 = 22
+
 #ABS = 1
 ABS_DEST = 2
 ABS_X = 3
@@ -118,7 +158,33 @@ ZERO_Y = 20
 ZERO_Y_DEST = 21
 
 InstructionOperandTypes = [
-	NONE, MOVE
+	NONE, MOVE,
+
+	# FIXME TODO
+	MOVE_FROM16,
+	MOVE_16,
+	MOVE_WIDE,
+	MOVE_WIDE_FROM_16,
+	MOVE_WIDE_16,
+	MOVE_OBJECT,
+	MOVE_OBJECT_FROM_16,
+	MOVE_OBJECT_16,
+	MOVE_RESULT,
+	MOVE_RESULT_WIDE,
+	MOVE_RESULT_OBJECT,
+	MOVE_EXCEPTION,
+	RETURN_VOID,
+	RETURN,
+	RETURN_WIDE,
+	RETURN_OBJECT,
+	CONST_4,
+	CONST_16,
+	CONST,
+	CONST_HIGH16,
+	CONST_WIDE16,
+
+	# FIXME TODO
+	NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,
 ]
 '''
 	IND_X, NONE, NONE, NONE, ZERO, ZERO_DEST, NONE, # 0x00
@@ -159,26 +225,37 @@ OperandLengths = [
 	0, # NONE - nop is either '00' or '0000' - not 100% certain
 	1, # MOVE - TODO: validate/verify
 
-	2, # ABS_DEST
-	2, # ABS_X
-	2, # ABS_X_DEST
-	2, # ABS_Y
-	2, # ABS_Y_DEST
-	0, # ACCUM
-	2, # ADDR
-	1, # IMMED
-	2, # IND
-	1, # IND_X
-	1, # IND_X_DEST
-	1, # IND_Y
-	1, # IND_Y_DEST
-	1, # REL
-	1, # ZERO
-	1, # ZREO_DEST
-	1, # ZERO_X
-	1, # ZERO_X_DEST
-	1, # ZERO_Y
-	1  # ZERO_Y_DEST
+	# TODO - verify
+	2, # MOVE_FROM16
+	2, # MOVE_16
+	2, # MOVE_WIDE
+	2, # MOVE_WIDE_FROM_16
+	2, # MOVE_WIDE_16
+	1, # MOVE_OBJECT
+	2, # MOVE_OBJECT_FROM_16
+	2, # MOVE_OBJECT_16
+	1, # MOVE_RESULT
+	1, # MOVE_RESULT_WIDE
+	1, # MOVE_RESULT_OBJECT
+	1, # MOVE_EXCEPTION
+	1, # RETURN_VOID
+	1, # RETURN
+	1, # RETURN_WIDE
+	1, # RETURN_OBJECT
+	1, # CONST_4
+	2, # CONST_16
+	3, # CONST
+	2, # CONST_HIGH16
+	2, # CONST_WIDE16
+
+
+	# TODO
+	2, # TODO
+	2, # TODO
+	2, # TODO
+	2, # TODO
+	2, # TODO
+	2 # TODO
 ]
 
 # used for perform_get_instruction_text
@@ -186,7 +263,73 @@ OperandTokens = [
 	lambda value: [], # NONE
 	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
 		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])] # MOVE
+		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])], # MOVE
+
+	# MOVE_FROM16,
+	lambda value: [], # TODO: actually implement....
+
+	# MOVE_16
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value >> 8]), # maybe?  - FAIL: (value >> 8), (value >> 16)
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF])], # definitely wrong
+
+	# MOVE_WIDE
+	lambda value: [], # NONE
+
+	# MOVE_WIDE_FROM_16
+	lambda value: [], # NONE
+
+	# MOVE_WIDE_16
+	lambda value: [], # NONE
+
+	# MOVE_OBJECT
+	lambda value: [], # NONE
+
+	# MOVE_OBJECT_FROM_16
+	lambda value: [], # NONE
+
+	# MOVE_OBJECT_16
+	lambda value: [], # NONE
+
+	# MOVE_RESULT
+	lambda value: [], # NONE
+
+	# MOVE_RESULT_WIDE
+	lambda value: [], # NONE
+
+	# MOVE_RESULT_OBJECT
+	lambda value: [], # NONE
+
+	# MOVE_EXCEPTION
+	lambda value: [], # NONE
+
+	# RETURN_VOID
+	lambda value: [], # NONE
+
+	# RETURN
+	lambda value: [], # NONE
+
+	# RETURN_WIDE
+	lambda value: [], # NONE
+
+	# RETURN_OBJECT
+	lambda value: [], # NONE
+
+	# CONST_4
+	lambda value: [], # NONE
+
+	# CONST_16
+	lambda value: [], # NONE
+
+	# CONST
+	lambda value: [], # NONE
+
+	# CONST_HIGH16
+	lambda value: [], # NONE
+
+	# CONST_WIDE16
+	lambda value: [] # NONE
+
 ]
 
 InstructionIL = {
@@ -306,16 +449,19 @@ class DEX(Architecture):
 		"v3": RegisterInfo("v3", 1), # TODO
 		"v4": RegisterInfo("v4", 1), # TODO
 		"v5": RegisterInfo("v5", 1), # TODO
-        "v6": RegisterInfo("v6", 1), # TODO
-        "v7": RegisterInfo("v7", 1), # TODO
-        "v8": RegisterInfo("v8", 1), # TODO
-        "v9": RegisterInfo("v9", 1), # TODO
-        "v10": RegisterInfo("v10", 1), # 0xA
-        "v11": RegisterInfo("v11", 1), # 0xB
-        "v12": RegisterInfo("v12", 1), # 0xC
-        "v13": RegisterInfo("v13", 1), # 0xD
-        "v14": RegisterInfo("v14", 1), # 0xE
-        "v15": RegisterInfo("v15", 1), # 0xF
+		"v6": RegisterInfo("v6", 1), # TODO
+		"v7": RegisterInfo("v7", 1), # TODO
+		"v8": RegisterInfo("v8", 1), # TODO
+		"v9": RegisterInfo("v9", 1), # TODO
+		"v10": RegisterInfo("v10", 1), # 0xA
+		"v11": RegisterInfo("v11", 1), # 0xB
+		"v12": RegisterInfo("v12", 1), # 0xC
+		"v13": RegisterInfo("v13", 1), # 0xD
+		"v14": RegisterInfo("v14", 1), # 0xE
+		"v15": RegisterInfo("v15", 1), # 0xF
+
+		# extended:
+		# see the reg loop below this list
 
 		# TODO: are parameter registers different than local registers (v0-v5)?
 		"p0": RegisterInfo("p0", 1), # TODO
@@ -324,9 +470,10 @@ class DEX(Architecture):
 
 		"r13": RegisterInfo("r13", 1) # stack pointer (SP), which isn't used in dalvik
 		# TODO: more
-
-
 	}
+	for reg in ["v16","v17","v18","v19","v20","v21","v22","v23","v24","v25"]:
+		regs[reg] = RegisterInfo(reg, 1)
+
 	stack_pointer = "r13" # TODO - no stack in dalvik? - techically R13 or SP, FIXME: this shouldn't be required by binja
 	flags = ["c", "z", "i", "d", "b", "v", "s"] # TODO
 	flag_write_types = ["*", "czs", "zvs", "zs"] # TODO
@@ -390,7 +537,6 @@ class DEX(Architecture):
 
 		return result
 
-
 	def perform_get_instruction_text(self, data, addr):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
@@ -398,22 +544,34 @@ class DEX(Architecture):
 
 		# I don't think we control "InstructionTextToken"
 
-		print "value: ", value # it's the bytes
-		print "type(value): ", type(value) # type "int"
+		'''
+		if operand == 3:
+			print "value: ", value # it's the bytes
+			print "type(value): ", type(value) # type "int"
+
+			print "================"
+			print "value >> 2: ", (value >> 2)
+			print "value >> 4: ", (value >> 4)
+			print "value >> 6: ", (value >> 6)
+			print "value >> 8: ", (value >> 8) # pretty sure this is supposed to be first one..
+			print "================"
+		'''
 
 		# FIXME: current crash
-		log(2, "perform_get_instruction_text is about to mess with tokens")
+		#log(2, "perform_get_instruction_text is about to mess with tokens")
 		tokens = []
 		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr.replace("@", ""))) # FIXME: error? this is "move" for example??
 		tokens += OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
-			# FIXME: ^ needs to be split up
 
-		print "================"
-		print "tokens: ", tokens
-		print "================"
-
-		log(2, "perform_get_instruction_text finished messing with tokens")
 		return tokens, length
+
+
+		#print "================"
+		#print "tokens: ", tokens
+		#print "================"
+
+		#log(2, "perform_get_instruction_text finished messing with tokens")
+
 
 
 # see NESView Example
@@ -438,7 +596,7 @@ class DEXView(BinaryView, DexFile):
 		self.notification = DEXViewUpdateNotification(self) # TODO
 		self.data.register_notification(self.notification)
 
-		self.print_metadata()
+		self.print_metadata() # for some reason this is getting regisered with "raw" view??
 
 		# this might be a better way to do it. Just create functions
 		#data.create_user_function(bv.platform, 0) # FAILURE TO CREATE VIEW..
