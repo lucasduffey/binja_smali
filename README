@@ -1,0 +1,7 @@
+# installation - create a dexBinja_wrapper.py script in ~/.binaryninja/plugins/
+
+# dexBinja_wrapper.py
+from dexBinja.apkBinja import *
+from dexBinja.dexBinja import *
+from dexBinja.dexFile import *
+
