@@ -344,8 +344,8 @@ class dexHeader():
 			self.offset = offset # NEVER MODIFY THIS
 
 			# pull four ULEB128s
-			print "type(offset): ", type(offset) # string - WTF
-			print "offset: ", offset
+			#print "type(offset): ", type(offset)
+			#print "offset: ", offset
 
 			self.static_fields_size, static_fields_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
 			offset += static_fields_ULEB128_size
@@ -419,7 +419,7 @@ class dexHeader():
 		# direct_methods	encoded_method[direct_methods_size]
 		# TODO: populate self.virtual_methods_off
 		def direct_methods(self):
-			offset = self.direct_methods_off
+			offset = self.direct_methods_off # FIXME: is this correct?
 
 			results = []
 			for i in xrange(self.direct_methods_size):
@@ -429,6 +429,7 @@ class dexHeader():
 				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
 				offset += access_flags_ULEB128_size
 
+				# FIXME: code_off value is wrong
 				code_off, code_off_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
 				offset += code_off_ULEB128_size
 
@@ -437,6 +438,7 @@ class dexHeader():
 					"access_flags": access_flags,
 					"code_off": code_off # GREPME
 				}
+				results.append(result)
 
 			self.virtual_methods_off = offset
 
@@ -445,7 +447,7 @@ class dexHeader():
 
 		# virtual_methods	encoded_method[virtual_methods_size]
 		def virtual_methods(self):
-			offset = self.virtual_methods_off
+			offset = self.virtual_methods_off # FIXME: is this correct?
 
 			results = []
 			for i in xrange(self.virtual_methods_size): #
@@ -455,6 +457,7 @@ class dexHeader():
 				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
 				offset += access_flags_ULEB128_size
 
+				# FIXME: code_off value is wrong
 				code_off, code_off_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
 				offset += code_off_ULEB128_size
 
@@ -463,6 +466,7 @@ class dexHeader():
 					"access_flags": access_flags,
 					"code_off": code_off # GREPME
 				}
+				results.append(result)
 
 			self.size = offset - self.offset # TODO: validate this...
 

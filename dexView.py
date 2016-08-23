@@ -504,28 +504,34 @@ class DEXView(BinaryView, DexFile):
 
 		self.print_metadata() # for some reason this is getting regisered with "raw" view??
 
-		# not populate the functions...
-		class_defs_obj = self.class_defs() # return list of objects that includes: size, off
-		for class_def in class_defs_obj:
+		# FIXME: it's not populating the functions...
+		for class_def in self.class_defs():
+			#log(2, "class_def instance")
 
-			assert type(class_def.class_data_off) == type(1)
+			assert type(class_def.class_data_off) == int
 
 			class_data_item_obj = self.class_data_item(raw_binary, class_def.class_data_off)
 
 			# create function for each direct_method
 			for direct_method in class_data_item_obj.direct_methods():
+				#log(2, "direct_method instance")
+				print "direct_method code_off:", direct_method["code_off"]
+
 				# direct_method.code_off
-				data.create_user_function(bv.platform, direct_method.code_off)
+				data.create_user_function(Architecture['dex'].standalone_platform, direct_method["code_off"]) # FIXME: failing
 
 			# create function for each virtual_method
 			for virtual_method in class_data_item_obj.virtual_methods():
-				# virtual_method.code_off
-				data.create_user_function(bv.platform, virtual_method.code_off)
+				print "virtual_method code_off:", virtual_method["code_off"]
 
+				# virtual_method.code_off
+				data.create_user_function(Architecture['dex'].standalone_platform, virtual_method["code_off"]) # FIXME: failing
+
+			print "" # for debugging only, improve readability
 
 
 		# this might be a better way to do it. Just create functions
-		#data.create_user_function(bv.platform, 0) # FAILURE TO CREATE VIEW..
+		#data.create_user_function(Architecture['dex'].standalone_platform, 0) # FAILURE TO CREATE VIEW..
 
 	@classmethod
 	def is_valid_for_data(self, data):
