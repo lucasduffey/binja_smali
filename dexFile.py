@@ -51,7 +51,7 @@ def get_ULEB128(data):
 		#print "value: %i" % value
 
 		# this is the last byte, so break
-		if (value >> 7) == 1:
+		if (value >> 7) == 0:
 			found = True
 			break
 
