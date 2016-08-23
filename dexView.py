@@ -389,8 +389,6 @@ class DEX(Architecture):
 	flag_write_types = ["*", "czs", "zvs", "zs"] # TODO
 
 	def decode_instruction(self, data, addr):
-		log(2, "decode_instruction")
-
 		if len(data) < 1:
 			return None, None, None, None
 		opcode = ord(data[0])
@@ -399,24 +397,22 @@ class DEX(Architecture):
 		if opcode >= len(InstructionNames):
 			return None, None, None, None
 
-		log(2, "opcode: %s" % str(opcode))
 		instr = InstructionNames[opcode]
 		if instr is None:
 			return None, None, None, None
 
 		operand = InstructionOperandTypes[opcode] # TODO
-		log(2, "operand: %s" % str(operand))
 
 		length = 1 + OperandLengths[operand] # TODO
-		log(2, "length: %s" % str(length)) # FIXME: should move have length: 3?
+		log(2, "decode_instruction - opcode: %s, operand: %s, length: %s" % (str(opcode), str(operand), str(length)))
 
 		if len(data) < length:
 			return None, None, None, None
 
 		if OperandLengths[operand] == 0:
 			value = None
-		elif operand == REL:
-			value = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
+		#elif operand == REL:
+		#	value = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
 		elif OperandLengths[operand] == 1:
 			value = ord(data[1])
 		else:
@@ -465,7 +461,7 @@ class DEX(Architecture):
 			print "value >> 6: ", (value >> 6)
 			print "value >> 8: ", (value >> 8) # pretty sure this is supposed to be first one..
 			print "================"
-		
+
 
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
@@ -507,6 +503,26 @@ class DEXView(BinaryView, DexFile):
 		self.data.register_notification(self.notification)
 
 		self.print_metadata() # for some reason this is getting regisered with "raw" view??
+
+		# not populate the functions...
+		class_defs_obj = self.class_defs() # return list of objects that includes: size, off
+		for class_def in class_defs_obj:
+
+			assert type(class_def.class_data_off) == type(1)
+
+			class_data_item_obj = self.class_data_item(raw_binary, class_def.class_data_off)
+
+			# create function for each direct_method
+			for direct_method in class_data_item_obj.direct_methods():
+				# direct_method.code_off
+				data.create_user_function(bv.platform, direct_method.code_off)
+
+			# create function for each virtual_method
+			for virtual_method in class_data_item_obj.virtual_methods():
+				# virtual_method.code_off
+				data.create_user_function(bv.platform, virtual_method.code_off)
+
+
 
 		# this might be a better way to do it. Just create functions
 		#data.create_user_function(bv.platform, 0) # FAILURE TO CREATE VIEW..

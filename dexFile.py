@@ -13,9 +13,13 @@ DEX Structure - https://source.android.com/devices/tech/dalvik/dex-format.html (
 http://elinux.org/images/d/d9/A_deep_dive_into_dex_file_format--chiossi.pdf
 https://android.googlesource.com/platform/art/+/master/tools/dexfuzz/src/dexfuzz/rawdex/HeaderItem.java
 
+reference: https://github.com/ondreji/dex_parser/blob/master/dex.py
+
 IMPORTANT
 .read(offset, 4) # last arg is the "count", not the "last idex to read"
 
+uleb128 - unsigned LEB128, variable-length
+	* consists of one to five bytes, which represent a single 32-bit value
 '''
 
 # sizes of fields
@@ -23,9 +27,41 @@ IMPORTANT
 # https://docs.python.org/2/library/struct.html
 # https://gist.github.com/ezterry/1239615
 
-#
-# in dexparse.py - the fp seeks to dexOptHdr.dexOffset
-#
+# Little-Endian Base 128 - consists of one to five bytes, which represent a single 32-bit value
+# data should be five bytes
+
+# return value, size_of_ULEB128
+def get_ULEB128(data):
+	# the first bit of each byte is 1, unless that's the last byte
+	total = 0
+	found = False
+
+	#print "=============="
+	#print "ULEB128"
+	#print "type(data): ", type(data)
+	#print "len(data): ", len(data)
+
+	for i in xrange(5):
+		value = ord(data[i])
+
+		value = value & 0x7f # clear the high bit
+		total += value << (i * 7) | total
+
+		#print "value: 0x%x" % value
+		#print "value: %i" % value
+
+		# this is the last byte, so break
+		if (value >> 7) == 1:
+			found = True
+			break
+
+	if i == 4 and not found:
+		log(4, "invalid ULEB128")
+		assert False
+
+	# return (value, num_of_bytes) # where num_of_bytes indicates how much space this LEB128 took up
+	return total, i+1
+
 class dexHeader():
 	def __init__(self, binary_blob, binary_blob_length):
 		# how do I make it so it just inherits it, and compiler thingy doesn't complain?
@@ -213,7 +249,13 @@ class dexHeader():
 		# TODO: now carve out method_ids
 		method_ids_data = self.binary_blob[method_ids_off: method_ids_off+method_ids_size]
 
-	# each class_defs instance has a "class_data_off" field
+	# each class_defs instance has a "class_data_off" field, this field is the offset to a "class_data_item" which has a direct_methods which has "code_off"
+	#
+	# header:
+	#	* class_defs_size
+	#	* class_defs_off
+	#
+	# return list of class_def_item objects
 	def class_defs(self):
 		class_defs_size_offset = 96 # AFAIK
 		class_defs_off_offset = 100 # AFAIK
@@ -228,57 +270,20 @@ class dexHeader():
 		print "class_defs_size: ", class_defs_size, "\n"
 		print "class_defs_off: ", hex(class_defs_off), "\n"
 
-		#results = [] # list of class_def_item
+		# class_def_items will store the class_def_items, see "class_def_item" @ https://source.android.com/devices/tech/dalvik/dex-format.html
 		_class_defs_bytes = class_defs_size*8*4 # class_def_item has 8 uints
 		raw_class_defs = self.binary_blob[class_defs_off: class_defs_off+ _class_defs_bytes]
 
+		#
+		# FIXME: class_def_items is not returning 8
+		#
+
 		# split by class_def_item_size
 		class_def_item_size = 8*4 # 8 uints
-		results = [raw_class_defs[i:i+class_def_item_size] for i in range(0, len(raw_class_defs), class_def_item_size)]
+		class_def_items = [self.class_def_item(raw_class_defs[i:i+class_def_item_size]) for i in range(0, len(raw_class_defs), class_def_item_size)]
 
-		# TODO: parse each all_class_defs - into a dict maybe?
-		for idx, result in enumerate(results):
-		#for idx in range(3): # FIXME: so, when it crashes for some reason it actually shows the functions.. maybe because the Arch hasn't failed....??
-			result = results[idx]
-
-			print "class_defs: in enumerate loop"
-
-			class_data_off = result[4*6: 4*7]
-
-			print "len(class_data_off)", len(class_data_off)
-
-			class_data_off = struct.unpack("<I", class_data_off)[0]
-
-			# add the dex function to function list, TODO: finish
-			print "create_user_function: ", hex(class_data_off)
-
-			#log(1, "example debug log 1")
-			#log(2, "example debug log 2")
-
-
-			self.data.create_user_function(Architecture['dex'].standalone_platform, class_data_off) # AFAIK
-			# 1st arg was self.data.file.platform
-			# "bv.platform" - "bv" is not defined
-			# "self.platform" - might be valid....???
-
-			print "class_data_off:", hex(class_data_off)
-
-
-		print "\n===============================\n"
-
-		class_def_item = {
-			"class_idx": 0,
-			"access_flags": 0,
-			"superclass_idx": 0,
-			"interfaces_off": 0,
-			"source_file_idx": 0,
-			"annotations_off": 0,
-			"class_data_off": 0,
-			"static_values_off": 0
-		}
-
-		# TODO: get list of "class_data_off" items (a struct with 8 uints)
-		#print "class_def_item"
+		# list of class_def_item objects
+		return class_def_items
 
 	# dataSize, dataOff (108)
 	# TODO - validate
@@ -299,6 +304,171 @@ class dexHeader():
 	def link_data(self):
 		print "link_data not yet implemented"
 		assert False
+
+
+	###########################
+	# helper functions
+	###########################
+	class class_def_item():
+		def __init__(self, binary_blob):
+			# class_def_item should be 32 bytes
+			if len(binary_blob) != 32:
+				print "len(binary_blob): ", len(binary_blob)
+				assert len(binary_blob) == 32
+
+			self.class_idx = struct.unpack("<I", binary_blob[0:4])[0]
+			self.access_flags = struct.unpack("<I", binary_blob[4:8])[0]
+			self.superclass_idx = struct.unpack("<I", binary_blob[8:12])[0]
+			self.interfaces_off = struct.unpack("<I", binary_blob[12:16])[0]
+			self.source_file_idx = struct.unpack("<I", binary_blob[16:20])[0]
+			self.annotations_off = struct.unpack("<I", binary_blob[20:24])[0]
+			self.class_data_off = struct.unpack("<I", binary_blob[24:28])[0]
+			self.static_values_off = struct.unpack("<I", binary_blob[28:32])[0]
+
+
+	# name					| format
+	# =========================================
+	# static_fields_size	| uleb128
+	# instance_fields_size	| uleb128
+	# direct_methods_size	| uleb128
+	# virtual_methods_size	| uleb128
+	# static_fields			| encoded_field[static_fields_size]
+	# instance_fields		| encoded_field[instance_fields_size]
+	# direct_methods		| encoded_method[direct_methods_size]
+	# virtual_methods		| encoded_method[virtual_methods_size]
+	class class_data_item():
+		# the size of this item is unknown, which is why it's passed an offset
+		def __init__(self, binary_blob, offset):
+			#self.size = 0 # unknown so-far, VERY ANNOYING TO CALCULATE
+			self.binary_blob = binary_blob
+			self.offset = offset # NEVER MODIFY THIS
+
+			# pull four ULEB128s
+			print "type(offset): ", type(offset) # string - WTF
+			print "offset: ", offset
+
+			self.static_fields_size, static_fields_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			offset += static_fields_ULEB128_size
+
+			self.instance_fields_size, instance_fields_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			offset += instance_fields_ULEB128_size
+
+			self.direct_methods_size, direct_methods_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			offset += direct_methods_ULEB128_size
+
+			self.virtual_methods_size, virtual_methods_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			offset += virtual_methods_ULEB128_size
+
+			# save data field offsets
+			self.static_fields_off = offset
+
+			self.static_fields() # populate self.instance_fields_off
+			self.instance_fields() # populate self.direct_methods_off
+			self.direct_methods() # populate self.virtual_methods_off
+			self.virtual_methods() # populate self.size
+
+
+		# static_fields	encoded_field[static_fields_size]
+		# for now returning a list of dict
+		def static_fields(self):
+			offset = self.static_fields_off
+
+			results = []
+			for i in xrange(self.static_fields_size):
+				field_idx_diff, field_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += field_idx_diff_ULEB128_size
+
+				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += field_idx_diff_ULEB128_size
+
+				result = {
+					"field_idx_diff": field_idx_diff,
+					"access_flags": access_flags
+				}
+				results.append(result)
+
+			self.instance_fields_off = offset
+
+			# return list of dicts
+			return results
+
+
+		# instance_fields	encoded_field[instance_fields_size]
+		def instance_fields(self):
+			offset = self.instance_fields_off
+
+			results = []
+			for i in xrange(self.instance_fields_size):
+				field_idx_diff, field_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += field_idx_diff_ULEB128_size
+
+				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += field_idx_diff_ULEB128_size
+
+				result = {
+					"field_idx_diff": field_idx_diff,
+					"access_flags": access_flags
+				}
+				results.append(result)
+
+			self.direct_methods_off = offset
+
+			# return list of dicts
+			return results
+
+		# direct_methods	encoded_method[direct_methods_size]
+		# TODO: populate self.virtual_methods_off
+		def direct_methods(self):
+			offset = self.direct_methods_off
+
+			results = []
+			for i in xrange(self.direct_methods_size):
+				method_idx_diff, method_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += method_idx_diff_ULEB128_size
+
+				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += access_flags_ULEB128_size
+
+				code_off, code_off_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += code_off_ULEB128_size
+
+				result = {
+					"method_idx_diff": method_idx_diff,
+					"access_flags": access_flags,
+					"code_off": code_off # GREPME
+				}
+
+			self.virtual_methods_off = offset
+
+			# return list of dicts
+			return results
+
+		# virtual_methods	encoded_method[virtual_methods_size]
+		def virtual_methods(self):
+			offset = self.virtual_methods_off
+
+			results = []
+			for i in xrange(self.virtual_methods_size): #
+				method_idx_diff, method_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += method_idx_diff_ULEB128_size
+
+				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += access_flags_ULEB128_size
+
+				code_off, code_off_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				offset += code_off_ULEB128_size
+
+				result = {
+					"method_idx_diff": method_idx_diff,
+					"access_flags": access_flags,
+					"code_off": code_off # GREPME
+				}
+
+			self.size = offset - self.offset # TODO: validate this...
+
+			# return list of dicts
+			return results
+
 
 # https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
 # Decompiling Android book is very useful, but it's 4 years old..
@@ -380,7 +550,16 @@ class DexFile(dexHeader):
 		print "header_size: ", self.header_size()
 
 		# unvalidated
-		self.class_defs() # return object that includes: size, off
+		#class_defs_obj = self.class_defs() # return list of objects that includes: size, off
+		#for class_def in class_defs_obj:
+
+		#	class_data_item_obj = class_data_item(class_def.class_data_off)
+
+		#	for direct_method in class_data_item_obj.direct_methods(): # TODO: what do I do with this?
+		#		# direct_method.code_off
+
+		#	for virtual_method in class_data_item_obj.virtual_methods() # TODO: what do I do with this?
+		#		# virtual_method.code_off
 
 
 
