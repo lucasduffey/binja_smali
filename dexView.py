@@ -504,7 +504,14 @@ class DEXView(BinaryView, DexFile):
 
 		self.print_metadata() # for some reason this is getting regisered with "raw" view??
 
+		# map_off
+
+		for string in self.string_ids(): # FIXME: cache the results
+			log(2, "found string: " + string)
+			pass
+
 		# FIXME: it's not populating the functions...
+		# FIXME: TODO - might be easier to get all the code from the mapping...
 		for class_def in self.class_defs():
 			#log(2, "class_def instance")
 
@@ -520,15 +527,22 @@ class DEXView(BinaryView, DexFile):
 				#log(2, "direct_method instance")
 				print "direct_method code_off:", direct_method["code_off"]
 
-				# direct_method.code_off
-				data.create_user_function(Architecture['dex'].standalone_platform, direct_method["code_off"]) # FIXME: failing
+				# FIXME: code_off is offset to code_item struct, not dex
+				code_item_list = class_data_item_obj.code_item(direct_method["code_off"])
+
+
+				# direct_method.code_off - there's no way to pass "insns_size" to binja???
+				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
 
 			# create function for each virtual_method
 			for virtual_method in class_data_item_obj.virtual_methods():
 				print "virtual_method code_off:", virtual_method["code_off"]
 
-				# virtual_method.code_off
-				data.create_user_function(Architecture['dex'].standalone_platform, virtual_method["code_off"]) # FIXME: failing
+				# FIXME: code_off is offset to code_item struct, not dex
+				code_item_list = class_data_item_obj.code_item(virtual_method["code_off"])
+
+				# virtual_method.code_off - there's no way to pass "insns_size" to binja???
+				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
 
 			print "" # for debugging only, improve readability
 

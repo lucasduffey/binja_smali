@@ -161,6 +161,7 @@ class dexHeader():
 	# TODO - validate
 	# format: uint = 0x12345678
 	def endian_tag(self):
+		offset = 40
 
 		# int ENDIAN_CONSTANT = 0x12345678;
 
@@ -170,11 +171,13 @@ class dexHeader():
 	# TODO - validate
 	# format: uint
 	def link_size(self):
+		offset = 44
 		pass
 
 	# TODO - validate
 	# format: uint
 	def link_off(self):
+		offset = 48
 		pass
 
 	# TODO - validate
@@ -182,12 +185,24 @@ class dexHeader():
 	# Purpose: offset from the start of the file to the map item. The offset, which must be non-zero, should be to an offset into the data section,
 	#  				and the data should be in the format specified by "map_list" below.
 	# Questions: what is the "map item"?
+		# VERY IMPORTANT FUNCTION - simplifies everything
 	def map_off(self):
-		pass
+		offset = 52
+
+		result = self.binary_blob[offset: offset+4]
+		result = struct.unpack("<I", result)[0] # uint
+
+		# wait: should I do anything with this? probably not
+		return result
 
 	########################################
 
 	# string_ids_size, string_ids_off
+	# return list of strings
+	# strings are encored in MUTF-8
+	#	* Only the one-, two-, and three-byte encodings are used.
+	#	* A plain null byte (value 0) indicates the end of a string, as is the standard C language interpretation.
+	# TODO: cache results
 	def string_ids(self):
 		string_ids_size_offset = 56
 		string_ids_off_offset = 60
@@ -198,6 +213,27 @@ class dexHeader():
 
 		string_ids_off = self.binary_blob[string_ids_off_offset: string_ids_off_offset+4]
 		string_ids_off = struct.unpack("<I", string_ids_off)[0]
+
+		strings = []
+		for i in xrange(string_ids_size):
+			string_data_off = self.binary_blob[string_ids_off: string_ids_off+4]
+			string_data_off = struct.unpack("<I", string_data_off)[0]
+
+			null_byte_offset = string_data_off
+			string_result = [""]
+
+			# lets just find the string...
+			while self.binary_blob[null_byte_offset] != "\x00":
+				string_result.append(self.binary_blob[null_byte_offset])
+				null_byte_offset += 1
+
+			string_result = "".join(string_result)
+			strings.append(string_result)
+
+			#string_data_offs.append(string_data_off)
+			string_ids_off += 4
+
+		return strings
 
 	# type_ids_size, type_ids_off
 	def type_ids(self):
@@ -251,6 +287,44 @@ class dexHeader():
 
 		# TODO: now carve out method_ids
 		method_ids_data = self.binary_blob[method_ids_off: method_ids_off+method_ids_size]
+
+
+		###########################
+		# HELPER FUNCTIONS
+		###########################
+
+		# Name	| Format			| Description
+		######################################################
+		# size	| uint				| size of the list, in entries
+		# list	| map_item[size]	| elements of the list
+
+		# SUPER CRITICAL
+		def map_list(self):
+			offset = self.map_off()
+
+			map_list_size = self.binary_blob[offset: offset+4]
+			map_list_size = struct.unpack("<I", map_list_size)[0]
+			offset += 4
+
+			# map_items are 12 bytes
+
+			map_items = []
+
+			for i in xrange(map_list_size): # FIXME: does this include the last item?
+				# Name		| Format	| Description
+				##############################################################################
+				# type		| ushort	| type of the items; see table below
+				# unused	| ushort	| (unused)
+				# size		| uint		| count of the number of items to be found at the indicated offset
+				# offset	| uint		| offset from the start of the file to the items in question
+
+				map_item = self.binary_blob[offset: offset+12]
+
+
+
+				# map_items.append()
+				pass
+
 
 	# each class_defs instance has a "class_data_off" field, this field is the offset to a "class_data_item" which has a direct_methods which has "code_off"
 	#
@@ -433,8 +507,16 @@ class dexHeader():
 			# return list of dicts
 			return results
 
+
+		# Name				| Format	| Description
+		#########################################################
+		# method_idx_diff	| uleb128	| index into the method_ids list for the identity of this method
+		# access_flags		| uleb128	|
+		# code_off			| uleb128	| offset from the start of the file to the code structure for this method, format of the data is specified by "code_item" below.
+
 		# direct_methods	encoded_method[direct_methods_size]
-		# TODO: populate self.virtual_methods_off
+		#  populate self.virtual_methods_off
+		# FIXME: code_off is a data structure
 		def direct_methods(self):
 			offset = self.direct_methods_off # FIXME: is this correct?
 
@@ -453,7 +535,7 @@ class dexHeader():
 				result = {
 					"method_idx_diff": method_idx_diff,
 					"access_flags": access_flags,
-					"code_off": code_off # GREPME
+					"code_off": code_off # GREPME # FIXME: code_off is a data structure
 				}
 				results.append(result)
 
@@ -489,6 +571,63 @@ class dexHeader():
 
 			# return list of dicts
 			return results
+
+
+		# Name				| Format									| Description
+		################################################################################
+		# registers_size	| ushort									| number of registers used by this code
+		# ins_size			| ushort						 			|
+		# outs_size			| ushort								 	| number of words of outgoing argument space required by this co
+		# tries_size		| ushort									| number of try_items for this instance.
+		# debug_info_off	| uint										| offset from the start of the file to the debug info
+		# insns_size		| uint										| size of the instructions list, in 16-bit code units
+		# insns				| ushort[insns_size]						| actual array of bytecode.
+		# padding			| ushort (optional) = 0						| two bytes of padding to make tries four-byte aligned.
+		# tries				| try_item[tries_size] (optional)			| array indicating where in the code exceptions
+		# handlers			| encoded_catch_handler_list (optional)		| bytes representing a list of lists
+
+		# ushort == 2 bytes
+		# FIXME: incomplete
+		def code_item(self, offset):
+			registers_size = self.binary_blob[offset:offset+2]
+			offset += 2
+
+			ins_size = self.binary_blob[offset:offset+2]
+			offset += 2
+
+			outs_size = self.binary_blob[offset:offset+2]
+			offset += 2
+
+			tries_size = self.binary_blob[offset:offset+2]
+			offset += 2
+
+			debug_info_off = self.binary_blob[offset:offset+4]
+			offset += 4
+
+			insns_size = self.binary_blob[offset:offset+4]
+			insns_size = struct.unpack("<I", insns_size)[0]
+			offset += 4
+
+
+			insns_off = offset
+			#insns = self.binary_blob[offset:offset+(insns_size*2)] # the actual dex code, but lets not save as variable unless we need to
+
+			offset += (insns_size*2)
+
+			# FIXME: need to handle "padding", "tries", and "handlers"
+
+			result = {
+				"registers_size": registers_size,
+				"ins_size": ins_size,
+				"outs_size": outs_size,
+				"tries_size": tries_size,
+				"debug_info_off": debug_info_off,
+				"insns_size": insns_size,
+				"insns_off": insns_off
+				# "insns": insns
+			}
+
+			return result
 
 
 # https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
