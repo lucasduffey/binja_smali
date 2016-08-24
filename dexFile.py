@@ -41,19 +41,22 @@ def get_ULEB128(data):
 	#print "type(data): ", type(data)
 	#print "len(data): ", len(data)
 
+	#p =  ["value: "]
 	for i in xrange(5):
 		value = ord(data[i])
 
 		value = value & 0x7f # clear the high bit
 		total += value << (i * 7) | total
 
-		#print "value: 0x%x" % value
+		#p.append("0x%x " % value)
 		#print "value: %i" % value
 
 		# this is the last byte, so break
-		if (value >> 7) == 0:
+		if (ord(data[i]) >> 7) == 0:
 			found = True
 			break
+
+	#print "".join(p)
 
 	if i == 4 and not found:
 		log(4, "invalid ULEB128")
@@ -257,12 +260,14 @@ class dexHeader():
 	#
 	# return list of class_def_item objects
 	def class_defs(self):
-		class_defs_size_offset = 96 # AFAIK
-		class_defs_off_offset = 100 # AFAIK
+		class_defs_size_offset = 96 # VERIFIED
+		class_defs_off_offset = 100 # VERIFIED
 
+		# calculate class_defs_size - ok
 		class_defs_size = self.binary_blob[class_defs_size_offset: class_defs_size_offset+4]
 		class_defs_size = struct.unpack("<I", class_defs_size)[0]
 
+		# calculate class_defs_off - ok
 		class_defs_off = self.binary_blob[class_defs_off_offset: class_defs_off_offset+4]
 		class_defs_off = struct.unpack("<I", class_defs_off)[0]
 
@@ -271,22 +276,30 @@ class dexHeader():
 		print "class_defs_off: ", hex(class_defs_off), "\n"
 
 		# class_def_items will store the class_def_items, see "class_def_item" @ https://source.android.com/devices/tech/dalvik/dex-format.html
-		_class_defs_bytes = class_defs_size*8*4 # class_def_item has 8 uints
-		raw_class_defs = self.binary_blob[class_defs_off: class_defs_off+ _class_defs_bytes]
 
-		#
-		# FIXME: class_def_items is not returning 8
-		#
+		# Name				| 	Format
+		# ========================================
+		# class_idx	uint	|	uint
+		# access_flags		| 	uint
+		# superclass_idx	|	uint
+		# interfaces_off	|	uint
+		# source_file_idx	|	uint
+		# annotations_off	|	uint
+		# class_data_off	|	uint
+		# static_values_off	|	uint
 
-		# split by class_def_item_size
-		class_def_item_size = 8*4 # 8 uints
+		class_def_item_size = 0x20 # 0x20 is class_def_item size in bytes
+
+		# OK
+		class_defs_byte_size = class_defs_size * class_def_item_size # class_defs_size indicates how many of them there are
+		raw_class_defs = self.binary_blob[class_defs_off: class_defs_off+ class_defs_byte_size]
+
+		# split by class_def_item_size - seems OK
 		class_def_items = [self.class_def_item(raw_class_defs[i:i+class_def_item_size]) for i in range(0, len(raw_class_defs), class_def_item_size)]
 
 		# list of class_def_item objects
 		return class_def_items
 
-	# dataSize, dataOff (108)
-	# TODO - validate
 
 	# collision?
 	# handles data_size, data_off
@@ -347,6 +360,10 @@ class dexHeader():
 			#print "type(offset): ", type(offset)
 			#print "offset: ", offset
 
+			#
+			# TODO: the problem most likely with get_ULEB128
+			#
+
 			self.static_fields_size, static_fields_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
 			offset += static_fields_ULEB128_size
 
@@ -364,7 +381,7 @@ class dexHeader():
 
 			self.static_fields() # populate self.instance_fields_off
 			self.instance_fields() # populate self.direct_methods_off
-			self.direct_methods() # populate self.virtual_methods_off
+			self.direct_methods() # populate self.virtual_methods_off # FIXME: is this right?
 			self.virtual_methods() # populate self.size
 
 
@@ -552,18 +569,6 @@ class DexFile(dexHeader):
 		print "signature: ", self.signature()
 		print "file_size: ", self.file_size()
 		print "header_size: ", self.header_size()
-
-		# unvalidated
-		#class_defs_obj = self.class_defs() # return list of objects that includes: size, off
-		#for class_def in class_defs_obj:
-
-		#	class_data_item_obj = class_data_item(class_def.class_data_off)
-
-		#	for direct_method in class_data_item_obj.direct_methods(): # TODO: what do I do with this?
-		#		# direct_method.code_off
-
-		#	for virtual_method in class_data_item_obj.virtual_methods() # TODO: what do I do with this?
-		#		# virtual_method.code_off
 
 
 

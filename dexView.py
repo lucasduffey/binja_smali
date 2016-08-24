@@ -510,7 +510,10 @@ class DEXView(BinaryView, DexFile):
 
 			assert type(class_def.class_data_off) == int
 
-			class_data_item_obj = self.class_data_item(raw_binary, class_def.class_data_off)
+			print "len(raw_binary): ", len(raw_binary) # seems good
+			print "class_def.class_data_off: ", class_def.class_data_off
+
+			class_data_item_obj = self.class_data_item(raw_binary, class_def.class_data_off) # this line seems correct, TODO: check the actual "class_data_item" function
 
 			# create function for each direct_method
 			for direct_method in class_data_item_obj.direct_methods():
