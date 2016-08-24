@@ -23,9 +23,54 @@ uleb128 - unsigned LEB128, variable-length
 '''
 
 # sizes of fields
-# look at dex.c -  DexHeader is the first header (is what it really seems to be)
 # https://docs.python.org/2/library/struct.html
 # https://gist.github.com/ezterry/1239615
+
+'''
+Item Type	Constant	Value	Item Size In Bytes
+header_item	TYPE_HEADER_ITEM	0x0000	0x70
+string_id_item	TYPE_STRING_ID_ITEM	0x0001	0x04
+type_id_item	TYPE_TYPE_ID_ITEM	0x0002	0x04
+proto_id_item	TYPE_PROTO_ID_ITEM	0x0003	0x0c
+field_id_item	TYPE_FIELD_ID_ITEM	0x0004	0x08
+method_id_item	TYPE_METHOD_ID_ITEM	0x0005	0x08
+class_def_item	TYPE_CLASS_DEF_ITEM	0x0006	0x20
+map_list	TYPE_MAP_LIST	0x1000	4 + (item.size * 12)
+type_list	TYPE_TYPE_LIST	0x1001	4 + (item.size * 2)
+annotation_set_ref_list	TYPE_ANNOTATION_SET_REF_LIST	0x1002	4 + (item.size * 4)
+annotation_set_item	TYPE_ANNOTATION_SET_ITEM	0x1003	4 + (item.size * 4)
+class_data_item	TYPE_CLASS_DATA_ITEM	0x2000	implicit; must parse
+code_item	TYPE_CODE_ITEM	0x2001	implicit; must parse
+string_data_item	TYPE_STRING_DATA_ITEM	0x2002	implicit; must parse
+debug_info_item	TYPE_DEBUG_INFO_ITEM	0x2003	implicit; must parse
+annotation_item	TYPE_ANNOTATION_ITEM	0x2004	implicit; must parse
+encoded_array_item	TYPE_ENCODED_ARRAY_ITEM	0x2005	implicit; must parse
+annotations_directory_item	TYPE_ANNOTATIONS_DIRECTORY_ITEM	0x2006	implicit; must parse
+'''
+ItemType = {
+	0x0000: "header_item",
+	0x0001: "string_id_item",
+	0x0002: "type_id_item",
+	0x0003: "proto_id_item",
+	0x0004: "field_id_item",
+	0x0005: "method_id_item",
+	0x0006: "class_def_item",
+	0x1000: "map_list",
+	0x1001: "type_list",
+	0x1002: "annotation_set_ref_list",
+	0x1003: "annotation_set_item",
+	0x2000: "class_data_item",
+	0x2001: "code_item",
+	0x2002: "string_data_item",
+	0x2003: "debug_info_item",
+	0x2004: "annotation_item",
+	0x2005: "encoded_array_item",
+	0x2006: "annotations_directory_item"
+}
+
+
+
+
 
 # Little-Endian Base 128 - consists of one to five bytes, which represent a single 32-bit value
 # data should be five bytes
@@ -274,6 +319,7 @@ class dexHeader():
 
 	# TODO - validate
 	# pulls method_ids_size, method_ids_off
+	# method_ids	method_id_item[]
 	def method_ids(self):
 		method_ids_size_offset = 88
 		method_ids_off_offset = 92
@@ -283,47 +329,82 @@ class dexHeader():
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
 		method_ids_off = self.binary_blob[method_ids_off_offset: method_ids_off_offset+4]
-		method_ids_off = struct.unpack("<I", _methodIdsOff)[0]
-
-		# TODO: now carve out method_ids
-		method_ids_data = self.binary_blob[method_ids_off: method_ids_off+method_ids_size]
+		method_ids_off = struct.unpack("<I", method_ids_off)[0]
 
 
-		###########################
-		# HELPER FUNCTIONS
-		###########################
+		methods = []
+		for i in xrange(method_ids_size):
+			# Name			| Format	| Description
+			############################################
+			# class_idx		| ushort	| index into the type_ids list for the definer of this method. This must be a class or array type, and not a primitive type.
+			# proto_idx		| ushort	| index into the proto_ids list for the prototype of this method
+			# name_idx		| uint		| index into the string_ids list for the name of this method. The string must conform to the syntax for MemberName, defined above.
 
-		# Name	| Format			| Description
-		######################################################
-		# size	| uint				| size of the list, in entries
-		# list	| map_item[size]	| elements of the list
+			# now carve out method_id_item
+			method_ids_data = self.binary_blob[method_ids_off: method_ids_off+8]
+			method_ids_off += 8
 
-		# SUPER CRITICAL
-		def map_list(self):
-			offset = self.map_off()
+			method = {
+				"class_idx": struct.unpack("<H", method_ids_data[0:2])[0],
+				"proto_idx": struct.unpack("<H", method_ids_data[2:4])[0],
+				"name_idx": struct.unpack("<I", method_ids_data[4:8])[0], # index into the string_ids
+			}
+			methods.append(method)
 
-			map_list_size = self.binary_blob[offset: offset+4]
-			map_list_size = struct.unpack("<I", map_list_size)[0]
-			offset += 4
+		return methods
 
-			# map_items are 12 bytes
+	###########################
+	# HELPER FUNCTIONS
+	###########################
 
-			map_items = []
+	# Name	| Format			| Description
+	######################################################
+	# size	| uint				| size of the list, in entries
+	# list	| map_item[size]	| elements of the list
 
-			for i in xrange(map_list_size): # FIXME: does this include the last item?
-				# Name		| Format	| Description
-				##############################################################################
-				# type		| ushort	| type of the items; see table below
-				# unused	| ushort	| (unused)
-				# size		| uint		| count of the number of items to be found at the indicated offset
-				# offset	| uint		| offset from the start of the file to the items in question
+	# SUPER CRITICAL
+	def map_list(self):
+		offset = self.map_off()
 
-				map_item = self.binary_blob[offset: offset+12]
+		map_list_size = self.binary_blob[offset: offset+4]
+		map_list_size = struct.unpack("<I", map_list_size)[0]
+		offset += 4
+
+		# map_items are 12 bytes
+
+		map_items = []
+
+		print(3, "map_list_size: %i" % map_list_size) # only 17 - this can't be right..
+
+		for i in xrange(map_list_size): # FIXME: does this include the last item?
+			# Name		| Format	| Description
+			##############################################################################
+			# type		| ushort	| type of the items; see table below
+			# unused	| ushort	| (unused)
+			# size		| uint		| count of the number of items to be found at the indicated offset
+			# offset	| uint		| offset from the start of the file to the items in question
+
+			map_item = self.binary_blob[offset: offset+12]
 
 
+			# right now we only care about strings - find all strings, count them up - and compare to my other string finder - which will be deprecated
 
-				# map_items.append()
-				pass
+			map_type = map_item[0:2]
+			map_type = struct.unpack("<H", map_type)[0] # FIXME: it's always printing 0, has to be wrong - unless the map is really useless..
+			log(3, "map_type: %x" % map_type)
+
+
+			string_count = 0
+			if ItemType[map_type] == "string_id_item": # I don't think we care about "string_data_item" for now (but that may fix the string_list[idx] problem)
+				string_count += 1
+
+			#log(3, "string_count: %i" % string_count) # returning 0
+
+			# TypeItem[map_type] # will print what it actually is..
+
+
+			# map_items.append()
+			pass
 
 
 	# each class_defs instance has a "class_data_off" field, this field is the offset to a "class_data_item" which has a direct_methods which has "code_off"
@@ -425,9 +506,10 @@ class dexHeader():
 	# virtual_methods		| encoded_method[virtual_methods_size]
 	class class_data_item():
 		# the size of this item is unknown, which is why it's passed an offset
-		def __init__(self, binary_blob, offset):
+		def __init__(self, binary_blob, binary_blob_length, offset):
 			#self.size = 0 # unknown so-far, VERY ANNOYING TO CALCULATE
 			self.binary_blob = binary_blob
+			self.binary_blob_length = binary_blob_length
 			self.offset = offset # NEVER MODIFY THIS
 
 			# pull four ULEB128s
@@ -604,8 +686,13 @@ class dexHeader():
 			debug_info_off = self.binary_blob[offset:offset+4]
 			offset += 4
 
-			insns_size = self.binary_blob[offset:offset+4]
-			insns_size = struct.unpack("<I", insns_size)[0]
+			print "offset: ", offset
+			print "offset+4: ", offset+4
+			print "self.binary_blob_length: ", self.binary_blob_length
+
+
+			insns_size = struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
+			print "insns_size: ", insns_size
 			offset += 4
 
 

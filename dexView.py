@@ -504,11 +504,14 @@ class DEXView(BinaryView, DexFile):
 
 		self.print_metadata() # for some reason this is getting regisered with "raw" view??
 
+		# self.map_list() - either I coded wrong, or not all apks support map_list...
+
 		# map_off
 
-		for string in self.string_ids(): # FIXME: cache the results
-			log(2, "found string: " + string)
-			pass
+		method_list = self.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
+		string_list = self.string_ids() # FIXME: cache the results
+		#log(2, "found string: " + string)
+
 
 		# FIXME: it's not populating the functions...
 		# FIXME: TODO - might be easier to get all the code from the mapping...
@@ -520,7 +523,7 @@ class DEXView(BinaryView, DexFile):
 			print "len(raw_binary): ", len(raw_binary) # seems good
 			print "class_def.class_data_off: ", class_def.class_data_off
 
-			class_data_item_obj = self.class_data_item(raw_binary, class_def.class_data_off) # this line seems correct, TODO: check the actual "class_data_item" function
+			class_data_item_obj = self.class_data_item(raw_binary, raw_binary_length, class_def.class_data_off) # this line seems correct, TODO: check the actual "class_data_item" function
 
 			# create function for each direct_method
 			for direct_method in class_data_item_obj.direct_methods():
@@ -529,10 +532,21 @@ class DEXView(BinaryView, DexFile):
 
 				# FIXME: code_off is offset to code_item struct, not dex
 				code_item_list = class_data_item_obj.code_item(direct_method["code_off"])
+				method_idx_diff = direct_method["method_idx_diff"]
+				string_idx = method_list[method_idx_diff]["name_idx"]
+
+				#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
+				method_name = string_list[string_idx] # FIXME: this is index to "method_ids"
 
 
 				# direct_method.code_off - there's no way to pass "insns_size" to binja???
 				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
+
+				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
+				log(3, str(method_name))
+				fn.name = method_name
+
+				# FIXME: method_list also provides class_idx, proto_idx
 
 			# create function for each virtual_method
 			for virtual_method in class_data_item_obj.virtual_methods():
@@ -540,9 +554,21 @@ class DEXView(BinaryView, DexFile):
 
 				# FIXME: code_off is offset to code_item struct, not dex
 				code_item_list = class_data_item_obj.code_item(virtual_method["code_off"])
+				method_idx_diff = virtual_method["method_idx_diff"] # FIXME: this is index to "method_ids"
+				string_idx = method_list[method_idx_diff]["name_idx"]
+
+				print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
+				method_name = string_list[string_idx]
 
 				# virtual_method.code_off - there's no way to pass "insns_size" to binja???
 				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
+
+
+				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
+				log(3, str(method_name))
+				fn.name = method_name
+
+				# FIXME: method_list also provides class_idx, proto_idx
 
 			print "" # for debugging only, improve readability
 
