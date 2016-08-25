@@ -111,8 +111,9 @@ def read_ULEB128(data):
 	return total, i+1
 
 
-
-def read_sleb128():
+# http://llvm.org/docs/doxygen/html/LEB128_8h_source.html
+def read_sleb128(data):
+	
 	assert False
 
 class DexFile():
