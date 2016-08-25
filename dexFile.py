@@ -68,15 +68,11 @@ ItemType = {
 	0x2006: "annotations_directory_item"
 }
 
-
-
-
-
 # Little-Endian Base 128 - consists of one to five bytes, which represent a single 32-bit value
 # data should be five bytes
 
 # return value, size_of_ULEB128
-def get_ULEB128(data):
+def read_ULEB128(data):
 	# the first bit of each byte is 1, unless that's the last byte
 	total = 0
 	found = False
@@ -89,15 +85,16 @@ def get_ULEB128(data):
 	#p =  ["value: "]
 	for i in xrange(5):
 		value = ord(data[i])
+		high_bit = (ord(data[i]) >> 7)
 
-		value = value & 0x7f # clear the high bit
-		total += value << (i * 7) | total
+		# clear the high bit
+		total += (value & 0x7f) << (i * 7) | total
 
 		#p.append("0x%x " % value)
 		#print "value: %i" % value
 
 		# this is the last byte, so break
-		if (ord(data[i]) >> 7) == 0:
+		if high_bit == 0:
 			found = True
 			break
 
@@ -110,13 +107,51 @@ def get_ULEB128(data):
 	# return (value, num_of_bytes) # where num_of_bytes indicates how much space this LEB128 took up
 	return total, i+1
 
-class dexHeader():
-	def __init__(self, binary_blob, binary_blob_length):
-		# how do I make it so it just inherits it, and compiler thingy doesn't complain?
+
+class DexFile():
+	def __init__(self, binary_blob, binary_blob_length): # data is binaryView
 		self.binary_blob = binary_blob
 		self.binary_blob_length = binary_blob_length
 
-		pass
+	'''
+	header
+		self.magic() - believed correct
+		self.checksum() - validated
+		self.signature() - validated
+		self.file_size() - validated
+		self.header_size  - validated
+		endian_tag - skipped
+		link_size
+		link_offset
+		map_offset
+		string_ids_size
+		string_ids_offset
+		type_ids_size
+		type_ids_offset
+		proto_ids_size
+		proto_ids_offset
+		field_ids_size
+		field_ids_offset
+		method_ids_size
+		method_ids_offset
+		class_defs_size
+		class_defs_offset
+		data_size
+		data_offset
+	'''
+
+	# I believe "data" is the whole file
+	def print_metadata(self):
+		# https://docs.python.org/2/library/struct.html
+		# pretty sure we want "unpack" to take binary string, and print in readable format
+
+		# DexHeader
+		# FIXME: we now inheirit these functions, which may need to be renamed to DexHeader_magic, dex_header_checksum, etc...
+		print "magic: ", self.magic()
+		print "checksum: ", self.checksum()
+		print "signature: ", self.signature()
+		print "file_size: ", self.file_size()
+		print "header_size: ", self.header_size()
 
 	# returns hex
 	# ubyte[8] = DEX_FILE_MAGIC
@@ -140,8 +175,8 @@ class dexHeader():
 		offset = 8
 		checksum_size = 4
 
-		result = self.binary_blob[offset: offset+checksum_size]
-		result = struct.unpack("<I", result)[0] # unsigned int
+		result = self.read_uint(offset)  # self.binary_blob[offset: offset+checksum_size]
+		#result = struct.unpack("<I", result)[0] # unsigned int
 
 		idx_start = offset+checksum_size
 		idx_end = idx_start + self.file_size()-offset-checksum_size
@@ -178,8 +213,8 @@ class dexHeader():
 	def file_size(self):
 		offset = 32
 
-		result = self.binary_blob[offset: offset+4]
-		result = struct.unpack("<I", result)[0] # is currently printing correct info
+		result = self.read_uint(offset)  # self.binary_blob[offset: offset+4]
+		# result = struct.unpack("<I", result)[0] # is currently printing correct info
 
 		# dex file validation
 		if result != self.binary_blob_length: # FIXME GREPME - was self.data.file.raw
@@ -192,8 +227,8 @@ class dexHeader():
 	# format: unit = 0x70
 	def header_size(self):
 		offset = 36
-		result = self.binary_blob[offset: offset+4]
-		result = struct.unpack("<I", result)[0] # uint
+		result = self.read_uint(offset)  # self.binary_blob[offset: offset+4]
+		# result = struct.unpack("<I", result)[0] # uint
 
 		if result != 0x70:
 			print "header_size: ", result
@@ -207,11 +242,14 @@ class dexHeader():
 	# format: uint = 0x12345678
 	def endian_tag(self):
 		offset = 40
+		ENDIAN_CONSTANT = 0x12345678
 
-		# int ENDIAN_CONSTANT = 0x12345678;
+		result = self.read_uint(offset)
+		if result != ENDIAN_CONSTANT:
+			print "endian_tag: ", result
+			assert False
 
-		print "endian_tag isn't implemented"
-		assert False
+		return result
 
 	# TODO - validate
 	# format: uint
@@ -234,8 +272,8 @@ class dexHeader():
 	def map_off(self):
 		offset = 52
 
-		result = self.binary_blob[offset: offset+4]
-		result = struct.unpack("<I", result)[0] # uint
+		result = self.read_uint(offset) # self.binary_blob[offset: offset+4]
+		#result = struct.unpack("<I", result)[0] # uint
 
 		# wait: should I do anything with this? probably not
 		return result
@@ -252,17 +290,17 @@ class dexHeader():
 		string_ids_size_offset = 56
 		string_ids_off_offset = 60
 
-		string_ids_size = self.binary_blob[string_ids_size_offset: string_ids_size_offset+4]
-		string_ids_size = struct.unpack("<I", string_ids_size)[0]
+		string_ids_size = self.read_uint(string_ids_size_offset) # self.binary_blob[string_ids_size_offset: string_ids_size_offset+4]
+		#string_ids_size = struct.unpack("<I", string_ids_size)[0]
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		string_ids_off = self.binary_blob[string_ids_off_offset: string_ids_off_offset+4]
-		string_ids_off = struct.unpack("<I", string_ids_off)[0]
+		string_ids_off = self.read_uint(string_ids_off_offset) # self.binary_blob[string_ids_off_offset: string_ids_off_offset+4]
+		#string_ids_off = struct.unpack("<I", string_ids_off)[0]
 
 		strings = []
 		for i in xrange(string_ids_size):
-			string_data_off = self.binary_blob[string_ids_off: string_ids_off+4]
-			string_data_off = struct.unpack("<I", string_data_off)[0]
+			string_data_off = self.read_uint(string_ids_off) # self.binary_blob[string_ids_off: string_ids_off+4]
+			#string_data_off = struct.unpack("<I", string_data_off)[0]
 
 			null_byte_offset = string_data_off
 			string_result = [""]
@@ -285,36 +323,36 @@ class dexHeader():
 		type_ids_size_offset = 64
 		type_ids_off_offset = 68
 
-		type_ids_size = self.binary_blob[type_ids_size_offset: type_ids_size_offset+4]
-		type_ids_size = struct.unpack("<I", type_ids_size)[0]
+		type_ids_size = self.read_uint(type_ids_size_offset) # self.binary_blob[type_ids_size_offset: type_ids_size_offset+4]
+		#type_ids_size = struct.unpack("<I", type_ids_size)[0]
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		type_ids_off = self.binary_blob[type_ids_off_offset: type_ids_off_offset+4]
-		type_ids_off = struct.unpack("<I", type_ids_off)[0]
+		type_ids_off = self.read_uint(type_ids_off_offset) # self.binary_blob[type_ids_off_offset: type_ids_off_offset+4]
+		#type_ids_off = struct.unpack("<I", type_ids_off)[0]
 
 	# pulls proto_ids_size, proto_ids_off
 	def proto_ids(self):
 		proto_ids_size_offset = 72
 		proto_ids_off_offset = 76
 
-		proto_ids_size = self.binary_blob[proto_ids_size_offset: proto_ids_size_offset+4]
-		proto_ids_size = struct.unpack("<I", proto_ids_size)[0]
+		proto_ids_size = self.read_uint(proto_ids_size_offset) # self.binary_blob[proto_ids_size_offset: proto_ids_size_offset+4]
+		#proto_ids_size = struct.unpack("<I", proto_ids_size)[0]
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		proto_ids_off = self.binary_blob[proto_ids_off_offset: proto_ids_off_offset+4]
-		proto_ids_off = struct.unpack("<I", proto_ids_off)[0]
+		proto_ids_off = self.read_uint(proto_ids_off_offset) # self.binary_blob[proto_ids_off_offset: proto_ids_off_offset+4]
+		#proto_ids_off = struct.unpack("<I", proto_ids_off)[0]
 
 	# pulls field_ids_size, field_ids_off
 	def field_ids(self):
 		field_ids_size_offset = 80
 		field_ids_off_offset = 84
 
-		field_ids_size = self.binary_blob[field_ids_size_offset: field_ids_size_offset+4]
-		field_ids_size = struct.unpack("<I", field_ids_size)[0]
+		field_ids_size = self.read_uint(field_ids_size_offset) # self.binary_blob[field_ids_size_offset: field_ids_size_offset+4]
+		#field_ids_size = struct.unpack("<I", field_ids_size)[0]
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		field_ids_off = self.binary_blob[field_ids_off_offset: field_ids_off_offset+4]
-		field_ids_off = struct.unpack("<I", field_ids_off)[0]
+		field_ids_off = self.read_uint(field_ids_off_offset) # self.binary_blob[field_ids_off_offset: field_ids_off_offset+4]
+		#field_ids_off = struct.unpack("<I", field_ids_off)[0]
 
 
 	# TODO - validate
@@ -324,12 +362,12 @@ class dexHeader():
 		method_ids_size_offset = 88
 		method_ids_off_offset = 92
 
-		method_ids_size = self.binary_blob[method_ids_size_offset: method_ids_size_offset+4]
-		method_ids_size = struct.unpack("<I", method_ids_size)[0]
+		method_ids_size = self.read_uint(method_ids_size_offset) # self.binary_blob[method_ids_size_offset: method_ids_size_offset+4]
+		#method_ids_size = struct.unpack("<I", method_ids_size)[0]
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		method_ids_off = self.binary_blob[method_ids_off_offset: method_ids_off_offset+4]
-		method_ids_off = struct.unpack("<I", method_ids_off)[0]
+		method_ids_off = self.read_uint(method_ids_off_offset) # self.binary_blob[method_ids_off_offset: method_ids_off_offset+4]
+		#method_ids_off = struct.unpack("<I", method_ids_off)[0]
 
 
 		methods = []
@@ -366,8 +404,8 @@ class dexHeader():
 	def map_list(self):
 		offset = self.map_off()
 
-		map_list_size = self.binary_blob[offset: offset+4]
-		map_list_size = struct.unpack("<I", map_list_size)[0]
+		map_list_size = self.read_uint(offset) # self.binary_blob[offset: offset+4]
+		# map_list_size = struct.unpack("<I", map_list_size)[0]
 		offset += 4
 
 		# map_items are 12 bytes
@@ -477,7 +515,18 @@ class dexHeader():
 	###########################
 	# helper functions
 	###########################
+	def read_uint(self, offset):
+		return struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
+
+	def read_ushort(self, offset):
+		return struct.unpack("<H", self.binary_blob[offset:offset+2])[0]
+
+	# wrapper function
+	def read_ULEB128(self, offset):
+		return read_ULEB128(self.binary_blob[offset:offset+5])
+
 	class class_def_item():
+		# FIXME: pass the offset
 		def __init__(self, binary_blob):
 			# class_def_item should be 32 bytes
 			if len(binary_blob) != 32:
@@ -516,20 +565,16 @@ class dexHeader():
 			#print "type(offset): ", type(offset)
 			#print "offset: ", offset
 
-			#
-			# TODO: the problem most likely with get_ULEB128
-			#
-
-			self.static_fields_size, static_fields_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			self.static_fields_size, static_fields_ULEB128_size = self.read_ULEB128(offset) # self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
 			offset += static_fields_ULEB128_size
 
-			self.instance_fields_size, instance_fields_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			self.instance_fields_size, instance_fields_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
 			offset += instance_fields_ULEB128_size
 
-			self.direct_methods_size, direct_methods_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			self.direct_methods_size, direct_methods_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
 			offset += direct_methods_ULEB128_size
 
-			self.virtual_methods_size, virtual_methods_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
+			self.virtual_methods_size, virtual_methods_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
 			offset += virtual_methods_ULEB128_size
 
 			# save data field offsets
@@ -548,10 +593,10 @@ class dexHeader():
 
 			results = []
 			for i in xrange(self.static_fields_size):
-				field_idx_diff, field_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				field_idx_diff, field_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += field_idx_diff_ULEB128_size
 
-				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += field_idx_diff_ULEB128_size
 
 				result = {
@@ -572,10 +617,10 @@ class dexHeader():
 
 			results = []
 			for i in xrange(self.instance_fields_size):
-				field_idx_diff, field_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				field_idx_diff, field_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += field_idx_diff_ULEB128_size
 
-				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += field_idx_diff_ULEB128_size
 
 				result = {
@@ -603,16 +648,23 @@ class dexHeader():
 			offset = self.direct_methods_off # FIXME: is this correct?
 
 			results = []
+			print(4, "self.direct_methods_size: %i" % self.direct_methods_size)
 			for i in xrange(self.direct_methods_size):
-				method_idx_diff, method_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				method_idx_diff, method_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += method_idx_diff_ULEB128_size
 
-				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += access_flags_ULEB128_size
 
 				# FIXME: code_off value is wrong
-				code_off, code_off_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				code_off, code_off_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += code_off_ULEB128_size
+
+				#assert code_off < self.binary_blob_length
+				#log(3, "code_off: %i" % code_off)
+				if code_off < self.binary_blob_length:
+					continue
+					#assert False
 
 				result = {
 					"method_idx_diff": method_idx_diff,
@@ -632,14 +684,14 @@ class dexHeader():
 
 			results = []
 			for i in xrange(self.virtual_methods_size): #
-				method_idx_diff, method_idx_diff_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				method_idx_diff, method_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += method_idx_diff_ULEB128_size
 
-				access_flags, access_flags_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += access_flags_ULEB128_size
 
 				# FIXME: code_off value is wrong
-				code_off, code_off_ULEB128_size = get_ULEB128(self.binary_blob[offset:offset+5])
+				code_off, code_off_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
 				offset += code_off_ULEB128_size
 
 				result = {
@@ -671,19 +723,19 @@ class dexHeader():
 		# ushort == 2 bytes
 		# FIXME: incomplete
 		def code_item(self, offset):
-			registers_size = self.binary_blob[offset:offset+2]
+			registers_size = self.read_ushort(offset) # binary_blob[offset:offset+2]
 			offset += 2
 
-			ins_size = self.binary_blob[offset:offset+2]
+			ins_size = self.read_ushort(offset) # self.binary_blob[offset:offset+2]
 			offset += 2
 
-			outs_size = self.binary_blob[offset:offset+2]
+			outs_size = self.read_ushort(offset) # self.binary_blob[offset:offset+2]
 			offset += 2
 
-			tries_size = self.binary_blob[offset:offset+2]
+			tries_size = self.read_ushort(offset) # self.binary_blob[offset:offset+2]
 			offset += 2
 
-			debug_info_off = self.binary_blob[offset:offset+4]
+			debug_info_off = self.read_uint(offset) # self.binary_blob[offset:offset+4]
 			offset += 4
 
 			print "offset: ", offset
@@ -691,8 +743,8 @@ class dexHeader():
 			print "self.binary_blob_length: ", self.binary_blob_length
 
 
-			insns_size = struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
-			print "insns_size: ", insns_size
+			insns_size = self.read_uint(offset) # struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
+			#print "insns_size: ", insns_size
 			offset += 4
 
 
@@ -717,6 +769,20 @@ class dexHeader():
 			return result
 
 
+		###########################
+		# helper functions
+		###########################
+		def read_uint(self, offset):
+			return struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
+
+		def read_ushort(self, offset):
+			return struct.unpack("<H", self.binary_blob[offset:offset+2])[0]
+
+		# wrapper function
+		def read_ULEB128(self, offset):
+			return read_ULEB128(self.binary_blob[offset:offset+5])
+
+
 # https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
 # Decompiling Android book is very useful, but it's 4 years old..
 # ~/Documents/dexinfo/a.out
@@ -732,73 +798,3 @@ class dexHeader():
 	data
 
 '''
-
-# TODO: DexFile should be passed bv.binary.raw, and parse that...
-
-# class_data_item - the juicy item AFAIK
-#	* referenced in class_def_item
-#	* appears in the data section
-#	* alignment: none (byte-aligned)
-
-class DexFile(dexHeader):
-	def __init__(self, binary_blob, binary_blob_length): # data is binaryView
-		self.binary_blob = binary_blob
-		self.binary_blob_length = binary_blob_length
-
-		dexHeader.__init__(self, binary_blob, binary_blob_length)
-
-	'''
-	header
-		self.magic() - believed correct
-		self.checksum() - validated
-		self.signature() - validated
-		self.file_size() - validated
-		self.header_size  - validated
-		endian_tag - skipped
-		link_size
-		link_offset
-		map_offset
-		string_ids_size
-		string_ids_offset
-		type_ids_size
-		type_ids_offset
-		proto_ids_size
-		proto_ids_offset
-		field_ids_size
-		field_ids_offset
-		method_ids_size
-		method_ids_offset
-		class_defs_size
-		class_defs_offset
-		data_size
-		data_offset
-	'''
-	def header(self):
-		results = []
-
-		results += [self.magic()]
-		results += [self.checksum()]
-		results += [self.signature()]
-		results += [self.file_size()]
-
-		pass
-
-	# I believe "data" is the whole file
-	def print_metadata(self):
-		# https://docs.python.org/2/library/struct.html
-		# pretty sure we want "unpack" to take binary string, and print in readable format
-
-		# DexHeader
-		# FIXME: we now inheirit these functions, which may need to be renamed to DexHeader_magic, dex_header_checksum, etc...
-		print "magic: ", self.magic()
-		print "checksum: ", self.checksum()
-		print "signature: ", self.signature()
-		print "file_size: ", self.file_size()
-		print "header_size: ", self.header_size()
-
-
-
-	def getData(self):
-		# dataOffset is in dexHeader (I think) - pull the data starting at the offset and figure out what it is
-
-		pass

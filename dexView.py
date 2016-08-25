@@ -404,7 +404,7 @@ class DEX(Architecture):
 		operand = InstructionOperandTypes[opcode] # TODO
 
 		length = 1 + OperandLengths[operand] # TODO
-		log(2, "decode_instruction - opcode: %s, operand: %s, length: %s" % (str(opcode), str(operand), str(length)))
+		#log(2, "decode_instruction - opcode: %s, operand: %s, length: %s" % (str(opcode), str(operand), str(length)))
 
 		if len(data) < length:
 			return None, None, None, None
@@ -421,7 +421,7 @@ class DEX(Architecture):
 		# len(data) == 16, why??
 		#log(2, "decode_instruction, len(data): %i" % len(data))
 
-		print data.encode('hex')
+		#print data.encode('hex')
 
 		#value = None # for the NOP
 		return instr, operand, length, value
@@ -483,7 +483,7 @@ class DEX(Architecture):
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers
-class DEXView(BinaryView, DexFile):
+class DEXView(BinaryView):
 	name = "DEX"
 	long_name = "Dalvik Executable"
 
@@ -497,38 +497,41 @@ class DEXView(BinaryView, DexFile):
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
 
-		DexFile.__init__(self, raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
+		self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
 
 		self.notification = DEXViewUpdateNotification(self) # TODO
 		self.data.register_notification(self.notification)
 
-		self.print_metadata() # for some reason this is getting regisered with "raw" view??
+		self.dex_file.print_metadata() # for some reason this is getting regisered with "raw" view??
 
 		# self.map_list() - either I coded wrong, or not all apks support map_list...
 
 		# map_off
 
-		method_list = self.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
-		string_list = self.string_ids() # FIXME: cache the results
+		method_list = self.dex_file.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
+		string_list = self.dex_file.string_ids() # FIXME: cache the results
 		#log(2, "found string: " + string)
 
 
 		# FIXME: it's not populating the functions...
 		# FIXME: TODO - might be easier to get all the code from the mapping...
-		for class_def in self.class_defs():
+		for class_def in self.dex_file.class_defs():
 			#log(2, "class_def instance")
 
 			assert type(class_def.class_data_off) == int
 
-			print "len(raw_binary): ", len(raw_binary) # seems good
-			print "class_def.class_data_off: ", class_def.class_data_off
+			#print "len(raw_binary): ", len(raw_binary) # seems good
+			#print "class_def.class_data_off: ", class_def.class_data_off
 
-			class_data_item_obj = self.class_data_item(raw_binary, raw_binary_length, class_def.class_data_off) # this line seems correct, TODO: check the actual "class_data_item" function
+			class_data_item_obj = self.dex_file.class_data_item(raw_binary, raw_binary_length, class_def.class_data_off) # this line seems correct, TODO: check the actual "class_data_item" function
 
 			# create function for each direct_method
 			for direct_method in class_data_item_obj.direct_methods():
+				assert direct_method["code_off"] < raw_binary_length
+
 				#log(2, "direct_method instance")
-				print "direct_method code_off:", direct_method["code_off"]
+				#print "direct_method code_off: ", direct_method["code_off"]
+				#print "direct_method raw_binary_length: ", raw_binary_length
 
 				# FIXME: code_off is offset to code_item struct, not dex
 				code_item_list = class_data_item_obj.code_item(direct_method["code_off"])
@@ -543,7 +546,7 @@ class DEXView(BinaryView, DexFile):
 				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
 
 				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
-				log(3, str(method_name))
+				#log(3, str(method_name))
 				fn.name = method_name
 
 				# FIXME: method_list also provides class_idx, proto_idx
@@ -557,7 +560,7 @@ class DEXView(BinaryView, DexFile):
 				method_idx_diff = virtual_method["method_idx_diff"] # FIXME: this is index to "method_ids"
 				string_idx = method_list[method_idx_diff]["name_idx"]
 
-				print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
+				#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
 				method_name = string_list[string_idx]
 
 				# virtual_method.code_off - there's no way to pass "insns_size" to binja???
@@ -565,12 +568,12 @@ class DEXView(BinaryView, DexFile):
 
 
 				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
-				log(3, str(method_name))
+				#log(3, str(method_name))
 				fn.name = method_name
 
 				# FIXME: method_list also provides class_idx, proto_idx
 
-			print "" # for debugging only, improve readability
+			#print "" # for debugging only, improve readability
 
 
 		# this might be a better way to do it. Just create functions
