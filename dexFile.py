@@ -77,6 +77,9 @@ def read_ULEB128(data):
 	total = 0
 	found = False
 
+	# so technically it doesn't have to be 5...
+	assert len(data) == 5
+
 	#print "=============="
 	#print "ULEB128"
 	#print "type(data): ", type(data)
@@ -108,10 +111,17 @@ def read_ULEB128(data):
 	return total, i+1
 
 
+
+def read_sleb128():
+	assert False
+
 class DexFile():
 	def __init__(self, binary_blob, binary_blob_length): # data is binaryView
 		self.binary_blob = binary_blob
 		self.binary_blob_length = binary_blob_length
+
+		# just map everything in..
+		self.map_list()
 
 	'''
 	header
@@ -119,8 +129,9 @@ class DexFile():
 		self.checksum() - validated
 		self.signature() - validated
 		self.file_size() - validated
-		self.header_size  - validated
-		endian_tag - skipped
+		self.header_size - validated
+		endian_tag - validated
+
 		link_size
 		link_offset
 		map_offset
@@ -152,6 +163,7 @@ class DexFile():
 		print "signature: ", self.signature()
 		print "file_size: ", self.file_size()
 		print "header_size: ", self.header_size()
+		print "endian_tag: ", self.endian_tag()
 
 	# returns hex
 	# ubyte[8] = DEX_FILE_MAGIC
@@ -175,11 +187,10 @@ class DexFile():
 		offset = 8
 		checksum_size = 4
 
-		result = self.read_uint(offset)  # self.binary_blob[offset: offset+checksum_size]
-		#result = struct.unpack("<I", result)[0] # unsigned int
+		result = self.read_uint(offset)
 
 		idx_start = offset+checksum_size
-		idx_end = idx_start + self.file_size()-offset-checksum_size
+		idx_end = idx_start + self.file_size() - offset - checksum_size
 		adler32 = zlib.adler32(self.binary_blob[idx_start: idx_end]) & (2**32-1)
 		# 32 bit: & (2**32-1)
 		# 64 bit: & (2**64-1)
@@ -193,10 +204,10 @@ class DexFile():
 	# sha-1 signature of the rest of the file (excluding magic, checksum, and signature)
 	# format: ubyte[20]
 	def signature(self):
-		offset = 12  # why 16? - this must be wrong. I validated file_size which starts at offset 32
+		offset = 12
 		signature_size = 20
 
-		result = self.binary_blob[offset: offset+signature_size] # I'm not sure why this is longer than "20"
+		result = self.binary_blob[offset: offset+signature_size]
 		result = result.encode('hex')
 
 		idx_start = offset+signature_size
@@ -213,11 +224,10 @@ class DexFile():
 	def file_size(self):
 		offset = 32
 
-		result = self.read_uint(offset)  # self.binary_blob[offset: offset+4]
-		# result = struct.unpack("<I", result)[0] # is currently printing correct info
+		result = self.read_uint(offset)
 
 		# dex file validation
-		if result != self.binary_blob_length: # FIXME GREPME - was self.data.file.raw
+		if result != self.binary_blob_length:
 			print "file_size method: ", hex(result), ", self.file.raw: ", hex(binary_blob_length)
 			assert False
 
@@ -227,8 +237,7 @@ class DexFile():
 	# format: unit = 0x70
 	def header_size(self):
 		offset = 36
-		result = self.read_uint(offset)  # self.binary_blob[offset: offset+4]
-		# result = struct.unpack("<I", result)[0] # uint
+		result = self.read_uint(offset)
 
 		if result != 0x70:
 			print "header_size: ", result
@@ -236,9 +245,6 @@ class DexFile():
 
 		return 0x70
 
-	###############################################3
-
-	# TODO - validate
 	# format: uint = 0x12345678
 	def endian_tag(self):
 		offset = 40
@@ -251,17 +257,23 @@ class DexFile():
 
 		return result
 
-	# TODO - validate
+	###############################################3
+
+	# TODO - can it be validated?
 	# format: uint
 	def link_size(self):
 		offset = 44
-		pass
+		result = self.read_uint(offset)
 
-	# TODO - validate
+		return result
+
+	# TODO - can it be validated?
 	# format: uint
 	def link_off(self):
 		offset = 48
-		pass
+
+		result = self.read_uint(offset)
+		return result
 
 	# TODO - validate
 	# format: uint
@@ -272,14 +284,12 @@ class DexFile():
 	def map_off(self):
 		offset = 52
 
-		result = self.read_uint(offset) # self.binary_blob[offset: offset+4]
-		#result = struct.unpack("<I", result)[0] # uint
+		result = self.read_uint(offset)
 
 		# wait: should I do anything with this? probably not
 		return result
 
 	########################################
-
 	# string_ids_size, string_ids_off
 	# return list of strings
 	# strings are encored in MUTF-8
@@ -290,69 +300,55 @@ class DexFile():
 		string_ids_size_offset = 56
 		string_ids_off_offset = 60
 
-		string_ids_size = self.read_uint(string_ids_size_offset) # self.binary_blob[string_ids_size_offset: string_ids_size_offset+4]
-		#string_ids_size = struct.unpack("<I", string_ids_size)[0]
+		string_ids_size = self.read_uint(string_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		string_ids_off = self.read_uint(string_ids_off_offset) # self.binary_blob[string_ids_off_offset: string_ids_off_offset+4]
-		#string_ids_off = struct.unpack("<I", string_ids_off)[0]
+		string_ids_off = self.read_uint(string_ids_off_offset)
 
 		strings = []
 		for i in xrange(string_ids_size):
-			string_data_off = self.read_uint(string_ids_off) # self.binary_blob[string_ids_off: string_ids_off+4]
-			#string_data_off = struct.unpack("<I", string_data_off)[0]
+			string_data_off = self.read_uint(string_ids_off)
 
-			null_byte_offset = string_data_off
-			string_result = [""]
-
-			# lets just find the string...
-			while self.binary_blob[null_byte_offset] != "\x00":
-				string_result.append(self.binary_blob[null_byte_offset])
-				null_byte_offset += 1
-
-			string_result = "".join(string_result)
-			strings.append(string_result)
+			string = self.read_string(string_data_off)
+			strings.append(string)
 
 			#string_data_offs.append(string_data_off)
 			string_ids_off += 4
 
 		return strings
 
+	# TODO: implement
 	# type_ids_size, type_ids_off
 	def type_ids(self):
 		type_ids_size_offset = 64
 		type_ids_off_offset = 68
 
-		type_ids_size = self.read_uint(type_ids_size_offset) # self.binary_blob[type_ids_size_offset: type_ids_size_offset+4]
-		#type_ids_size = struct.unpack("<I", type_ids_size)[0]
+		type_ids_size = self.read_uint(type_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		type_ids_off = self.read_uint(type_ids_off_offset) # self.binary_blob[type_ids_off_offset: type_ids_off_offset+4]
-		#type_ids_off = struct.unpack("<I", type_ids_off)[0]
+		type_ids_off = self.read_uint(type_ids_off_offset)
 
+	# TODO: implement
 	# pulls proto_ids_size, proto_ids_off
 	def proto_ids(self):
 		proto_ids_size_offset = 72
 		proto_ids_off_offset = 76
 
-		proto_ids_size = self.read_uint(proto_ids_size_offset) # self.binary_blob[proto_ids_size_offset: proto_ids_size_offset+4]
-		#proto_ids_size = struct.unpack("<I", proto_ids_size)[0]
+		proto_ids_size = self.read_uint(proto_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		proto_ids_off = self.read_uint(proto_ids_off_offset) # self.binary_blob[proto_ids_off_offset: proto_ids_off_offset+4]
-		#proto_ids_off = struct.unpack("<I", proto_ids_off)[0]
+		proto_ids_off = self.read_uint(proto_ids_off_offset)
 
+	# TODO: implement
 	# pulls field_ids_size, field_ids_off
 	def field_ids(self):
 		field_ids_size_offset = 80
 		field_ids_off_offset = 84
 
-		field_ids_size = self.read_uint(field_ids_size_offset) # self.binary_blob[field_ids_size_offset: field_ids_size_offset+4]
-		#field_ids_size = struct.unpack("<I", field_ids_size)[0]
+		field_ids_size = self.read_uint(field_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		field_ids_off = self.read_uint(field_ids_off_offset) # self.binary_blob[field_ids_off_offset: field_ids_off_offset+4]
-		#field_ids_off = struct.unpack("<I", field_ids_off)[0]
+		field_ids_off = self.read_uint(field_ids_off_offset)
 
 
 	# TODO - validate
@@ -362,13 +358,8 @@ class DexFile():
 		method_ids_size_offset = 88
 		method_ids_off_offset = 92
 
-		method_ids_size = self.read_uint(method_ids_size_offset) # self.binary_blob[method_ids_size_offset: method_ids_size_offset+4]
-		#method_ids_size = struct.unpack("<I", method_ids_size)[0]
-		# FIXME: loot at class_defs for how to calculate size in bytes
-
-		method_ids_off = self.read_uint(method_ids_off_offset) # self.binary_blob[method_ids_off_offset: method_ids_off_offset+4]
-		#method_ids_off = struct.unpack("<I", method_ids_off)[0]
-
+		method_ids_size = self.read_uint(method_ids_size_offset)
+		method_ids_off = self.read_uint(method_ids_off_offset)
 
 		methods = []
 		for i in xrange(method_ids_size):
@@ -379,14 +370,13 @@ class DexFile():
 			# name_idx		| uint		| index into the string_ids list for the name of this method. The string must conform to the syntax for MemberName, defined above.
 
 			# now carve out method_id_item
-			method_ids_data = self.binary_blob[method_ids_off: method_ids_off+8]
+			method = {
+				"class_idx": self.read_ushort(method_ids_off), # struct.unpack("<H", method_ids_data[0:2])[0],
+				"proto_idx": self.read_ushort(method_ids_off+2), # struct.unpack("<H", method_ids_data[2:4])[0],
+				"name_idx": self.read_uint(method_ids_off+4) # struct.unpack("<I", method_ids_data[4:8])[0], # index into the string_ids
+			}
 			method_ids_off += 8
 
-			method = {
-				"class_idx": struct.unpack("<H", method_ids_data[0:2])[0],
-				"proto_idx": struct.unpack("<H", method_ids_data[2:4])[0],
-				"name_idx": struct.unpack("<I", method_ids_data[4:8])[0], # index into the string_ids
-			}
 			methods.append(method)
 
 		return methods
@@ -403,9 +393,7 @@ class DexFile():
 	# SUPER CRITICAL
 	def map_list(self):
 		offset = self.map_off()
-
-		map_list_size = self.read_uint(offset) # self.binary_blob[offset: offset+4]
-		# map_list_size = struct.unpack("<I", map_list_size)[0]
+		map_list_size = self.read_uint(offset)
 		offset += 4
 
 		# map_items are 12 bytes
@@ -413,6 +401,9 @@ class DexFile():
 		map_items = []
 
 		print(3, "map_list_size: %i" % map_list_size) # only 17 - this can't be right..
+		self.strings = []
+		self.codes = []
+
 
 		for i in xrange(map_list_size): # FIXME: does this include the last item?
 			# Name		| Format	| Description
@@ -422,27 +413,44 @@ class DexFile():
 			# size		| uint		| count of the number of items to be found at the indicated offset
 			# offset	| uint		| offset from the start of the file to the items in question
 
-			map_item = self.binary_blob[offset: offset+12]
+			# map_item
+			map_type = self.read_ushort(offset) # yes this is a ushort
+			map_size = self.read_uint(offset+4)
+			map_offset = self.read_uint(offset+8)
+			offset += 12
 
-
-			# right now we only care about strings - find all strings, count them up - and compare to my other string finder - which will be deprecated
-
-			map_type = map_item[0:2]
-			map_type = struct.unpack("<H", map_type)[0] # FIXME: it's always printing 0, has to be wrong - unless the map is really useless..
-			log(3, "map_type: %x" % map_type)
-
-
-			string_count = 0
+			# string_id_item works
 			if ItemType[map_type] == "string_id_item": # I don't think we care about "string_data_item" for now (but that may fix the string_list[idx] problem)
-				string_count += 1
+				for i in range(map_size):
+					# map_offset points to a string_id_item
+					string_off = self.read_uint(map_offset + i*4)
 
-			#log(3, "string_count: %i" % string_count) # returning 0
+					string = self.read_string(string_off)
+					self.strings.append(string)
+
+			elif ItemType[map_type] == "code_item":
+				log(3, "there are %i code_items" % map_size)
+				for i in range(map_size):
+					code_off = self.read_uint(map_offset + i*4)
+
+					# TODO: I need to determine the size of the code_item
+
+ 					code = self.code_item(code_off)
+
+					self.codes.append(code)
+
+
+			map_item = {
+				"type": map_type,
+				"size": map_size,
+				"offset": map_offset,
+			}
+			map_items.append(map_item)
+
+
+		#log(3, "string_count: %i" % string_count) # returning 0
 
 			# TypeItem[map_type] # will print what it actually is..
-
-
-			# map_items.append()
-			pass
 
 
 	# each class_defs instance has a "class_data_off" field, this field is the offset to a "class_data_item" which has a direct_methods which has "code_off"
@@ -452,17 +460,12 @@ class DexFile():
 	#	* class_defs_off
 	#
 	# return list of class_def_item objects
-	def class_defs(self):
+	def class_defs(self): # seems ok
 		class_defs_size_offset = 96 # VERIFIED
 		class_defs_off_offset = 100 # VERIFIED
 
-		# calculate class_defs_size - ok
-		class_defs_size = self.binary_blob[class_defs_size_offset: class_defs_size_offset+4]
-		class_defs_size = struct.unpack("<I", class_defs_size)[0]
-
-		# calculate class_defs_off - ok
-		class_defs_off = self.binary_blob[class_defs_off_offset: class_defs_off_offset+4]
-		class_defs_off = struct.unpack("<I", class_defs_off)[0]
+		class_defs_size = self.read_uint(class_defs_size_offset) # ok
+		class_defs_off = self.read_uint(class_defs_off_offset) # ok
 
 		print "\n===============================\n"
 		print "class_defs_size: ", class_defs_size, "\n"
@@ -481,14 +484,14 @@ class DexFile():
 		# class_data_off	|	uint
 		# static_values_off	|	uint
 
-		class_def_item_size = 0x20 # 0x20 is class_def_item size in bytes
+		class_def_item_size = 0x20 # 0x20 is 32 decimal, the class_def_item size in bytes
 
-		# OK
-		class_defs_byte_size = class_defs_size * class_def_item_size # class_defs_size indicates how many of them there are
-		raw_class_defs = self.binary_blob[class_defs_off: class_defs_off+ class_defs_byte_size]
+		class_def_items = []
+		for i in range(class_defs_size):
+			item = self.class_def_item(class_defs_off)
+			class_defs_off += class_def_item_size
 
-		# split by class_def_item_size - seems OK
-		class_def_items = [self.class_def_item(raw_class_defs[i:i+class_def_item_size]) for i in range(0, len(raw_class_defs), class_def_item_size)]
+			class_def_items.append(item)
 
 		# list of class_def_item objects
 		return class_def_items
@@ -500,12 +503,10 @@ class DexFile():
 		data_size_offset = 104
 		data_off_offset = 108
 
-		data_size = self.binary_blob[data_off_offset: data_off_offset+4]
-		data_size = struct.unpack("<I", data_size)[0]
+		data_size = self.read_uint(data_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		data_off = self.binary_blob[data_off_offset:data_off_offset + 4]
-		data_off = struct.unpack("<I", data_off)[0]
+		data_off = self.read_uint(data_off_offset)
 
 	def link_data(self):
 		print "link_data not yet implemented"
@@ -525,22 +526,97 @@ class DexFile():
 	def read_ULEB128(self, offset):
 		return read_ULEB128(self.binary_blob[offset:offset+5])
 
-	class class_def_item():
-		# FIXME: pass the offset
-		def __init__(self, binary_blob):
-			# class_def_item should be 32 bytes
-			if len(binary_blob) != 32:
-				print "len(binary_blob): ", len(binary_blob)
-				assert len(binary_blob) == 32
+	def read_string(self, offset):
+		string_result = [""]
 
-			self.class_idx = struct.unpack("<I", binary_blob[0:4])[0]
-			self.access_flags = struct.unpack("<I", binary_blob[4:8])[0]
-			self.superclass_idx = struct.unpack("<I", binary_blob[8:12])[0]
-			self.interfaces_off = struct.unpack("<I", binary_blob[12:16])[0]
-			self.source_file_idx = struct.unpack("<I", binary_blob[16:20])[0]
-			self.annotations_off = struct.unpack("<I", binary_blob[20:24])[0]
-			self.class_data_off = struct.unpack("<I", binary_blob[24:28])[0]
-			self.static_values_off = struct.unpack("<I", binary_blob[28:32])[0]
+		# lets just find the string...
+		while self.binary_blob[offset] != "\x00":
+			string_result.append(self.binary_blob[offset])
+			offset += 1
+
+		return "".join(string_result)
+
+	# Name				| Format									| Description
+	################################################################################
+	# registers_size	| ushort									| number of registers used by this code
+	# ins_size			| ushort						 			|
+	# outs_size			| ushort								 	| number of words of outgoing argument space required by this co
+	# tries_size		| ushort									| number of try_items for this instance.
+	# debug_info_off	| uint										| offset from the start of the file to the debug info
+	# insns_size		| uint										| size of the instructions list, in 16-bit code units
+	# insns				| ushort[insns_size]						| actual array of bytecode.
+	# padding			| ushort (optional) = 0						| two bytes of padding to make tries four-byte aligned.
+	# tries				| try_item[tries_size] (optional)			| array indicating where in the code exceptions
+	# handlers			| encoded_catch_handler_list (optional)		| bytes representing a list of lists
+
+	# ushort == 2 bytes
+	# FIXME: incomplete
+	def code_item(self, offset):
+		registers_size = self.read_ushort(offset) # binary_blob[offset:offset+2]
+		ins_size = self.read_ushort(offset+2) # self.binary_blob[offset:offset+2]
+		outs_size = self.read_ushort(offset+4) # self.binary_blob[offset:offset+2]
+		tries_size = self.read_ushort(offset+6) # self.binary_blob[offset:offset+2]
+		debug_info_off = self.read_uint(offset+8) # self.binary_blob[offset:offset+4]
+		insns_size = self.read_uint(offset+12) # struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
+		offset += 16
+		#print "insns_size: ", insns_size
+
+		# pretty sure this is correct
+		insns_off = offset
+
+		#insns = self.binary_blob[insns_off:insns_off+(insns_size*2)] # the actual dex code, but lets not save as variable unless we need to
+
+		offset += (insns_size*2)
+
+		# optional padding
+		if (tries_size != 0) and (insns_size % 2 == 1):
+			offset += 2
+
+		# tries
+		#tries =  # each "tries" is 8 bytes
+		offset += tries_size * 8
+
+		# handlers
+		if tries_size != 0:
+			val, handlers_size = self.read_ULEB128(offset)
+			offset += size
+
+			handlers = []
+			for i in range(handlers_size):
+				# read an "encoded_catch_handler" struct
+
+				# what's a "sleb128"
+				#encoded_catch_handler_size = read_sleb128() # FIXME: need to create read_sleb128 wrapper
+
+				assert False # lots to do here
+				pass
+
+		# FIXME: need to handle "padding", "tries", and "handlers"
+
+		result = {
+			"registers_size": registers_size,
+			"ins_size": ins_size,
+			"outs_size": outs_size,
+			"tries_size": tries_size,
+			"debug_info_off": debug_info_off,
+			"insns_size": insns_size,
+			"insns_off": insns_off
+			# "insns": insns
+		}
+
+		return result
+
+	def class_def_item(self, offset):
+		return {
+			"class_idx": self.read_uint(offset), # struct.unpack("<I", binary_blob[0:4])[0]
+			"access_flags": self.read_uint(offset+4), # struct.unpack("<I", binary_blob[4:8])[0]
+			"superclass_idx": self.read_uint(offset+8), # struct.unpack("<I", binary_blob[8:12])[0]
+			"interfaces_off": self.read_uint(offset+12), # struct.unpack("<I", binary_blob[12:16])[0]
+			"source_file_idx": self.read_uint(offset+16), # struct.unpack("<I", binary_blob[16:20])[0]
+			"annotations_off": self.read_uint(offset+20), # struct.unpack("<I", binary_blob[20:24])[0]
+			"class_data_off": self.read_uint(offset+24), # struct.unpack("<I", binary_blob[24:28])[0]
+			"static_values_off": self.read_uint(offset+28) # struct.unpack("<I", binary_blob[28:32])[0]
+		}
 
 
 	# name					| format
@@ -556,6 +632,10 @@ class DexFile():
 	class class_data_item():
 		# the size of this item is unknown, which is why it's passed an offset
 		def __init__(self, binary_blob, binary_blob_length, offset):
+			if offset > binary_blob_length:
+				log(3, "length: %i, binary_blob_length: %i" % (offset, binary_blob_length))
+				assert False
+
 			#self.size = 0 # unknown so-far, VERY ANNOYING TO CALCULATE
 			self.binary_blob = binary_blob
 			self.binary_blob_length = binary_blob_length
@@ -705,68 +785,6 @@ class DexFile():
 
 			# return list of dicts
 			return results
-
-
-		# Name				| Format									| Description
-		################################################################################
-		# registers_size	| ushort									| number of registers used by this code
-		# ins_size			| ushort						 			|
-		# outs_size			| ushort								 	| number of words of outgoing argument space required by this co
-		# tries_size		| ushort									| number of try_items for this instance.
-		# debug_info_off	| uint										| offset from the start of the file to the debug info
-		# insns_size		| uint										| size of the instructions list, in 16-bit code units
-		# insns				| ushort[insns_size]						| actual array of bytecode.
-		# padding			| ushort (optional) = 0						| two bytes of padding to make tries four-byte aligned.
-		# tries				| try_item[tries_size] (optional)			| array indicating where in the code exceptions
-		# handlers			| encoded_catch_handler_list (optional)		| bytes representing a list of lists
-
-		# ushort == 2 bytes
-		# FIXME: incomplete
-		def code_item(self, offset):
-			registers_size = self.read_ushort(offset) # binary_blob[offset:offset+2]
-			offset += 2
-
-			ins_size = self.read_ushort(offset) # self.binary_blob[offset:offset+2]
-			offset += 2
-
-			outs_size = self.read_ushort(offset) # self.binary_blob[offset:offset+2]
-			offset += 2
-
-			tries_size = self.read_ushort(offset) # self.binary_blob[offset:offset+2]
-			offset += 2
-
-			debug_info_off = self.read_uint(offset) # self.binary_blob[offset:offset+4]
-			offset += 4
-
-			print "offset: ", offset
-			print "offset+4: ", offset+4
-			print "self.binary_blob_length: ", self.binary_blob_length
-
-
-			insns_size = self.read_uint(offset) # struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
-			#print "insns_size: ", insns_size
-			offset += 4
-
-
-			insns_off = offset
-			#insns = self.binary_blob[offset:offset+(insns_size*2)] # the actual dex code, but lets not save as variable unless we need to
-
-			offset += (insns_size*2)
-
-			# FIXME: need to handle "padding", "tries", and "handlers"
-
-			result = {
-				"registers_size": registers_size,
-				"ins_size": ins_size,
-				"outs_size": outs_size,
-				"tries_size": tries_size,
-				"debug_info_off": debug_info_off,
-				"insns_size": insns_size,
-				"insns_off": insns_off
-				# "insns": insns
-			}
-
-			return result
 
 
 		###########################

@@ -510,20 +510,35 @@ class DEXView(BinaryView):
 
 		method_list = self.dex_file.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
 		string_list = self.dex_file.string_ids() # FIXME: cache the results
+
+		# map_list - is literally the best way to do stuff...
+		# self.dex_file.map_list() # it's called in dex_file init routine
+		#print self.dex_file.strings # WORKING YAY
+
+
+		for code_item in self.dex_file.codes:
+			data.create_user_function(Architecture['dex'].standalone_platform, code_item["insns_off"])
+
 		#log(2, "found string: " + string)
 
 
 		# FIXME: it's not populating the functions...
 		# FIXME: TODO - might be easier to get all the code from the mapping...
-		for class_def in self.dex_file.class_defs():
+		log(3, "self.dex_file.class_defs() count: %i" % len(self.dex_file.class_defs())) # 123 for the example
+
+		for class_def in self.dex_file.class_defs():  # this line seems ok - I read class_defs source as well
 			#log(2, "class_def instance")
 
-			assert type(class_def.class_data_off) == int
+			assert type(class_def["class_data_off"]) == int
 
 			#print "len(raw_binary): ", len(raw_binary) # seems good
-			#print "class_def.class_data_off: ", class_def.class_data_off
+			#print "class_de["class_data_off"]: ", class_def["class_data_off"]
 
-			class_data_item_obj = self.dex_file.class_data_item(raw_binary, raw_binary_length, class_def.class_data_off) # this line seems correct, TODO: check the actual "class_data_item" function
+			# FIXME: class_def["class_data_off"] is clearly wrong
+			assert class_def["class_data_off"] < raw_binary_length
+
+			'''
+			class_data_item_obj = self.dex_file.class_data_item(raw_binary, raw_binary_length, class_def["class_data_off"]) # this line seems correct, TODO: check the actual "class_data_item" function
 
 			# create function for each direct_method
 			for direct_method in class_data_item_obj.direct_methods():
@@ -572,7 +587,7 @@ class DEXView(BinaryView):
 				fn.name = method_name
 
 				# FIXME: method_list also provides class_idx, proto_idx
-
+			'''
 			#print "" # for debugging only, improve readability
 
 
