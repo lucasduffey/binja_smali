@@ -38,13 +38,62 @@ OPCODES NEEDED
 # TODO: verify accuracy - http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
 # the "None" ones - are ones I didn't feel like copy-pasting
 InstructionNames = [
-	"nop", "move", "move/from16", "move/16", "move-wide", "move-wide/from16", "move-wide/16", "move-object", "move-object/from16", # 0x00
-	"move-object/16", "move-result", "move-result-wide", "move-result-object", "move-exception", "return-void", "return", "return-wide", # 0x8
-	"return-object", "const/4", "const/16", "const", "const/high16", "const-wide/16", "const-wide/32", "const-wide", "const-wide/high16"
-	"const-string", "const-string-jumbo", "const-class", "monitor-enter", "monitor-exit", "check-cast", "instance-of", "array-length",
-	"new-instance", "new-array", "filled-new-array", None, None, None, "throw", "goto", None, None, None, None, None
+	"nop",
+	"move", "move/from16", "move/16", "move-wide", "move-wide/from16", "move-wide/16", "move-object", # 0x00
+	"move-object/from16", "move-object/16", "move-result", "move-result-wide", "move-result-object", "move-exception", "return-void", "return", # 0x8
+	"return-wide", "return-object",
+	"const/4", "const/16", "const", "const/high16", "const-wide/16", "const-wide/32", # 0x10
+	"const-wide", "const-wide/high16", "const-string", "const-string-jumbo", "const-class", "monitor-enter", "monitor-exit", "check-cast", # 0x18
+	"instance-of", "array-length", "new-instance",
 
-	# etc.. there are a LOT
+	"new-array", "filled-new-array", "filled-new-array-range ", "fill-array-data",  # 0x26 - verified
+
+	"throw",
+
+	"goto", "goto/16", "goto/32"
+	"packed-switch", "sparse-switch",
+	"cmpl-float", "cmpg-float", "cmpl-double", "cmpg-double", "cmp-long",
+	"if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez",
+	None, None, None, None, None, None, # unused 0x3e - 0x43
+	"aget", "aget-wide", "aget-object", "aget-boolean", "aget-byte", "aget-char", "aget-short",
+	"aput", "aput-wide", "aput-object", "aput-boolean", "aput-byte", "aput-char", "aput-short",
+
+	"iget", "iget-wide", "iget-object", "iget-boolean", "iget-byte", "iget-char", "iget-short",
+	"iput", "iput-wide", "iput-object", "iput-boolean", "iput-byte", "iput-char", "iput-short",
+
+	"sget", "sget-wide", "sget-object", "sget-boolean", "sget-byte", "sget-char", "sget-short",
+	"sput", "sput-wide", "sput-object", "sput-boolean", "sput-byte", "sput-char", "sput-short",
+
+	"invoke-virtual", "invoke-super", "invoke-direct", "invoke-static", "invoke-interface",
+	None, # unused 0x73
+	"invoke-virtual/range", "invoke-super/range", "invoke-direct/range", "invoke-static/range", "invoke-interface/range",
+	None, None, # unused 0x79 - 0x7a
+	"neg-int", "not-int", "neg-long", "not-long", "neg-float", "neg-double",
+	"int-to-long", "int-to-float", "int-to-double",
+	"long-to-int", "long-to-float", "long-to-double",
+	"float-to-int", "float-to-long", "float-to-double",
+	"double-to-int", "dobule-to-long", "double-to-float",
+	"int-to-byte", "int-to-char", "int-to-short",
+
+	"add-int", "sub-int", "mul-int", "div-int", "rem-int", "and-int", "or-int", "xor-int", "shl-int", "shr-int", "ushr-int",
+	"add-long", "sub-long", "mul-long", "div-long", "rem-long", "and-long", "or-long", "xor-long", "shl-long", "shr-long", "ushr-long",
+	"add-float", "sub-float", "mul-float", "div-float", "rem-float",
+	"add-double", "sub-double", "mul-double", "div-double", "rem-double",
+	"add-int/2addr", "sub-int/2addr", "mul-int/2addr", "div-int/2addr", "rem-int/2addr", "and-int/2addr", "or-int/2addr", "xor-int/2addr", "shl-int/2addr", "shr-int/2addr", "ushr-int/2addr",
+
+	"add-long/2addr","sub-long/2addr","mul-long/2addr","div-long/2addr","rem-long/2addr","and-long/2addr","or-long/2addr","xor-long/2addr","shl-long/2addr","shr-long/2addr","ushr-long/2addr",
+	"add-float/2addr", "sub-float/2addr", "mul-float/2addr", "div-float/2addr", "rem-float/2addr",
+	"add-double/2addr", "sub-double/2addr", "mul-double/2addr", "div-double/2addr", "rem-double/2addr",
+	"add-int/lit16", "sub-int/lit16", "mul-int/lit16", "div-int/lit16", "rem-int/lit16", "and-int/lit16", "or-int/lit16", "xor-int/lit16",
+	"add-int/lit8", "sub-int/lit8", "mul-int/lit8", "div-int/lit8", "rem-int/lit8", "and-int/lit8", "or-int/lit8", "xor-int/lit8", "shl-int/lit8", "shr-int/lit8", "ushr-int/lit8",
+	None,None,None,None,None,None,None,None,None,None,None,
+	"execute-inline",
+	None,
+	"invoke-direct-empty",
+	None,
+	"iget-quick", "iget-wide-quick", "iget-object-quick","iput-quick", "iput-wide-quick", "iput-object-quick",
+	"invoke-virtual-quick", "invoke-virtual-quick/range","invoke-super-quick", "invoke-super-quick/range",
+	None,None,None,None
 ]
 
 RegisterNames = [
@@ -100,6 +149,239 @@ CONST_16 = 19
 CONST = 20
 CONST_HIGH16 = 21
 CONST_WIDE16 = 22
+CONST_WIDE32 = 23
+CONST_WIDE = 0x18
+CONST_WIDE_HIGH16 = 0x19
+CONST_STRING = 0x1A
+CONST_STRING_JUMBO = 0x1B
+CONST_CLASS = 0x1C
+MONITOR_ENTER = 0x1D
+MONITOR_EXIT = 0x1E
+CHECK_CAST = 0x1F
+INSTANCE_OF = 020
+ARRAY_LENGTH = 0x21
+NEW_INSTANCE = 0x22
+NEW_ARRAY = 0x23
+FILLED_NEW_ARRAY = 0x24
+FILLED_NEW_ARRAY_RANGE = 0x25
+FILL_ARRAY_DATA = 0x26
+THROW = 0x27
+GOTO = 0x28
+PACKED_SWITCH = 0x29
+SPARSE_SWITCH = 0x2a
+CMPL_FLOAT = 0x2b
+CMPG_FLOAT = 0x2c
+CMPL_DOUBLE = 0x2d
+CMPG_DOUBLE = 0x2e
+CMP_LONG = 0x2f
+IF_EQ = 0x30
+IF_NE = 0x31
+IF_LT = 0x32
+IF_GE = 0x33
+IF_GT = 0x34
+IF_LE = 0x35
+IF_EQZ = 0x36
+IF_NEZ = 0x37
+IF_LTZ = 0x38
+IF_GEZ = 0x39
+IF_GTZ = 0x3a
+IF_LEZ = 0x3b
+UNUSED_3E = 0x3c
+UNUSED_3F = 0x3d
+UNUSED_40 = 0x3e
+UNUSED_41 = 0x3f
+UNUSED_42 = 0x40
+UNUSED_43 = 0x41
+AGET = 0x42
+AGET_WIDE = 0x43
+AGET_OBJECT = 0x44
+AGET_BOOLEAN = 0x45
+AGET_BYTE = 0x46
+AGET_CHAR = 0x47
+AGET_SHORT = 0x48
+APUT = 0x49
+APUT_WIDE = 0x4a
+APUT_OBJECT = 0x4b
+APUT_BOOLEAN = 0x4c
+APUT_BYTE = 0x4d
+APUT_CHAR = 0x4e
+APUT_SHORT = 0x4f
+IGET = 0x50
+IGET_WIDE = 0x51
+IGET_OBJECT = 0x52
+IGET_BOOLEAN = 0x53
+IGET_BYTE = 0x54
+IGET_CHAR = 0x55
+IGET_SHORT = 0x56
+IPUT = 0x57
+IPUT_WIDE = 0x58
+IPUT_OBJECT = 0x59
+IPUT_BOOLEAN = 0x5a
+IPUT_BYTE = 0x5b
+IPUT_CHAR = 0x5c
+IPUT_SHORT = 0x5d
+SGET = 0x5e
+SGET_WIDE = 0x5f
+SGET_OBJECT = 0x60
+SGET_BOOLEAN = 0x61
+SGET_BYTE = 0x62
+SGET_CHAR = 0x63
+SGET_SHORT = 0x64
+SPUT = 0x65
+SPUT_WIDE = 0x66
+SPUT_OBJECT = 0x67
+SPUT_BOOLEAN = 0x68
+SPUT_BYTE = 0x69
+SPUT_CHAR = 0x6a
+SPUT_SHORT = 0x6b
+INVOKE_VIRTUAL = 0x6c
+INVOKE_SUPER = 0x6d
+INVOKE_DIRECT = 0x6e
+INVOKE_STATIC = 0x6f
+INVOKE_INTERFACE = 0x70
+UNUSED_73 = 0x71
+INVOKE_VIRTUAL_RANGE = 0x72
+INVOKE_SUPER_RANGE = 0x73
+INVOKE_DIRECT_RANGE = 0x74
+INVOKE_STATIC_RANGE = 0x75
+INVOKE_INTERFACE_RANGE = 0x76
+UNUSED_79 = 0x77
+UNUSED_7A = 0x78
+NEG_INT = 0x79
+NOT_INT = 0x7a
+NEG_LONG = 0x7b
+NOT_LONG = 0x7c
+NEG_FLOAT = 0x7d
+NEG_DOUBLE = 0x7e
+INT_TO_LONG = 0x7f
+INT_TO_FLOAT = 0x80
+INT_TO_DOUBLE = 0x81
+LONG_TO_INT = 0x82
+LONG_TO_FLOAT = 0x83
+LONG_TO_DOUBLE = 0x84
+FLOAT_TO_INT = 0x85
+FLOAT_TO_LONG = 0x86
+FLOAT_TO_DOUBLE = 0x87
+DOUBLE_TO_INT = 0x88
+DOUBLE_TO_LONG = 0x89
+DOUBLE_TO_FLOAT = 0x8a
+INT_TO_BYTE = 0x8b
+INT_TO_CHAR = 0x8c
+INT_TO_SHORT = 0x8d
+ADD_INT = 0x8e
+SUB_INT = 0x8f
+MUL_INT = 0x90
+DIV_INT = 0x91
+REM_INT = 0x92
+AND_INT = 0x93
+OR_INT = 0x94
+XOR_INT = 0x95
+SHL_INT = 0x96
+SHR_INT = 0x97
+USHR_INT = 0x98
+ADD_LONG = 0x99
+SUB_LONG = 0x9a
+MUL_LONG = 0x9b
+DIV_LONG = 0x9c
+REM_LONG = 0x9d
+AND_LONG = 0x9e
+OR_LONG = 0x9f
+XOR_LONG = 0xa0
+SHL_LONG = 0xa1
+SHR_LONG = 0xa2
+USHR_LONG = 0xa3
+ADD_FLOAT = 0xa4
+SUB_FLOAT = 0xa5
+MUL_FLOAT = 0xa6
+DIV_FLOAT = 0xa7
+REM_FLOAT = 0xa8
+ADD_DOUBLE = 0xa9
+SUB_DOUBLE = 0xaa
+MUL_DOUBLE = 0xab
+DIV_DOUBLE = 0xac
+REM_DOUBLE = 0xad
+ADD_INT_2ADDR = 0xae
+SUB_INT_2ADDR = 0xaf
+MUL_INT_2ADDR = 0xb0
+DIV_INT_2ADDR = 0xb1
+REM_INT_2ADDR = 0xb2
+AND_INT_2ADDR = 0xb3
+OR_INT_2ADDR = 0xb4
+XOR_INT_2ADDR = 0xb5
+SHL_INT_2ADDR = 0xb6
+SHR_INT_2ADDR = 0xb7
+USHR_INT_2ADDR = 0xb8
+ADD_LONG_2ADDR = 0xb9
+SUB_LONG_2ADDR = 0xba
+MUL_LONG_2ADDR = 0xbb
+DIV_LONG_2ADDR = 0xbc
+REM_LONG_2ADDR = 0xbd
+AND_LONG_2ADDR = 0xbe
+OR_LONG_2ADDR = 0xbf
+XOR_LONG_2ADDR = 0xc0
+SHL_LONG_2ADDR = 0xc1
+SHR_LONG_2ADDR = 0xc2
+USHR_LONG_2ADDR = 0xc3
+ADD_FLOAT_2ADDR = 0xc4
+SUB_FLOAT_2ADDR = 0xc5
+MUL_FLOAT_2ADDR = 0xc6
+DIV_FLOAT_2ADDR = 0xc7
+REM_FLOAT_2ADDR = 0xc8
+ADD_DOUBLE_2ADDR = 0xc9
+SUB_DOUBLE_2ADDR = 0xca
+MUL_DOUBLE_2ADDR = 0xcb
+DIV_DOUBLE_2ADDR = 0xcc
+REM_DOUBLE_2ADDR = 0xcd
+ADD_INT_LIT16 = 0xce
+SUB_INT_LIT16 = 0xcf
+MUL_INT_LIT16 = 0xd0
+DIV_INT_LIT16 = 0xd1
+REM_INT_LIT16 = 0xd2
+AND_INT_LIT16 = 0xd3
+OR_INT_LIT16 = 0xd4
+XOR_INT_LIT16 = 0xd5
+ADD_INT_LIT8 = 0xd6
+SUB_INT_LIT8 = 0xd7
+MUL_INT_LIT8 = 0xd8
+DIV_INT_LIT8 = 0xd9
+REM_INT_LIT8 = 0xda
+AND_INT_LIT8 = 0xdb
+OR_INT_LIT8 = 0xdc
+XOR_INT_LIT8 = 0xdd
+SHL_INT_LIT8 = 0xde
+SHR_INT_LIT8 = 0xdf
+USHR_INT_LIT8 = 0xe0
+UNUSED_E3 = 0xe1
+UNUSED_E4 = 0xe2
+UNUSED_E5 = 0xe3
+UNUSED_E6 = 0xe4
+UNUSED_E7 = 0xe5
+UNUSED_E8 = 0xe6
+UNUSED_E9 = 0xe7
+UNUSED_EA = 0xe8
+UNUSED_EB = 0xe9
+UNUSED_EC = 0xea
+UNUSED_ED = 0xeb
+EXECUTE_INLINE = 0xec
+UNUSED_EF = 0xed
+INVOKE_DIRECT_EMPTY = 0xee
+UNUSED_F1 = 0xef
+IGET_QUICK = 0xf0
+IGET_WIDE_QUICK = 0xf1
+IGET_OBJECT_QUICK = 0xf2
+IPUT_QUICK = 0xf3
+IPUT_WIDE_QUICK = 0xf4
+IPUT_OBJECT_QUICK = 0xf5
+INVOKE_VIRTUAL_QUICK = 0xf6
+INVOKE_VIRTUAL_QUICK_RANGE = 0xf7
+INVOKE_SUPER_QUICK = 0xf8
+INVOKE_SUPER_QUICK_RANGE = 0xf9
+UNUSED_FC = 0xfa
+UNUSED_FD = 0xfb
+UNUSED_FE = 0xfc
+UNUSED_FF = 0xfd
+
+
 
 InstructionOperandTypes = [
 	NONE, MOVE,
@@ -126,6 +408,238 @@ InstructionOperandTypes = [
 	CONST,
 	CONST_HIGH16,
 	CONST_WIDE16,
+	CONST_WIDE32,
+	CONST_WIDE,
+	CONST_WIDE_HIGH16,
+	CONST_STRING,
+	CONST_STRING_JUMBO,
+	CONST_CLASS,
+	MONITOR_ENTER,
+	MONITOR_EXIT,
+	CHECK_CAST,
+	INSTANCE_OF,
+	ARRAY_LENGTH,
+	NEW_INSTANCE,
+	NEW_ARRAY,
+	FILLED_NEW_ARRAY,
+	FILLED_NEW_ARRAY_RANGE,
+	FILL_ARRAY_DATA,
+	THROW,
+	GOTO,
+
+	PACKED_SWITCH,
+	SPARSE_SWITCH,
+	CMPL_FLOAT,
+	CMPG_FLOAT,
+	CMPL_DOUBLE,
+	CMPG_DOUBLE,
+	CMP_LONG,
+	IF_EQ,
+	IF_NE,
+	IF_LT,
+	IF_GE,
+	IF_GT,
+	IF_LE,
+	IF_EQZ,
+	IF_NEZ,
+	IF_LTZ,
+	IF_GEZ,
+	IF_GTZ,
+	IF_LEZ,
+	UNUSED_3E,
+	UNUSED_3F,
+	UNUSED_40,
+	UNUSED_41,
+	UNUSED_42,
+	UNUSED_43,
+	AGET,
+	AGET_WIDE,
+	AGET_OBJECT,
+	AGET_BOOLEAN,
+	AGET_BYTE,
+	AGET_CHAR,
+	AGET_SHORT,
+	APUT,
+	APUT_WIDE,
+	APUT_OBJECT,
+	APUT_BOOLEAN,
+	APUT_BYTE,
+	APUT_CHAR,
+	APUT_SHORT,
+	IGET,
+	IGET_WIDE,
+	IGET_OBJECT,
+	IGET_BOOLEAN,
+	IGET_BYTE,
+	IGET_CHAR,
+	IGET_SHORT,
+	IPUT,
+	IPUT_WIDE,
+	IPUT_OBJECT,
+	IPUT_BOOLEAN,
+	IPUT_BYTE,
+	IPUT_CHAR,
+	IPUT_SHORT,
+	SGET,
+	SGET_WIDE,
+	SGET_OBJECT,
+	SGET_BOOLEAN,
+	SGET_BYTE,
+	SGET_CHAR,
+	SGET_SHORT,
+	SPUT,
+	SPUT_WIDE,
+	SPUT_OBJECT,
+	SPUT_BOOLEAN,
+	SPUT_BYTE,
+	SPUT_CHAR,
+	SPUT_SHORT,
+	INVOKE_VIRTUAL,
+	INVOKE_SUPER,
+	INVOKE_DIRECT,
+	INVOKE_STATIC,
+	INVOKE_INTERFACE,
+	UNUSED_73,
+	INVOKE_VIRTUAL_RANGE,
+	INVOKE_SUPER_RANGE,
+	INVOKE_DIRECT_RANGE,
+	INVOKE_STATIC_RANGE,
+	INVOKE_INTERFACE_RANGE,
+	UNUSED_79,
+	UNUSED_7A,
+	NEG_INT,
+	NOT_INT,
+	NEG_LONG,
+	NOT_LONG,
+	NEG_FLOAT,
+	NEG_DOUBLE,
+	INT_TO_LONG,
+	INT_TO_FLOAT,
+	INT_TO_DOUBLE,
+	LONG_TO_INT,
+	LONG_TO_FLOAT,
+	LONG_TO_DOUBLE,
+	FLOAT_TO_INT,
+	FLOAT_TO_LONG,
+	FLOAT_TO_DOUBLE,
+	DOUBLE_TO_INT,
+	DOUBLE_TO_LONG,
+	DOUBLE_TO_FLOAT,
+	INT_TO_BYTE,
+	INT_TO_CHAR,
+	INT_TO_SHORT,
+	ADD_INT,
+	SUB_INT,
+	MUL_INT,
+	DIV_INT,
+	REM_INT,
+	AND_INT,
+	OR_INT,
+	XOR_INT,
+	SHL_INT,
+	SHR_INT,
+	USHR_INT,
+	ADD_LONG,
+	SUB_LONG,
+	MUL_LONG,
+	DIV_LONG,
+	REM_LONG,
+	AND_LONG,
+	OR_LONG,
+	XOR_LONG,
+	SHL_LONG,
+	SHR_LONG,
+	USHR_LONG,
+	ADD_FLOAT,
+	SUB_FLOAT,
+	MUL_FLOAT,
+	DIV_FLOAT,
+	REM_FLOAT,
+	ADD_DOUBLE,
+	SUB_DOUBLE,
+	MUL_DOUBLE,
+	DIV_DOUBLE,
+	REM_DOUBLE,
+	ADD_INT_2ADDR,
+	SUB_INT_2ADDR,
+	MUL_INT_2ADDR,
+	DIV_INT_2ADDR,
+	REM_INT_2ADDR,
+	AND_INT_2ADDR,
+	OR_INT_2ADDR,
+	XOR_INT_2ADDR,
+	SHL_INT_2ADDR,
+	SHR_INT_2ADDR,
+	USHR_INT_2ADDR,
+	ADD_LONG_2ADDR,
+	SUB_LONG_2ADDR,
+	MUL_LONG_2ADDR,
+	DIV_LONG_2ADDR,
+	REM_LONG_2ADDR,
+	AND_LONG_2ADDR,
+	OR_LONG_2ADDR,
+	XOR_LONG_2ADDR,
+	SHL_LONG_2ADDR,
+	SHR_LONG_2ADDR,
+	USHR_LONG_2ADDR,
+	ADD_FLOAT_2ADDR,
+	SUB_FLOAT_2ADDR,
+	MUL_FLOAT_2ADDR,
+	DIV_FLOAT_2ADDR,
+	REM_FLOAT_2ADDR,
+	ADD_DOUBLE_2ADDR,
+	SUB_DOUBLE_2ADDR,
+	MUL_DOUBLE_2ADDR,
+	DIV_DOUBLE_2ADDR,
+	REM_DOUBLE_2ADDR,
+	ADD_INT_LIT16,
+	SUB_INT_LIT16,
+	MUL_INT_LIT16,
+	DIV_INT_LIT16,
+	REM_INT_LIT16,
+	AND_INT_LIT16,
+	OR_INT_LIT16,
+	XOR_INT_LIT16,
+	ADD_INT_LIT8,
+	SUB_INT_LIT8,
+	MUL_INT_LIT8,
+	DIV_INT_LIT8,
+	REM_INT_LIT8,
+	AND_INT_LIT8,
+	OR_INT_LIT8,
+	XOR_INT_LIT8,
+	SHL_INT_LIT8,
+	SHR_INT_LIT8,
+	USHR_INT_LIT8,
+	UNUSED_E3,
+	UNUSED_E4,
+	UNUSED_E5,
+	UNUSED_E6,
+	UNUSED_E7,
+	UNUSED_E8,
+	UNUSED_E9,
+	UNUSED_EA,
+	UNUSED_EB,
+	UNUSED_EC,
+	UNUSED_ED,
+	EXECUTE_INLINE,
+	UNUSED_EF,
+	INVOKE_DIRECT_EMPTY,
+	UNUSED_F1,
+	IGET_QUICK,
+	IGET_WIDE_QUICK,
+	IGET_OBJECT_QUICK,
+	IPUT_QUICK,
+	IPUT_WIDE_QUICK,
+	IPUT_OBJECT_QUICK,
+	INVOKE_VIRTUAL_QUICK,
+	INVOKE_VIRTUAL_QUICK_RANGE,
+	INVOKE_SUPER_QUICK,
+	INVOKE_SUPER_QUICK_RANGE,
+	UNUSED_FC,
+	UNUSED_FD,
+	UNUSED_FE,
+	UNUSED_FF,
 
 	# FIXME TODO
 	NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,
@@ -153,19 +667,259 @@ OperandLengths = [
 	1, # RETURN_WIDE
 	1, # RETURN_OBJECT
 	1, # CONST_4
-	2, # CONST_16
+	3, # CONST_16 - pretty sure
 	3, # CONST
 	2, # CONST_HIGH16
 	2, # CONST_WIDE16
+	5, # CONST_WIDE32,
+	7, # CONST_WIDE,
+	3, # CONST_WIDE_HIGH16,
+	3, # CONST_STRING,
+	3, # CONST_STRING_JUMBO,
+	3, # CONST_CLASS,
+	1, # MONITOR_ENTER,
+	1, # MONITOR_EXIT,
+	3, # CHECK_CAST,
+	3, # INSTANCE_OF,
+	1, # ARRAY_LENGTH,
+	3, # NEW_INSTANCE,
+	3, # NEW_ARRAY,
+	5, # FILLED_NEW_ARRAY,
+	5, # FILLED_NEW_ARRAY_RANGE
+	5, # FILLED_ARRAY_DATA
+	1, # THROW
+	1, # GOTO
 
+	5, # PACKED_SWITCH
+	5, # SPARSE_SWITCH
+	3, # CMPL_FLOAT
+	3, # CMPG_FLOAT
+	3, # CMPL_DOUBLE
+	3, # CMPG_DOUBLE
+	3, # CMP_LONG
+	3, # IF_EQ
+	3, # IF_NE
+	3, # IF_LT
+	3, # IF_GE
+	3, # IF_GT
+	3, # IF_LE
+	3, # IF_EQZ
+	3, # IF_NEZ
+	3, # IF_LTZ
+	3, # IF_GEZ
+	3, # IF_GTZ
+	3, # IF_LEZ
+
+	0, # UNUSED_3E
+	0, # UNUSED_3F
+	0, # UNUSED_40
+	0, # UNUSED_41
+	0, # UNUSED_42
+	0, # UNUSED_43
+
+	3, # AGET
+	3, # AGET_WIDE
+	3, # AGET_OBJECT
+	3, # AGET_BOOLEAN
+	3, # AGET_BYTE
+	3, # AGET_CHAR
+	3, # AGET_SHORT
+	3, # APUT
+	3, # APUT_WIDE
+	3, # APUT_OBJECT
+	3, # APUT_BOOLEAN
+	3, # APUT_BYTE
+	3, # APUT_CHAR
+	3, # APUT_SHORT
+
+	3, # IGET - FIXME - correct??
+	3, # IGET_WIDE
+	3, # IGET_OBJECT
+	3, # IGET_BOOLEAN
+	3, # IGET_BYTE
+	3, # IGET_CHAR
+	3, # IGET_SHORT
+	3, # IPUT
+	3, # IPUT_WIDE
+	3, # IPUT_OBJECT
+	3, # IPUT_BOOLEAN
+	3, # IPUT_BYTE
+	3, # IPUT_CHAR
+	3, # IPUT_SHORT
+	3, # SGET
+	3, # SGET_WIDE
+	3, # SGET_OBJECT
+	3, # SGET_BOOLEAN
+	3, # SGET_BYTE
+	3, # SGET_CHAR
+	3, # SGET_SHORT
+	3, # SPUT
+	3, # SPUT_WIDE
+	3, # SPUT_OBJECT
+	3, # SPUT_BOOLEAN
+	3, # SPUT_BYTE
+	3, # SPUT_CHAR
+	3, # SPUT_SHORT
 
 	# TODO
-	2, # TODO
-	2, # TODO
-	2, # TODO
-	2, # TODO
-	2, # TODO
-	2 # TODO
+	5, # INVOKE_VIRTUAL
+	5, # INVOKE_SUPER
+	5, # INVOKE_DIRECT
+	5, # INVOKE_STATIC
+	5, # INVOKE_INTERFACE
+
+	0, # UNUSED_73
+
+	5, # INVOKE_VIRTUAL_RANGE
+	5, # INVOKE_SUPER_RANGE
+	5, # INVOKE_DIRECT_RANGE
+	5, # INVOKE_STATIC_RANGE
+	5, # INVOKE_INTERFACE_RANGE
+
+	0, # UNUSED_79
+	0, # UNUSED_7A
+
+	1, # NEG_INT
+	1, # NOT_INT
+	1, # NEG_LONG
+	1, # NOT_LONG
+	1, # NEG_FLOAT
+	1, # NEG_DOUBLE
+	1, # INT_TO_LONG
+	1, # INT_TO_FLOAT
+	1, # INT_TO_DOUBLE
+	1, # LONG_TO_INT
+	1, # LONG_TO_FLOAT
+	1, # LONG_TO_DOUBLE
+	1, # FLOAT_TO_INT
+	1, # FLOAT_TO_LONG
+	1, # FLOAT_TO_DOUBLE
+	1, # DOUBLE_TO_INT
+	1, # DOUBLE_TO_LONG
+	1, # DOUBLE_TO_FLOAT
+	1, # INT_TO_BYTE
+	1, # INT_TO_CHAR
+	1, # INT_TO_SHORT
+
+	3, # ADD_INT
+	3, # SUB_INT
+	3, # MUL_INT
+	3, # DIV_INT
+	3, # REM_INT
+	3, # AND_INT
+	3, # OR_INT
+	3, # XOR_INT
+	3, # SHL_INT
+	3, # SHR_INT
+	3, # USHR_INT
+	3, # ADD_LONG
+	3, # SUB_LONG
+	3, # MUL_LONG
+	3, # DIV_LONG
+	3, # REM_LONG
+	3, # AND_LONG
+	3, # OR_LONG
+	3, # XOR_LONG
+	3, # SHL_LONG
+	3, # SHR_LONG
+	3, # USHR_LONG
+	3, # ADD_FLOAT
+	3, # SUB_FLOAT
+	3, # MUL_FLOAT
+	3, # DIV_FLOAT
+	3, # REM_FLOAT
+	3, # ADD_DOUBLE
+	3, # SUB_DOUBLE
+	3, # MUL_DOUBLE
+	3, # DIV_DOUBLE
+	3, # REM_DOUBLE
+
+	1, # ADD_INT_2ADDR
+	1, # SUB_INT_2ADDR
+	1, # MUL_INT_2ADDR
+	1, # DIV_INT_2ADDR
+	1, # REM_INT_2ADDR
+	1, # AND_INT_2ADDR
+	1, # OR_INT_2ADDR
+	1, # XOR_INT_2ADDR
+	1, # SHL_INT_2ADDR
+	1, # SHR_INT_2ADDR
+	1, # USHR_INT_2ADDR
+	1, # ADD_LONG_2ADDR
+	1, # SUB_LONG_2ADDR
+	1, # MUL_LONG_2ADDR
+	1, # DIV_LONG_2ADDR
+	1, # REM_LONG_2ADDR
+	1, # AND_LONG_2ADDR
+	1, # OR_LONG_2ADDR
+	1, # XOR_LONG_2ADDR
+	1, # SHL_LONG_2ADDR
+	1, # SHR_LONG_2ADDR
+	1, # USHR_LONG_2ADDR
+	1, # ADD_FLOAT_2ADDR
+	1, # SUB_FLOAT_2ADDR
+	1, # MUL_FLOAT_2ADDR
+	1, # DIV_FLOAT_2ADDR
+	1, # REM_FLOAT_2ADDR
+	1, # ADD_DOUBLE_2ADDR
+	1, # SUB_DOUBLE_2ADDR
+	1, # MUL_DOUBLE_2ADDR
+	1, # DIV_DOUBLE_2ADDR
+	1, # REM_DOUBLE_2ADDR
+
+	3, # ADD_INT_LIT16
+	3, # SUB_INT_LIT16
+	3, # MUL_INT_LIT16
+	3, # DIV_INT_LIT16
+	3, # REM_INT_LIT16
+	3, # AND_INT_LIT16
+	3, # OR_INT_LIT16
+	3, # XOR_INT_LIT16
+	3, # ADD_INT_LIT8
+	3, # SUB_INT_LIT8
+	3, # MUL_INT_LIT8
+	3, # DIV_INT_LIT8
+	3, # REM_INT_LIT8
+	3, # AND_INT_LIT8
+	3, # OR_INT_LIT8
+	3, # XOR_INT_LIT8
+	3, # SHL_INT_LIT8
+	3, # SHR_INT_LIT8
+	3, # USHR_INT_LIT8
+
+	0, # UNUSED_E3
+	0, # UNUSED_E4
+	0, # UNUSED_E5
+	0, # UNUSED_E6
+	0, # UNUSED_E7
+	0, # UNUSED_E8
+	0, # UNUSED_E9
+	0, # UNUSED_EA
+	0, # UNUSED_EB
+	0, # UNUSED_EC
+	0, # UNUSED_ED
+
+	5, # EXECUTE_INLINE
+	0, # UNUSED_EF
+	5, # INVOKE_DIRECT_EMPTY
+	0, # UNUSED_F1
+
+	3, # IGET_QUICK
+	3, # IGET_WIDE_QUICK
+	3, # IGET_OBJECT_QUICK
+	3, # IPUT_QUICK
+	3, # IPUT_WIDE_QUICK
+	3, # IPUT_OBJECT_QUICK
+
+	5, # INVOKE_VIRTUAL_QUICK
+	5, # INVOKE_VIRTUAL_QUICK_RANGE
+	5, # INVOKE_SUPER_QUICK
+	5, # INVOKE_SUPER_QUICK_RANGE
+
+	0, # UNUSED_FC
+	0, # UNUSED_FD
+	0, # UNUSED_FE
+	0 # UNUSED_FF
 ]
 
 # used for perform_get_instruction_text
@@ -238,9 +992,65 @@ OperandTokens = [
 	lambda value: [], # NONE
 
 	# CONST_WIDE16
-	lambda value: [] # NONE
+	lambda value: [], # NONE
 
+	# CONST_WIDE32
+	lambda value: [], # NONE
+
+	# CONST_WIDE
+	lambda value: [], # NONE
+
+	# CONST_WIDE_HIGH16
+	lambda value: [], # NONE
+
+	# CONST_STRING
+	lambda value: [], # NONE
+
+	# CONST_STRING_JUMBO
+	lambda value: [], # NONE
+
+	# CONST_CLASS
+	lambda value: [], # NONE
+
+	# MONITOR_ENTER
+	lambda value: [], # NONE
+
+	# MONITOR_EXIT
+	lambda value: [], # NONE
+
+	# CHECK_CAST
+	lambda value: [], # NONE
+
+	# INSTANCE_OF
+	lambda value: [], # NONE
+
+	# ARRAY_LENGTH
+	lambda value: [], # NONE
+
+	# NEW_INSTANCE
+	lambda value: [], # NONE
+
+	# NEW_ARRAY
+	lambda value: [], # NONE
+
+	# FILLED_NEW_ARRAY
+	lambda value: [], # NONE
+
+	# FILLED_NEW_ARRAY_RANGE
+	lambda value: [], # NONE
+
+	# FILLED_ARRAY_DATA
+	lambda value: [], # NONE
+
+	# THROW
+	lambda value: [], # NONE
+
+	# GOTO
+	lambda value: [] # NONE
 ]
+# hack to make it work for now
+#for i in range(0x28, 0xFF):
+#	OperandTokens[i] = []
 
 InstructionIL = {
 	"adc": lambda il, operand: il.set_reg(1, "a", il.add_carry(1, il.reg(1, "a"), operand, flags = "*")),
