@@ -68,6 +68,17 @@ ItemType = {
 	0x2006: "annotations_directory_item"
 }
 
+def four_byte_align(number):
+	# 0x0, 0x4, 0x8, 0xc
+	val = number & 0xF
+
+	# already aligned: keep this code
+	if val & 3 == 0:
+		return number
+
+	# AFAIK
+	return number + (4 - (val & 3))
+
 # Little-Endian Base 128 - consists of one to five bytes, which represent a single 32-bit value
 # data should be five bytes
 
@@ -78,7 +89,9 @@ def read_ULEB128(data):
 	found = False
 
 	# so technically it doesn't have to be 5...
-	assert len(data) == 5
+	if len(data) != 5:
+		log(3, "read_ULEB128, where len(data) == %i" % len(data))
+		#assert len(data) == 5
 
 	#print "=============="
 	#print "ULEB128"
@@ -113,7 +126,7 @@ def read_ULEB128(data):
 
 # http://llvm.org/docs/doxygen/html/LEB128_8h_source.html
 def read_sleb128(data):
-	
+	value = 0
 	assert False
 
 class DexFile():
@@ -394,19 +407,20 @@ class DexFile():
 	# SUPER CRITICAL
 	def map_list(self):
 		offset = self.map_off()
-		map_list_size = self.read_uint(offset)
+		map_list_size = self.read_uint(offset) # ok
 		offset += 4
 
 		# map_items are 12 bytes
 
 		map_items = []
 
-		print(3, "map_list_size: %i" % map_list_size) # only 17 - this can't be right..
+		log(3, "map_list_size: %i" % map_list_size) # example: 17
 		self.strings = []
 		self.codes = []
 
 
-		for i in xrange(map_list_size): # FIXME: does this include the last item?
+		# offset should point to the first map_list
+		for map_list_idx in xrange(map_list_size): # FIXME: does this include the last item?
 			# Name		| Format	| Description
 			##############################################################################
 			# type		| ushort	| type of the items; see table below
@@ -414,11 +428,18 @@ class DexFile():
 			# size		| uint		| count of the number of items to be found at the indicated offset
 			# offset	| uint		| offset from the start of the file to the items in question
 
-			# map_item
+			# map_item attributes
 			map_type = self.read_ushort(offset) # yes this is a ushort
-			map_size = self.read_uint(offset+4)
-			map_offset = self.read_uint(offset+8)
+			map_size = self.read_uint(offset+4) # ok
+			map_offset = self.read_uint(offset+8) # ok
 			offset += 12
+
+			log(3, "offset: 0x%x, map_type: 0x%x, map_size: %i, map_offset: 0x%x" % (offset, map_type, map_size, map_offset))
+
+			# ignore bugs
+			#if map_offset == 0:
+			#	# well the header will be 0...
+			#	continue
 
 			# string_id_item works
 			if ItemType[map_type] == "string_id_item": # I don't think we care about "string_data_item" for now (but that may fix the string_list[idx] problem)
@@ -429,16 +450,21 @@ class DexFile():
 					string = self.read_string(string_off)
 					self.strings.append(string)
 
+			# FIXME: code_items are aligned to 4 bytes.. does that matter?
 			elif ItemType[map_type] == "code_item":
 				log(3, "there are %i code_items" % map_size)
+
+				code_item_off = map_offset
 				for i in range(map_size):
-					code_off = self.read_uint(map_offset + i*4)
+					#if code_item_off == 0x2e75a:
 
-					# TODO: I need to determine the size of the code_item
+ 					code_item, code_size = self.read_code_item(code_item_off)
+					code_item_off += code_size
+					log(3, "code_size: 0x%x" % code_size)
 
- 					code = self.code_item(code_off)
-
-					self.codes.append(code)
+					if code_size == -1:
+						break
+					self.codes.append(code_item)
 
 
 			map_item = {
@@ -447,6 +473,7 @@ class DexFile():
 				"offset": map_offset,
 			}
 			map_items.append(map_item)
+			print "==============================================================================================="
 
 
 		#log(3, "string_count: %i" % string_count) # returning 0
@@ -518,16 +545,33 @@ class DexFile():
 	# helper functions
 	###########################
 	def read_uint(self, offset):
+		if offset > self.binary_blob_length:
+			assert False
+
 		return struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
 
 	def read_ushort(self, offset):
+		if offset > self.binary_blob_length:
+			assert False
+
 		return struct.unpack("<H", self.binary_blob[offset:offset+2])[0]
 
 	# wrapper function
 	def read_ULEB128(self, offset):
+		if offset > self.binary_blob_length:
+			log(3, "read_ULEB128(0x%x)" % offset)
+			assert False
+
 		return read_ULEB128(self.binary_blob[offset:offset+5])
 
+	def read_sleb128(self, offset):
+
+		assert False
+
 	def read_string(self, offset):
+		if offset > self.binary_blob_length:
+			assert False
+
 		string_result = [""]
 
 		# lets just find the string...
@@ -536,6 +580,8 @@ class DexFile():
 			offset += 1
 
 		return "".join(string_result)
+
+
 
 	# Name				| Format									| Description
 	################################################################################
@@ -552,47 +598,68 @@ class DexFile():
 
 	# ushort == 2 bytes
 	# FIXME: incomplete
-	def code_item(self, offset):
-		registers_size = self.read_ushort(offset) # binary_blob[offset:offset+2]
-		ins_size = self.read_ushort(offset+2) # self.binary_blob[offset:offset+2]
-		outs_size = self.read_ushort(offset+4) # self.binary_blob[offset:offset+2]
-		tries_size = self.read_ushort(offset+6) # self.binary_blob[offset:offset+2]
-		debug_info_off = self.read_uint(offset+8) # self.binary_blob[offset:offset+4]
-		insns_size = self.read_uint(offset+12) # struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
+	def read_code_item(self, offset):
+		original_offset = offset
+
+		# FIXME: I assume "code_item" is incorrect at https://source.android.com/devices/tech/dalvik/dex-format.html
+		print "----------------------------------------------------"
+		log(2, "read_code_item(0x%x)" % offset)
+
+		offset = four_byte_align(offset)
+		log(2, "read_code_item(aligned 0x%x)" % offset)
+
+		registers_size = self.read_ushort(offset)
+		ins_size = self.read_ushort(offset+2)
+		outs_size = self.read_ushort(offset+4)
+		tries_size = self.read_ushort(offset+6)
+		debug_info_off = self.read_uint(offset+8)
+		instructions_size = self.read_uint(offset+12)
 		offset += 16
-		#print "insns_size: ", insns_size
+
+		if instructions_size*2 > self.binary_blob_length:
+			log(3, "instructions_size: 0x%x" % instructions_size)
+			assert False
 
 		# pretty sure this is correct
-		insns_off = offset
+		instructions_off = offset
+		instructions = self.binary_blob[instructions_off:instructions_off+(instructions_size*2)] # the actual dex code, but lets not save as variable unless we need to
 
-		#insns = self.binary_blob[insns_off:insns_off+(insns_size*2)] # the actual dex code, but lets not save as variable unless we need to
+		log(3, "offset: 0x%x, insns_size: 0x%x" % (offset, instructions_size))
 
-		offset += (insns_size*2)
+		offset += (instructions_size*2) # ok
+		log(3, "offset: 0x%x, insns_size: 0x%x" % (offset, instructions_size))
 
 		# optional padding
-		if (tries_size != 0) and (insns_size % 2 == 1):
+		if (tries_size != 0) and (instructions_size % 2 == 1):
+			log(3, "optional padding is 2 bytes")
 			offset += 2
 
-		# tries
-		#tries =  # each "tries" is 8 bytes
-		offset += tries_size * 8
-
-		# handlers
+		# tries try_item[tries_size] - each "try_item" is 8 bytes - ok
 		if tries_size != 0:
-			val, handlers_size = self.read_ULEB128(offset)
-			offset += size
+			log(3, "try_item is %i bytes" % (tries_size * 8))
+			offset += (tries_size * 8) # ok
+
+		# handlers encoded_catch_handler_list
+		if tries_size != 0:
+			val, handlers_size = self.read_ULEB128(offset) # FAILING HERE...
+			offset += handlers_size # FIXME: is this right
+
+			log(3, "handlers is at least %i bytes" % handlers_size)
 
 			handlers = []
+			log(3, "handlers_size: %i" % handlers_size)
 			for i in range(handlers_size):
 				# read an "encoded_catch_handler" struct
 
 				# what's a "sleb128"
-				#encoded_catch_handler_size = read_sleb128() # FIXME: need to create read_sleb128 wrapper
+
+				return -1, -1 # not handling this stuff yet.
+
+				encoded_catch_handler_size = self.read_sleb128(offset) # FIXME: need to create read_sleb128 wrapper
+
+				#offset += ??
 
 				assert False # lots to do here
-				pass
-
-		# FIXME: need to handle "padding", "tries", and "handlers"
 
 		result = {
 			"registers_size": registers_size,
@@ -600,23 +667,23 @@ class DexFile():
 			"outs_size": outs_size,
 			"tries_size": tries_size,
 			"debug_info_off": debug_info_off,
-			"insns_size": insns_size,
-			"insns_off": insns_off
+			"insns_size": instructions_size,
+			"insns_off": instructions_off
 			# "insns": insns
 		}
 
-		return result
+		return result, offset-original_offset
 
 	def class_def_item(self, offset):
 		return {
-			"class_idx": self.read_uint(offset), # struct.unpack("<I", binary_blob[0:4])[0]
-			"access_flags": self.read_uint(offset+4), # struct.unpack("<I", binary_blob[4:8])[0]
-			"superclass_idx": self.read_uint(offset+8), # struct.unpack("<I", binary_blob[8:12])[0]
-			"interfaces_off": self.read_uint(offset+12), # struct.unpack("<I", binary_blob[12:16])[0]
-			"source_file_idx": self.read_uint(offset+16), # struct.unpack("<I", binary_blob[16:20])[0]
-			"annotations_off": self.read_uint(offset+20), # struct.unpack("<I", binary_blob[20:24])[0]
-			"class_data_off": self.read_uint(offset+24), # struct.unpack("<I", binary_blob[24:28])[0]
-			"static_values_off": self.read_uint(offset+28) # struct.unpack("<I", binary_blob[28:32])[0]
+			"class_idx": self.read_uint(offset),
+			"access_flags": self.read_uint(offset+4),
+			"superclass_idx": self.read_uint(offset+8),
+			"interfaces_off": self.read_uint(offset+12),
+			"source_file_idx": self.read_uint(offset+16),
+			"annotations_off": self.read_uint(offset+20),
+			"class_data_off": self.read_uint(offset+24),
+			"static_values_off": self.read_uint(offset+28)
 		}
 
 
@@ -792,14 +859,43 @@ class DexFile():
 		# helper functions
 		###########################
 		def read_uint(self, offset):
+			if offset > self.binary_blob_length:
+				assert False
+
 			return struct.unpack("<I", self.binary_blob[offset:offset+4])[0]
 
 		def read_ushort(self, offset):
+			if offset > self.binary_blob_length:
+				assert False
+
 			return struct.unpack("<H", self.binary_blob[offset:offset+2])[0]
 
 		# wrapper function
 		def read_ULEB128(self, offset):
+			if offset > self.binary_blob_length:
+				log(3, "read_ULEB128(0x%x)" % offset)
+				assert False
+
 			return read_ULEB128(self.binary_blob[offset:offset+5])
+
+		def read_sleb128(self, offset):
+			if offset > self.binary_blob_length:
+				assert False
+
+			assert False
+
+		def read_string(self, offset):
+			if offset > self.binary_blob_length:
+				assert False
+
+			string_result = [""]
+
+			# lets just find the string...
+			while self.binary_blob[offset] != "\x00":
+				string_result.append(self.binary_blob[offset])
+				offset += 1
+
+			return "".join(string_result)
 
 
 # https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE

@@ -519,6 +519,8 @@ class DEXView(BinaryView):
 		for code_item in self.dex_file.codes:
 			data.create_user_function(Architecture['dex'].standalone_platform, code_item["insns_off"])
 
+		# TODO: method_idx_diff
+
 		#log(2, "found string: " + string)
 
 
