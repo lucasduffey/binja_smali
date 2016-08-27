@@ -5,3 +5,9 @@ from dexBinja.apkView import *
 from dexBinja.dexView import *
 from dexBinja.dexFile import *
 
+
+
+# about
+* apkView.py - carves out the dex file, then overwrites the view with it
+* dexView.py - responsible for rendering the dexView + dex arch in binary ninja
+* dexFile.py - this deals with the dex file structure
