@@ -360,12 +360,12 @@ UNUSED_E6 = 0xe6
 UNUSED_E7 = 0xe7
 UNUSED_E8 = 0xe8
 UNUSED_E9 = 0xe9
-UNUSED_EA = 0xeA
-UNUSED_EB = 0xeB
-UNUSED_EC = 0xeC
-UNUSED_ED = 0xeD
-EXECUTE_INLINE = 0xeE
-UNUSED_EF = 0xeF
+UNUSED_EA = 0xEA
+UNUSED_EB = 0xEB
+UNUSED_EC = 0xEC
+UNUSED_ED = 0xED
+EXECUTE_INLINE = 0xEE
+UNUSED_EF = 0xEF
 INVOKE_DIRECT_EMPTY = 0xF0
 UNUSED_F1 = 0xF1
 IGET_QUICK = 0xf2
@@ -1464,6 +1464,39 @@ class DEX(Architecture):
 		result = InstructionInfo()
 		result.length = length
 
+		# function return
+		if instr in ["return-void", "return", "return-wide", "return-object"]:
+			result.add_branch(FunctionReturn)
+
+		# TODO: implement unconditional jumps
+		elif instr in ["goto", "goto/16", "goto/32"]:
+			# how is data handled?
+			#d = struct.unpack("<h", data[1:3])[0]
+
+			# Examples:
+			# 	28F0 - goto 0005 // -0010    # how do they go from 0xF0 to 5? it's signed...
+			#			Jumps to current position-16 words (hex 10). 0005 is the label of the target instruction.
+			#	2900 0FFE - goto/16 002f // -01f1
+			#			Jumps to the current position-1F1H words. 002F is the label of the target instruction.
+			if instr == "goto/16":
+				# FIXME: verify...
+				offset = struct.unpack("<h", data[1:3])[0]# AFAIK....
+				target_addr = data.addr + offset # AFAIK....
+
+				result.add_branch(UnconditionalBranch, target_addr)
+			
+
+		# TODO: implement conditional jumps
+		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
+			pass
+
+		# TODO: implement calls
+		elif instr in ["invoke-virtual", "invoke-super", "invoke-direct", "invoke-static", "invoke-interface",
+			"invoke-virtual/range", "invoke-super/range", "invoke-direct/range", "invoke-static/range", "invoke-interface-range",
+			"invoke-direct-empty", "invoke-virtual-quick", "invoke-virtual-quick/range", "invoke-super-quick", "invoke-super-quick/range"]:
+			# time to implement branch/jump/whatever...
+			pass
+
 		#
 		# TODO: implement jumps and other oddities
 		#
@@ -1543,7 +1576,11 @@ class DEXView(BinaryView):
 		#print self.dex_file.strings # WORKING YAY
 
 
+
 		for code_item in self.dex_file.codes:
+			# might be useful
+			# 	* code_item["registers_size"] - the number of registers used by this code
+			# 	* code_item["ins_size"] - the number of words of incoming arguments to the method that this code is for
 			data.create_user_function(Architecture['dex'].standalone_platform, code_item["insns_off"])
 
 		# TODO: method_idx_diff
