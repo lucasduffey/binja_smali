@@ -691,6 +691,8 @@ OperandLengths = [
 	5, # FILLED_ARRAY_DATA
 	1, # THROW
 	1, # GOTO
+	3, # GOTO_16
+	3, # GOTO_32
 
 	5, # PACKED_SWITCH
 	5, # SPARSE_SWITCH
@@ -926,33 +928,23 @@ OperandLengths = [
 
 # used for perform_get_instruction_text
 OperandTokens = [
-	lambda value: [], # NONE
+	lambda value: [], # NOP
 	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
 		InstructionTextToken(TextToken, ", "),
 		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])], # MOVE
 
-	# MOVE_FROM16,
-	lambda value: [], # TODO: actually implement....
+	lambda value: [], # TODO: implement MOVE_FROM16
 
 	# MOVE_16
 	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
 		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value >> 8])],
+		InstructionTextToken(RegisterToken, RegisterNames[value >> 8])], # TODO: implement
 
-	# MOVE_WIDE
-	lambda value: [], # NONE
-
-	# MOVE_WIDE_FROM_16
-	lambda value: [], # NONE
-
-	# MOVE_WIDE_16
-	lambda value: [], # NONE
-
-	# MOVE_OBJECT
-	lambda value: [], # NONE
-
-	# MOVE_OBJECT_FROM_16
-	lambda value: [], # NONE
+	lambda value: [], # TODO: implement MOVE_WIDE
+	lambda value: [], # TODO: implement MOVE_WIDE_FROM_16
+	lambda value: [], # TODO: implement MOVE_WIDE_16
+	lambda value: [], # TODO: implement MOVE_OBJECT
+	lambda value: [], # TODO: MOVE_OBJECT_FROM_16
 
 	# MOVE_OBJECT_16
 	lambda value: [], # NONE
@@ -984,8 +976,11 @@ OperandTokens = [
 	# CONST_4
 	lambda value: [], # NONE
 
-	# CONST_16
-	lambda value: [], # NONE
+	# CONST_16 - OK AFAIK
+	# [00 0A][00] => const/16 v0, 10   - I believe this is true
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)], # 16 bit constant
 
 	# CONST
 	lambda value: [], # NONE
@@ -1033,7 +1028,14 @@ OperandTokens = [
 	lambda value: [], # NONE
 
 	# NEW_ARRAY
-	lambda value: [], # NONE
+	# https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 16) & 0xF]),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(RegisterToken, RegisterNames[value >> 20]),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(TextToken, "undefined") # https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats, AFAIK this is relevant
+														# example "0x19", this may be pulling it from the "field_ids" section
+		],
 
 	# FILLED_NEW_ARRAY
 	lambda value: [], # NONE
@@ -1270,66 +1272,6 @@ OperandTokens = [
 #	OperandTokens[i] = []
 
 InstructionIL = {
-	"adc": lambda il, operand: il.set_reg(1, "a", il.add_carry(1, il.reg(1, "a"), operand, flags = "*")),
-	"asl": lambda il, operand: il.store(1, operand, il.shift_left(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
-	"asl@": lambda il, operand: il.set_reg(1, "a", il.shift_left(1, operand, il.const(1, 1), flags = "czs")),
-	"and": lambda il, operand: il.set_reg(1, "a", il.and_expr(1, il.reg(1, "a"), operand, flags = "zs")),
-	"bcc": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_UGE), operand),
-	"bcs": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_ULT), operand),
-	"beq": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_E), operand),
-	"bit": lambda il, operand: il.and_expr(1, il.reg(1, "a"), operand, flags = "czs"),
-	"bmi": lambda il, operand: cond_branch(il, il.flag("s"), operand),
-	"bne": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_NE), operand),
-	"bpl": lambda il, operand: cond_branch(il, il.not_expr(0, il.flag("s")), operand),
-	"brk": lambda il, operand: il.system_call(),
-	"bvc": lambda il, operand: cond_branch(il, il.not_expr(0, il.flag("v")), operand),
-	"bvs": lambda il, operand: cond_branch(il, il.flag("v"), operand),
-	"clc": lambda il, operand: il.set_flag("c", il.const(0, 0)),
-	"cld": lambda il, operand: il.set_flag("d", il.const(0, 0)),
-	"cli": lambda il, operand: il.set_flag("i", il.const(0, 0)),
-	"clv": lambda il, operand: il.set_flag("v", il.const(0, 0)),
-	"cmp": lambda il, operand: il.sub(1, il.reg(1, "a"), operand, flags = "czs"),
-	"cpx": lambda il, operand: il.sub(1, il.reg(1, "x"), operand, flags = "czs"),
-	"cpy": lambda il, operand: il.sub(1, il.reg(1, "y"), operand, flags = "czs"),
-	"dec": lambda il, operand: il.store(1, operand, il.sub(1, il.load(1, operand), il.const(1, 1), flags = "zs")),
-	"dex": lambda il, operand: il.set_reg(1, "x", il.sub(1, il.reg(1, "x"), il.const(1, 1), flags = "zs")),
-	"dey": lambda il, operand: il.set_reg(1, "y", il.sub(1, il.reg(1, "y"), il.const(1, 1), flags = "zs")),
-	"eor": lambda il, operand: il.set_reg(1, "a", il.xor_expr(1, il.reg(1, "a"), operand, flags = "zs")),
-	"inc": lambda il, operand: il.store(1, operand, il.add(1, il.load(1, operand), il.const(1, 1), flags = "zs")),
-	"inx": lambda il, operand: il.set_reg(1, "x", il.add(1, il.reg(1, "x"), il.const(1, 1), flags = "zs")),
-	"iny": lambda il, operand: il.set_reg(1, "y", il.add(1, il.reg(1, "y"), il.const(1, 1), flags = "zs")),
-	"jmp": lambda il, operand: jump(il, operand),
-	"jsr": lambda il, operand: il.call(operand),
-	"lda": lambda il, operand: il.set_reg(1, "a", operand, flags = "zs"),
-	"ldx": lambda il, operand: il.set_reg(1, "x", operand, flags = "zs"),
-	"ldy": lambda il, operand: il.set_reg(1, "y", operand, flags = "zs"),
-	"lsr": lambda il, operand: il.store(1, operand, il.logical_shift_right(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
-	"lsr@": lambda il, operand: il.set_reg(1, "a", il.logical_shift_right(1, il.reg(1, "a"), il.const(1, 1), flags = "czs")),
-	"nop": lambda il, operand: il.nop(),
-	"ora": lambda il, operand: il.set_reg(1, "a", il.or_expr(1, il.reg(1, "a"), operand, flags = "zs")),
-	"pha": lambda il, operand: il.push(1, il.reg(1, "a")),
-	"php": lambda il, operand: il.push(1, get_p_value(il)),
-	"pla": lambda il, operand: il.set_reg(1, "a", il.pop(1), flags = "zs"),
-	"plp": lambda il, operand: set_p_value(il, il.pop(1)),
-	"rol": lambda il, operand: il.store(1, operand, il.rotate_left_carry(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
-	"rol@": lambda il, operand: il.set_reg(1, "a", il.rotate_left_carry(1, il.reg(1, "a"), il.const(1, 1), flags = "czs")),
-	"ror": lambda il, operand: il.store(1, operand, il.rotate_right_carry(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
-	"ror@": lambda il, operand: il.set_reg(1, "a", il.rotate_right_carry(1, il.reg(1, "a"), il.const(1, 1), flags = "czs")),
-	"rti": lambda il, operand: rti(il),
-	"rts": lambda il, operand: il.ret(il.add(2, il.pop(2), il.const(2, 1))),
-	"sbc": lambda il, operand: il.set_reg(1, "a", il.sub_borrow(1, il.reg(1, "a"), operand, flags = "*")),
-	"sec": lambda il, operand: il.set_flag("c", il.const(0, 1)),
-	"sed": lambda il, operand: il.set_flag("d", il.const(0, 1)),
-	"sei": lambda il, operand: il.set_flag("i", il.const(0, 1)),
-	"sta": lambda il, operand: il.store(1, operand, il.reg(1, "a")),
-	"stx": lambda il, operand: il.store(1, operand, il.reg(1, "x")),
-	"sty": lambda il, operand: il.store(1, operand, il.reg(1, "y")),
-	"tax": lambda il, operand: il.set_reg(1, "x", il.reg(1, "a"), flags = "zs"),
-	"tay": lambda il, operand: il.set_reg(1, "y", il.reg(1, "a"), flags = "zs"),
-	"tsx": lambda il, operand: il.set_reg(1, "x", il.reg(1, "s"), flags = "zs"),
-	"txa": lambda il, operand: il.set_reg(1, "a", il.reg(1, "x"), flags = "zs"),
-	"txs": lambda il, operand: il.set_reg(1, "s", il.reg(1, "x")),
-	"tya": lambda il, operand: il.set_reg(1, "a", il.reg(1, "y"), flags = "zs")
 }
 
 class DEXViewUpdateNotification(BinaryDataNotification):
@@ -1484,7 +1426,7 @@ class DEX(Architecture):
 				target_addr = data.addr + offset # AFAIK....
 
 				result.add_branch(UnconditionalBranch, target_addr)
-			
+
 
 		# TODO: implement conditional jumps
 		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
@@ -1504,12 +1446,10 @@ class DEX(Architecture):
 		return result
 
 	def perform_get_instruction_text(self, data, addr):
+		# NOTE: value is an "int"
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
-
-		# I don't think we control "InstructionTextToken"
-
 
 		if operand == 3:
 			print "value: ", value # it's the bytes
@@ -1521,6 +1461,10 @@ class DEX(Architecture):
 			print "value >> 6: ", (value >> 6)
 			print "value >> 8: ", (value >> 8) # pretty sure this is supposed to be first one..
 			print "================"
+
+
+		#if operand == 0x13:
+			#log(2, str(hex(value)) + ": " + str(value))
 
 
 		# FIXME: current crash
