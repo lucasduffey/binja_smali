@@ -136,23 +136,23 @@ MOVE_WIDE_16 = 6
 MOVE_OBJECT = 7
 MOVE_OBJECT_FROM_16 = 8
 MOVE_OBJECT_16 = 9
-MOVE_RESULT = 10
-MOVE_RESULT_WIDE = 11
-MOVE_RESULT_OBJECT = 12
-MOVE_EXCEPTION = 13
-RETURN_VOID = 14
-RETURN = 15
-RETURN_WIDE = 16
-RETURN_OBJECT = 17
-CONST_4 = 18
-CONST_16 = 19
-CONST = 20
-CONST_HIGH16 = 21
-CONST_WIDE16 = 22
-CONST_WIDE32 = 23
+MOVE_RESULT = 0xA
+MOVE_RESULT_WIDE = 0xB
+MOVE_RESULT_OBJECT = 0xC
+MOVE_EXCEPTION = 0xD
+RETURN_VOID = 0xE
+RETURN = 0xF
+RETURN_WIDE = 0x10
+RETURN_OBJECT = 0x11
+CONST_4 = 0x12
+CONST_16 = 0x13
+CONST = 0x14
+CONST_HIGH16 = 0x15 # verified
+CONST_WIDE16 = 0x16
+CONST_WIDE32 = 0x17
 CONST_WIDE = 0x18
 CONST_WIDE_HIGH16 = 0x19
-CONST_STRING = 0x1A
+CONST_STRING = 0x1A # verified
 CONST_STRING_JUMBO = 0x1B
 CONST_CLASS = 0x1C
 MONITOR_ENTER = 0x1D
@@ -165,221 +165,223 @@ NEW_ARRAY = 0x23
 FILLED_NEW_ARRAY = 0x24
 FILLED_NEW_ARRAY_RANGE = 0x25
 FILL_ARRAY_DATA = 0x26
-THROW = 0x27
+THROW = 0x27 # verified
 GOTO = 0x28
-PACKED_SWITCH = 0x29
-SPARSE_SWITCH = 0x2a
-CMPL_FLOAT = 0x2b
-CMPG_FLOAT = 0x2c
-CMPL_DOUBLE = 0x2d
-CMPG_DOUBLE = 0x2e
-CMP_LONG = 0x2f
-IF_EQ = 0x30
-IF_NE = 0x31
-IF_LT = 0x32
-IF_GE = 0x33
-IF_GT = 0x34
-IF_LE = 0x35
-IF_EQZ = 0x36
-IF_NEZ = 0x37
-IF_LTZ = 0x38
-IF_GEZ = 0x39
-IF_GTZ = 0x3a
-IF_LEZ = 0x3b
-UNUSED_3E = 0x3c
-UNUSED_3F = 0x3d
-UNUSED_40 = 0x3e
-UNUSED_41 = 0x3f
-UNUSED_42 = 0x40
-UNUSED_43 = 0x41
-AGET = 0x42
-AGET_WIDE = 0x43
-AGET_OBJECT = 0x44
-AGET_BOOLEAN = 0x45
-AGET_BYTE = 0x46
-AGET_CHAR = 0x47
-AGET_SHORT = 0x48
-APUT = 0x49
-APUT_WIDE = 0x4a
-APUT_OBJECT = 0x4b
-APUT_BOOLEAN = 0x4c
-APUT_BYTE = 0x4d
-APUT_CHAR = 0x4e
-APUT_SHORT = 0x4f
-IGET = 0x50
-IGET_WIDE = 0x51
-IGET_OBJECT = 0x52
-IGET_BOOLEAN = 0x53
-IGET_BYTE = 0x54
-IGET_CHAR = 0x55
-IGET_SHORT = 0x56
-IPUT = 0x57
-IPUT_WIDE = 0x58
-IPUT_OBJECT = 0x59
-IPUT_BOOLEAN = 0x5a
-IPUT_BYTE = 0x5b
-IPUT_CHAR = 0x5c
-IPUT_SHORT = 0x5d
-SGET = 0x5e
+GOTO_16 = 0x29
+GOTO_32 = 0x2A
+PACKED_SWITCH = 0x2B
+SPARSE_SWITCH = 0x2C
+CMPL_FLOAT = 0x2D
+CMPG_FLOAT = 0x2E
+CMPL_DOUBLE = 0x2F
+CMPG_DOUBLE = 0x30
+CMP_LONG = 0x31
+IF_EQ = 0x32 # verified
+IF_NE = 0x33
+IF_LT = 0x34
+IF_GE = 0x35
+IF_GT = 0x36
+IF_LE = 0x37
+IF_EQZ = 0x38
+IF_NEZ = 0x39
+IF_LTZ = 0x3A
+IF_GEZ = 0x3B
+IF_GTZ = 0x3C
+IF_LEZ = 0x3D
+UNUSED_3E = 0x3E
+UNUSED_3F = 0x3F
+UNUSED_40 = 0x40
+UNUSED_41 = 0x41
+UNUSED_42 = 0x42
+UNUSED_43 = 0x43
+AGET = 0x44 # verified
+AGET_WIDE = 0x45
+AGET_OBJECT = 0x46
+AGET_BOOLEAN = 0x47
+AGET_BYTE = 0x48
+AGET_CHAR = 0x49
+AGET_SHORT = 0x4A
+APUT = 0x4B # verified
+APUT_WIDE = 0x4C
+APUT_OBJECT = 0x4D
+APUT_BOOLEAN = 0x4E
+APUT_BYTE = 0x4F
+APUT_CHAR = 0x50
+APUT_SHORT = 0x51
+IGET = 0x52 # verified
+IGET_WIDE = 0x53
+IGET_OBJECT = 0x54
+IGET_BOOLEAN = 0x55
+IGET_BYTE = 0x56
+IGET_CHAR = 0x57
+IGET_SHORT = 0x58
+IPUT = 0x59 # verified
+IPUT_WIDE = 0x5A
+IPUT_OBJECT = 0x5B
+IPUT_BOOLEAN = 0x5C
+IPUT_BYTE = 0x5D
+IPUT_CHAR = 0x5E
+IPUT_SHORT = 0x5F
+SGET = 0x60 # verified
 SGET_WIDE = 0x5f
 SGET_OBJECT = 0x60
 SGET_BOOLEAN = 0x61
 SGET_BYTE = 0x62
 SGET_CHAR = 0x63
 SGET_SHORT = 0x64
-SPUT = 0x65
-SPUT_WIDE = 0x66
-SPUT_OBJECT = 0x67
-SPUT_BOOLEAN = 0x68
-SPUT_BYTE = 0x69
-SPUT_CHAR = 0x6a
-SPUT_SHORT = 0x6b
-INVOKE_VIRTUAL = 0x6c
-INVOKE_SUPER = 0x6d
-INVOKE_DIRECT = 0x6e
-INVOKE_STATIC = 0x6f
-INVOKE_INTERFACE = 0x70
-UNUSED_73 = 0x71
-INVOKE_VIRTUAL_RANGE = 0x72
-INVOKE_SUPER_RANGE = 0x73
-INVOKE_DIRECT_RANGE = 0x74
-INVOKE_STATIC_RANGE = 0x75
-INVOKE_INTERFACE_RANGE = 0x76
-UNUSED_79 = 0x77
-UNUSED_7A = 0x78
-NEG_INT = 0x79
-NOT_INT = 0x7a
-NEG_LONG = 0x7b
-NOT_LONG = 0x7c
-NEG_FLOAT = 0x7d
-NEG_DOUBLE = 0x7e
-INT_TO_LONG = 0x7f
-INT_TO_FLOAT = 0x80
-INT_TO_DOUBLE = 0x81
-LONG_TO_INT = 0x82
-LONG_TO_FLOAT = 0x83
-LONG_TO_DOUBLE = 0x84
-FLOAT_TO_INT = 0x85
-FLOAT_TO_LONG = 0x86
-FLOAT_TO_DOUBLE = 0x87
-DOUBLE_TO_INT = 0x88
-DOUBLE_TO_LONG = 0x89
-DOUBLE_TO_FLOAT = 0x8a
-INT_TO_BYTE = 0x8b
-INT_TO_CHAR = 0x8c
-INT_TO_SHORT = 0x8d
-ADD_INT = 0x8e
-SUB_INT = 0x8f
-MUL_INT = 0x90
-DIV_INT = 0x91
-REM_INT = 0x92
-AND_INT = 0x93
-OR_INT = 0x94
-XOR_INT = 0x95
-SHL_INT = 0x96
-SHR_INT = 0x97
-USHR_INT = 0x98
-ADD_LONG = 0x99
-SUB_LONG = 0x9a
-MUL_LONG = 0x9b
-DIV_LONG = 0x9c
-REM_LONG = 0x9d
-AND_LONG = 0x9e
-OR_LONG = 0x9f
-XOR_LONG = 0xa0
-SHL_LONG = 0xa1
-SHR_LONG = 0xa2
-USHR_LONG = 0xa3
-ADD_FLOAT = 0xa4
-SUB_FLOAT = 0xa5
-MUL_FLOAT = 0xa6
-DIV_FLOAT = 0xa7
-REM_FLOAT = 0xa8
-ADD_DOUBLE = 0xa9
-SUB_DOUBLE = 0xaa
-MUL_DOUBLE = 0xab
-DIV_DOUBLE = 0xac
-REM_DOUBLE = 0xad
-ADD_INT_2ADDR = 0xae
-SUB_INT_2ADDR = 0xaf
-MUL_INT_2ADDR = 0xb0
-DIV_INT_2ADDR = 0xb1
-REM_INT_2ADDR = 0xb2
-AND_INT_2ADDR = 0xb3
-OR_INT_2ADDR = 0xb4
-XOR_INT_2ADDR = 0xb5
-SHL_INT_2ADDR = 0xb6
-SHR_INT_2ADDR = 0xb7
-USHR_INT_2ADDR = 0xb8
-ADD_LONG_2ADDR = 0xb9
-SUB_LONG_2ADDR = 0xba
-MUL_LONG_2ADDR = 0xbb
-DIV_LONG_2ADDR = 0xbc
-REM_LONG_2ADDR = 0xbd
-AND_LONG_2ADDR = 0xbe
-OR_LONG_2ADDR = 0xbf
-XOR_LONG_2ADDR = 0xc0
-SHL_LONG_2ADDR = 0xc1
-SHR_LONG_2ADDR = 0xc2
-USHR_LONG_2ADDR = 0xc3
-ADD_FLOAT_2ADDR = 0xc4
-SUB_FLOAT_2ADDR = 0xc5
-MUL_FLOAT_2ADDR = 0xc6
-DIV_FLOAT_2ADDR = 0xc7
-REM_FLOAT_2ADDR = 0xc8
-ADD_DOUBLE_2ADDR = 0xc9
-SUB_DOUBLE_2ADDR = 0xca
-MUL_DOUBLE_2ADDR = 0xcb
-DIV_DOUBLE_2ADDR = 0xcc
-REM_DOUBLE_2ADDR = 0xcd
-ADD_INT_LIT16 = 0xce
-SUB_INT_LIT16 = 0xcf
-MUL_INT_LIT16 = 0xd0
-DIV_INT_LIT16 = 0xd1
-REM_INT_LIT16 = 0xd2
-AND_INT_LIT16 = 0xd3
-OR_INT_LIT16 = 0xd4
-XOR_INT_LIT16 = 0xd5
-ADD_INT_LIT8 = 0xd6
-SUB_INT_LIT8 = 0xd7
-MUL_INT_LIT8 = 0xd8
-DIV_INT_LIT8 = 0xd9
-REM_INT_LIT8 = 0xda
-AND_INT_LIT8 = 0xdb
-OR_INT_LIT8 = 0xdc
-XOR_INT_LIT8 = 0xdd
-SHL_INT_LIT8 = 0xde
-SHR_INT_LIT8 = 0xdf
-USHR_INT_LIT8 = 0xe0
-UNUSED_E3 = 0xe1
-UNUSED_E4 = 0xe2
-UNUSED_E5 = 0xe3
-UNUSED_E6 = 0xe4
-UNUSED_E7 = 0xe5
-UNUSED_E8 = 0xe6
-UNUSED_E9 = 0xe7
-UNUSED_EA = 0xe8
-UNUSED_EB = 0xe9
-UNUSED_EC = 0xea
-UNUSED_ED = 0xeb
-EXECUTE_INLINE = 0xec
-UNUSED_EF = 0xed
-INVOKE_DIRECT_EMPTY = 0xee
-UNUSED_F1 = 0xef
-IGET_QUICK = 0xf0
-IGET_WIDE_QUICK = 0xf1
-IGET_OBJECT_QUICK = 0xf2
-IPUT_QUICK = 0xf3
-IPUT_WIDE_QUICK = 0xf4
-IPUT_OBJECT_QUICK = 0xf5
-INVOKE_VIRTUAL_QUICK = 0xf6
-INVOKE_VIRTUAL_QUICK_RANGE = 0xf7
-INVOKE_SUPER_QUICK = 0xf8
-INVOKE_SUPER_QUICK_RANGE = 0xf9
-UNUSED_FC = 0xfa
-UNUSED_FD = 0xfb
-UNUSED_FE = 0xfc
-UNUSED_FF = 0xfd
+SPUT = 0x66 # verified
+SPUT_WIDE = 0x68 # verified
+SPUT_OBJECT = 0x69 # verified
+SPUT_BOOLEAN = 0x6A # verified
+SPUT_BYTE = 0x6B
+SPUT_CHAR = 0x6C
+SPUT_SHORT = 0x6D
+INVOKE_VIRTUAL = 0x6E
+INVOKE_SUPER = 0x6F
+INVOKE_DIRECT = 0x70
+INVOKE_STATIC = 0x71
+INVOKE_INTERFACE = 0x72
+UNUSED_73 = 0x73
+INVOKE_VIRTUAL_RANGE = 0x74
+INVOKE_SUPER_RANGE = 0x75
+INVOKE_DIRECT_RANGE = 0x76
+INVOKE_STATIC_RANGE = 0x77
+INVOKE_INTERFACE_RANGE = 0x78
+UNUSED_79 = 0x79
+UNUSED_7A = 0x7A
+NEG_INT = 0x7B
+NOT_INT = 0x7C
+NEG_LONG = 0x7D
+NOT_LONG = 0x7E
+NEG_FLOAT = 0x7F
+NEG_DOUBLE = 0x80
+INT_TO_LONG = 0x81
+INT_TO_FLOAT = 0x82
+INT_TO_DOUBLE = 0x83
+LONG_TO_INT = 0x84
+LONG_TO_FLOAT = 0x85
+LONG_TO_DOUBLE = 0x86
+FLOAT_TO_INT = 0x87
+FLOAT_TO_LONG = 0x88
+FLOAT_TO_DOUBLE = 0x89
+DOUBLE_TO_INT = 0x8A
+DOUBLE_TO_LONG = 0x8B
+DOUBLE_TO_FLOAT = 0x8C
+INT_TO_BYTE = 0x8D
+INT_TO_CHAR = 0x8E
+INT_TO_SHORT = 0x8F
+ADD_INT = 0x90
+SUB_INT = 0x91
+MUL_INT = 0x92
+DIV_INT = 0x93
+REM_INT = 0x94
+AND_INT = 0x95
+OR_INT = 0x96
+XOR_INT = 0x97
+SHL_INT = 0x98
+SHR_INT = 0x99
+USHR_INT = 0x9A
+ADD_LONG = 0x9B
+SUB_LONG = 0x9C
+MUL_LONG = 0x9D
+DIV_LONG = 0x9E
+REM_LONG = 0x9F # verified
+AND_LONG = 0xA0
+OR_LONG = 0xA1
+XOR_LONG = 0xA2
+SHL_LONG = 0xa3
+SHR_LONG = 0xa4
+USHR_LONG = 0xa5
+ADD_FLOAT = 0xa6
+SUB_FLOAT = 0xa7
+MUL_FLOAT = 0xa8
+DIV_FLOAT = 0xa9
+REM_FLOAT = 0xAA # verified
+ADD_DOUBLE = 0xaB
+SUB_DOUBLE = 0xaC
+MUL_DOUBLE = 0xaD
+DIV_DOUBLE = 0xaE
+REM_DOUBLE = 0xaF
+ADD_INT_2ADDR = 0xB0 # verified
+SUB_INT_2ADDR = 0xB1
+MUL_INT_2ADDR = 0xb2
+DIV_INT_2ADDR = 0xb3
+REM_INT_2ADDR = 0xb4
+AND_INT_2ADDR = 0xb5
+OR_INT_2ADDR = 0xb6
+XOR_INT_2ADDR = 0xb7
+SHL_INT_2ADDR = 0xb8
+SHR_INT_2ADDR = 0xb9
+USHR_INT_2ADDR = 0xbA
+ADD_LONG_2ADDR = 0xbB
+SUB_LONG_2ADDR = 0xbC
+MUL_LONG_2ADDR = 0xbD
+DIV_LONG_2ADDR = 0xbE
+REM_LONG_2ADDR = 0xbF
+AND_LONG_2ADDR = 0xC0
+OR_LONG_2ADDR = 0xC1
+XOR_LONG_2ADDR = 0xc2
+SHL_LONG_2ADDR = 0xc3
+SHR_LONG_2ADDR = 0xc4
+USHR_LONG_2ADDR = 0xc5
+ADD_FLOAT_2ADDR = 0xc6
+SUB_FLOAT_2ADDR = 0xc7
+MUL_FLOAT_2ADDR = 0xc8
+DIV_FLOAT_2ADDR = 0xc9
+REM_FLOAT_2ADDR = 0xcA
+ADD_DOUBLE_2ADDR = 0xcB
+SUB_DOUBLE_2ADDR = 0xcC
+MUL_DOUBLE_2ADDR = 0xcD
+DIV_DOUBLE_2ADDR = 0xcE
+REM_DOUBLE_2ADDR = 0xcF
+ADD_INT_LIT16 = 0xD0
+SUB_INT_LIT16 = 0xD1
+MUL_INT_LIT16 = 0xd2
+DIV_INT_LIT16 = 0xd3
+REM_INT_LIT16 = 0xd4
+AND_INT_LIT16 = 0xd5
+OR_INT_LIT16 = 0xd6
+XOR_INT_LIT16 = 0xd7
+ADD_INT_LIT8 = 0xd8
+SUB_INT_LIT8 = 0xd9
+MUL_INT_LIT8 = 0xdA
+DIV_INT_LIT8 = 0xdB
+REM_INT_LIT8 = 0xdC
+AND_INT_LIT8 = 0xdD
+OR_INT_LIT8 = 0xdE
+XOR_INT_LIT8 = 0xdF
+SHL_INT_LIT8 = 0xE0 # verified
+SHR_INT_LIT8 = 0xE1
+USHR_INT_LIT8 = 0xe2
+UNUSED_E3 = 0xe3
+UNUSED_E4 = 0xe4
+UNUSED_E5 = 0xe5
+UNUSED_E6 = 0xe6
+UNUSED_E7 = 0xe7
+UNUSED_E8 = 0xe8
+UNUSED_E9 = 0xe9
+UNUSED_EA = 0xeA
+UNUSED_EB = 0xeB
+UNUSED_EC = 0xeC
+UNUSED_ED = 0xeD
+EXECUTE_INLINE = 0xeE
+UNUSED_EF = 0xeF
+INVOKE_DIRECT_EMPTY = 0xF0
+UNUSED_F1 = 0xF1
+IGET_QUICK = 0xf2
+IGET_WIDE_QUICK = 0xf3
+IGET_OBJECT_QUICK = 0xf4
+IPUT_QUICK = 0xf5
+IPUT_WIDE_QUICK = 0xf6
+IPUT_OBJECT_QUICK = 0xf7
+INVOKE_VIRTUAL_QUICK = 0xf8
+INVOKE_VIRTUAL_QUICK_RANGE = 0xf9
+INVOKE_SUPER_QUICK = 0xFA # verified
+INVOKE_SUPER_QUICK_RANGE = 0xFB
+UNUSED_FC = 0xFC
+UNUSED_FD = 0xFD
+UNUSED_FE = 0xFE
+UNUSED_FF = 0xFF
 
 
 
@@ -1046,7 +1048,222 @@ OperandTokens = [
 	lambda value: [], # NONE
 
 	# GOTO
-	lambda value: [] # NONE
+	lambda value: [], # NONE
+
+	lambda value: [], # PACKED_SWITCH
+	lambda value: [], # SPARSE_SWITCH
+	lambda value: [], # CMPL_FLOAT
+	lambda value: [], # CMPG_FLOAT
+	lambda value: [], # CMPL_DOUBLE
+	lambda value: [], # CMPG_DOUBLE
+	lambda value: [], # CMP_LONG
+	lambda value: [], # IF_EQ
+	lambda value: [], # IF_NE
+	lambda value: [], # IF_LT
+	lambda value: [], # IF_GE
+	lambda value: [], # IF_GT
+	lambda value: [], # IF_LE
+	lambda value: [], # IF_EQZ
+	lambda value: [], # IF_NEZ
+	lambda value: [], # IF_LTZ
+	lambda value: [], # IF_GEZ
+	lambda value: [], # IF_GTZ
+	lambda value: [], # IF_LEZ
+	lambda value: [], # UNUSED_3E
+	lambda value: [], # UNUSED_3F
+	lambda value: [], # UNUSED_40
+	lambda value: [], # UNUSED_41
+	lambda value: [], # UNUSED_42
+	lambda value: [], # UNUSED_43
+	lambda value: [], # AGET
+	lambda value: [], # AGET_WIDE
+	lambda value: [], # AGET_OBJECT
+	lambda value: [], # AGET_BOOLEAN
+	lambda value: [], # AGET_BYTE
+	lambda value: [], # AGET_CHAR
+	lambda value: [], # AGET_SHORT
+	lambda value: [], # APUT
+	lambda value: [], # APUT_WIDE
+	lambda value: [], # APUT_OBJECT
+	lambda value: [], # APUT_BOOLEAN
+	lambda value: [], # APUT_BYTE
+	lambda value: [], # APUT_CHAR
+	lambda value: [], # APUT_SHORT
+	lambda value: [], # IGET
+	lambda value: [], # IGET_WIDE
+	lambda value: [], # IGET_OBJECT
+	lambda value: [], # IGET_BOOLEAN
+	lambda value: [], # IGET_BYTE
+	lambda value: [], # IGET_CHAR
+	lambda value: [], # IGET_SHORT
+	lambda value: [], # IPUT
+	lambda value: [], # IPUT_WIDE
+	lambda value: [], # IPUT_OBJECT
+	lambda value: [], # IPUT_BOOLEAN
+	lambda value: [], # IPUT_BYTE
+	lambda value: [], # IPUT_CHAR
+	lambda value: [], # IPUT_SHORT
+	lambda value: [], # SGET
+	lambda value: [], # SGET_WIDE
+	lambda value: [], # SGET_OBJECT
+	lambda value: [], # SGET_BOOLEAN
+	lambda value: [], # SGET_BYTE
+	lambda value: [], # SGET_CHAR
+	lambda value: [], # SGET_SHORT
+	lambda value: [], # SPUT
+	lambda value: [], # SPUT_WIDE
+	lambda value: [], # SPUT_OBJECT
+	lambda value: [], # SPUT_BOOLEAN
+	lambda value: [], # SPUT_BYTE
+	lambda value: [], # SPUT_CHAR
+	lambda value: [], # SPUT_SHORT
+	lambda value: [], # INVOKE_VIRTUAL
+	lambda value: [], # INVOKE_SUPER
+	lambda value: [], # INVOKE_DIRECT
+	lambda value: [], # INVOKE_STATIC
+	lambda value: [], # INVOKE_INTERFACE
+	lambda value: [], # UNUSED_73
+	lambda value: [], # INVOKE_VIRTUAL_RANGE
+	lambda value: [], # INVOKE_SUPER_RANGE
+	lambda value: [], # INVOKE_DIRECT_RANGE
+	lambda value: [], # INVOKE_STATIC_RANGE
+	lambda value: [], # INVOKE_INTERFACE_RANGE
+	lambda value: [], # UNUSED_79
+	lambda value: [], # UNUSED_7A
+	lambda value: [], # NEG_INT
+	lambda value: [], # NOT_INT
+	lambda value: [], # NEG_LONG
+	lambda value: [], # NOT_LONG
+	lambda value: [], # NEG_FLOAT
+	lambda value: [], # NEG_DOUBLE
+	lambda value: [], # INT_TO_LONG
+	lambda value: [], # INT_TO_FLOAT
+	lambda value: [], # INT_TO_DOUBLE
+	lambda value: [], # LONG_TO_INT
+	lambda value: [], # LONG_TO_FLOAT
+	lambda value: [], # LONG_TO_DOUBLE
+	lambda value: [], # FLOAT_TO_INT
+	lambda value: [], # FLOAT_TO_LONG
+	lambda value: [], # FLOAT_TO_DOUBLE
+	lambda value: [], # DOUBLE_TO_INT
+	lambda value: [], # DOUBLE_TO_LONG
+	lambda value: [], # DOUBLE_TO_FLOAT
+	lambda value: [], # INT_TO_BYTE
+	lambda value: [], # INT_TO_CHAR
+	lambda value: [], # INT_TO_SHORT
+	lambda value: [], # ADD_INT
+	lambda value: [], # SUB_INT
+	lambda value: [], # MUL_INT
+	lambda value: [], # DIV_INT
+	lambda value: [], # REM_INT
+	lambda value: [], # AND_INT
+	lambda value: [], # OR_INT
+	lambda value: [], # XOR_INT
+	lambda value: [], # SHL_INT
+	lambda value: [], # SHR_INT
+	lambda value: [], # USHR_INT
+	lambda value: [], # ADD_LONG
+	lambda value: [], # SUB_LONG
+	lambda value: [], # MUL_LONG
+	lambda value: [], # DIV_LONG
+	lambda value: [], # REM_LONG
+	lambda value: [], # AND_LONG
+	lambda value: [], # OR_LONG
+	lambda value: [], # XOR_LONG
+	lambda value: [], # SHL_LONG
+	lambda value: [], # SHR_LONG
+	lambda value: [], # USHR_LONG
+	lambda value: [], # ADD_FLOAT
+	lambda value: [], # SUB_FLOAT
+	lambda value: [], # MUL_FLOAT
+	lambda value: [], # DIV_FLOAT
+	lambda value: [], # REM_FLOAT
+	lambda value: [], # ADD_DOUBLE
+	lambda value: [], # SUB_DOUBLE
+	lambda value: [], # MUL_DOUBLE
+	lambda value: [], # DIV_DOUBLE
+	lambda value: [], # REM_DOUBLE
+	lambda value: [], # ADD_INT_2ADDR
+	lambda value: [], # SUB_INT_2ADDR
+	lambda value: [], # MUL_INT_2ADDR
+	lambda value: [], # DIV_INT_2ADDR
+	lambda value: [], # REM_INT_2ADDR
+	lambda value: [], # AND_INT_2ADDR
+	lambda value: [], # OR_INT_2ADDR
+	lambda value: [], # XOR_INT_2ADDR
+	lambda value: [], # SHL_INT_2ADDR
+	lambda value: [], # SHR_INT_2ADDR
+	lambda value: [], # USHR_INT_2ADDR
+	lambda value: [], # ADD_LONG_2ADDR
+	lambda value: [], # SUB_LONG_2ADDR
+	lambda value: [], # MUL_LONG_2ADDR
+	lambda value: [], # DIV_LONG_2ADDR
+	lambda value: [], # REM_LONG_2ADDR
+	lambda value: [], # AND_LONG_2ADDR
+	lambda value: [], # OR_LONG_2ADDR
+	lambda value: [], # XOR_LONG_2ADDR
+	lambda value: [], # SHL_LONG_2ADDR
+	lambda value: [], # SHR_LONG_2ADDR
+	lambda value: [], # USHR_LONG_2ADDR
+	lambda value: [], # ADD_FLOAT_2ADDR
+	lambda value: [], # SUB_FLOAT_2ADDR
+	lambda value: [], # MUL_FLOAT_2ADDR
+	lambda value: [], # DIV_FLOAT_2ADDR
+	lambda value: [], # REM_FLOAT_2ADDR
+	lambda value: [], # ADD_DOUBLE_2ADDR
+	lambda value: [], # SUB_DOUBLE_2ADDR
+	lambda value: [], # MUL_DOUBLE_2ADDR
+	lambda value: [], # DIV_DOUBLE_2ADDR
+	lambda value: [], # REM_DOUBLE_2ADDR
+	lambda value: [], # ADD_INT_LIT16
+	lambda value: [], # SUB_INT_LIT16
+	lambda value: [], # MUL_INT_LIT16
+	lambda value: [], # DIV_INT_LIT16
+	lambda value: [], # REM_INT_LIT16
+	lambda value: [], # AND_INT_LIT16
+	lambda value: [], # OR_INT_LIT16
+	lambda value: [], # XOR_INT_LIT16
+	lambda value: [], # ADD_INT_LIT8
+	lambda value: [], # SUB_INT_LIT8
+	lambda value: [], # MUL_INT_LIT8
+	lambda value: [], # DIV_INT_LIT8
+	lambda value: [], # REM_INT_LIT8
+	lambda value: [], # AND_INT_LIT8
+	lambda value: [], # OR_INT_LIT8
+	lambda value: [], # XOR_INT_LIT8
+	lambda value: [], # SHL_INT_LIT8
+	lambda value: [], # SHR_INT_LIT8
+	lambda value: [], # USHR_INT_LIT8
+	lambda value: [], # UNUSED_E3
+	lambda value: [], # UNUSED_E4
+	lambda value: [], # UNUSED_E5
+	lambda value: [], # UNUSED_E6
+	lambda value: [], # UNUSED_E7
+	lambda value: [], # UNUSED_E8
+	lambda value: [], # UNUSED_E9
+	lambda value: [], # UNUSED_EA
+	lambda value: [], # UNUSED_EB
+	lambda value: [], # UNUSED_EC
+	lambda value: [], # UNUSED_ED
+	lambda value: [], # EXECUTE_INLINE
+	lambda value: [], # UNUSED_EF
+	lambda value: [], # INVOKE_DIRECT_EMPTY
+	lambda value: [], # UNUSED_F1
+	lambda value: [], # IGET_QUICK
+	lambda value: [], # IGET_WIDE_QUICK
+	lambda value: [], # IGET_OBJECT_QUICK
+	lambda value: [], # IPUT_QUICK
+	lambda value: [], # IPUT_WIDE_QUICK
+	lambda value: [], # IPUT_OBJECT_QUICK
+	lambda value: [], # INVOKE_VIRTUAL_QUICK
+	lambda value: [], # INVOKE_VIRTUAL_QUICK_RANGE
+	lambda value: [], # INVOKE_SUPER_QUICK
+	lambda value: [], # INVOKE_SUPER_QUICK_RANGE
+	lambda value: [], # UNUSED_FC
+	lambda value: [], # UNUSED_FD
+	lambda value: [], # UNUSED_FE
+	lambda value: [] # UNUSED_FF
+
 ]
 # hack to make it work for now
 #for i in range(0x28, 0xFF):
