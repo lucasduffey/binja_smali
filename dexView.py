@@ -8,10 +8,7 @@ import os
 
 DEX_MAGIC = "dex\x0a035\x00"
 
-'''
-OPCODES NEEDED
-* B3
-'''
+# android dex opcodes: https://docs.google.com/spreadsheets/d/1SN5W0uwl0BRRAIngPOk9eMAt9VSkGCGD6w4bCe5akvc/edit#gid=0
 
 
 # ~/binaryninja/binaryninja /home/noot/CTF/tmp/classes2.dex
@@ -37,6 +34,273 @@ OPCODES NEEDED
 
 # TODO: verify accuracy - http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
 # the "None" ones - are ones I didn't feel like copy-pasting
+
+'''
+# read from "android dex opcodes" google spreadsheet
+for line in open("data").readlines():
+	opcode, instructionName, operandLength = line.rstrip().split("\t")
+	print  "%s: {\"name\": \"%s\", \"length\": \"%s\"}," % (opcode, instructionName, operandLength)
+'''
+Instruction = {
+	0x0: {"name": "nop", "length": 0},
+	0x1: {"name": "move", "length": 1},
+	0x2: {"name": "move/from16", "length": 2},
+	0x3: {"name": "move/16", "length": 2},
+	0x4: {"name": "move-wide", "length": 2},
+	0x5: {"name": "move-wide/from16", "length": 2},
+	0x6: {"name": "move-wide/16", "length": 2},
+	0x7: {"name": "move-object", "length": 1},
+	0x8: {"name": "move-object/from16", "length": 2},
+	0x9: {"name": "move-object/16", "length": 2},
+	0xa: {"name": "move-result", "length": 1},
+	0xb: {"name": "move-result-wide", "length": 1},
+	0xc: {"name": "move-result-object", "length": 1},
+	0xd: {"name": "move-exception", "length": 1},
+	0xe: {"name": "return-void", "length": 1},
+	0xf: {"name": "return", "length": 1},
+	0x10: {"name": "return-wide", "length": 1},
+	0x11: {"name": "return-object", "length": 1},
+	0x12: {"name": "const/4", "length": 1},
+	0x13: {"name": "const/16", "length": 3},
+	0x14: {"name": "const", "length": 3},
+	0x15: {"name": "const/high16", "length": 2},
+	0x16: {"name": "const-wide/16", "length": 2},
+	0x17: {"name": "const-wide/32", "length": 5},
+	0x18: {"name": "const-wide", "length": 7},
+	0x19: {"name": "const-wide/high16", "length": 3},
+	0x1a: {"name": "const-string", "length": 3},
+	0x1b: {"name": "const-string-jumbo", "length": 3},
+	0x1c: {"name": "const-class", "length": 3},
+	0x1d: {"name": "monitor-enter", "length": 1},
+	0x1e: {"name": "monitor-exit", "length": 1},
+	0x1f: {"name": "check-cast", "length": 3},
+	0x20: {"name": "instance-of", "length": 3},
+	0x21: {"name": "array-length", "length": 1},
+	0x22: {"name": "new-instance", "length": 3},
+	0x23: {"name": "new-array", "length": 3},
+	0x24: {"name": "filled-new-array", "length": 5},
+	0x25: {"name": "filled-new-array-range ", "length": 5},
+	0x26: {"name": "fill-array-data", "length": 5},
+	0x27: {"name": "throw", "length": 1},
+	0x28: {"name": "goto", "length": 1},
+	0x29: {"name": "goto/16", "length": 3},
+	0x2a: {"name": "goto/32", "length": 3},
+	0x2b: {"name": "packed-switch", "length": 5},
+	0x2c: {"name": "sparse-switch", "length": 5},
+	0x2d: {"name": "cmpl-float", "length": 3},
+	0x2e: {"name": "cmpg-float", "length": 3},
+	0x2f: {"name": "cmpl-double", "length": 3},
+	0x30: {"name": "cmpg-double", "length": 3},
+	0x31: {"name": "cmp-long", "length": 3},
+	0x32: {"name": "if-eq", "length": 3},
+	0x33: {"name": "if-ne", "length": 3},
+	0x34: {"name": "if-lt", "length": 3},
+	0x35: {"name": "if-ge", "length": 3},
+	0x36: {"name": "if-gt", "length": 3},
+	0x37: {"name": "if-le", "length": 3},
+	0x38: {"name": "if-eqz", "length": 3},
+	0x39: {"name": "if-nez", "length": 3},
+	0x3a: {"name": "if-ltz", "length": 3},
+	0x3b: {"name": "if-gez", "length": 3},
+	0x3c: {"name": "if-gtz", "length": 3},
+	0x3d: {"name": "if-lez", "length": 3},
+	0x3e: {"name": "None", "length": 0},
+	0x3f: {"name": "None", "length": 0},
+	0x40: {"name": "None", "length": 0},
+	0x41: {"name": "None", "length": 0},
+	0x42: {"name": "None", "length": 0},
+	0x43: {"name": "None", "length": 0},
+	0x44: {"name": "aget", "length": 3},
+	0x45: {"name": "aget-wide", "length": 3},
+	0x46: {"name": "aget-object", "length": 3},
+	0x47: {"name": "aget-boolean", "length": 3},
+	0x48: {"name": "aget-byte", "length": 3},
+	0x49: {"name": "aget-char", "length": 3},
+	0x4a: {"name": "aget-short", "length": 3},
+	0x4b: {"name": "aput", "length": 3},
+	0x4c: {"name": "aput-wide", "length": 3},
+	0x4d: {"name": "aput-object", "length": 3},
+	0x4e: {"name": "aput-boolean", "length": 3},
+	0x4f: {"name": "aput-byte", "length": 3},
+	0x50: {"name": "aput-char", "length": 3},
+	0x51: {"name": "aput-short", "length": 3},
+	0x52: {"name": "iget", "length": 3},
+	0x53: {"name": "iget-wide", "length": 3},
+	0x54: {"name": "iget-object", "length": 3},
+	0x55: {"name": "iget-boolean", "length": 3},
+	0x56: {"name": "iget-byte", "length": 3},
+	0x57: {"name": "iget-char", "length": 3},
+	0x58: {"name": "iget-short", "length": 3},
+	0x59: {"name": "iput", "length": 3},
+	0x5a: {"name": "iput-wide", "length": 3},
+	0x5b: {"name": "iput-object", "length": 3},
+	0x5c: {"name": "iput-boolean", "length": 3},
+	0x5d: {"name": "iput-byte", "length": 3},
+	0x5e: {"name": "iput-char", "length": 3},
+	0x5f: {"name": "iput-short", "length": 3},
+	0x60: {"name": "sget", "length": 3},
+	0x61: {"name": "sget-wide", "length": 3},
+	0x62: {"name": "sget-object", "length": 3},
+	0x63: {"name": "sget-boolean", "length": 3},
+	0x64: {"name": "sget-byte", "length": 3},
+	0x65: {"name": "sget-char", "length": 3},
+	0x66: {"name": "sget-short", "length": 3},
+	0x67: {"name": "sput", "length": 3},
+	0x68: {"name": "sput-wide", "length": 3},
+	0x69: {"name": "sput-object", "length": 3},
+	0x6a: {"name": "sput-boolean", "length": 3},
+	0x6b: {"name": "sput-byte", "length": 3},
+	0x6c: {"name": "sput-char", "length": 3},
+	0x6d: {"name": "sput-short", "length": 3},
+	0x6e: {"name": "invoke-virtual", "length": 5},
+	0x6f: {"name": "invoke-super", "length": 5},
+	0x70: {"name": "invoke-direct", "length": 5},
+	0x71: {"name": "invoke-static", "length": 5},
+	0x72: {"name": "invoke-interface", "length": 5},
+	0x73: {"name": "None", "length": 0},
+	0x74: {"name": "invoke-virtual/range", "length": 5},
+	0x75: {"name": "invoke-super/range", "length": 5},
+	0x76: {"name": "invoke-direct/range", "length": 5},
+	0x77: {"name": "invoke-static/range", "length": 5},
+	0x78: {"name": "invoke-interface/range", "length": 5},
+	0x79: {"name": "None", "length": 0},
+	0x7a: {"name": "None", "length": 0},
+	0x7b: {"name": "neg-int", "length": 1},
+	0x7c: {"name": "not-int", "length": 1},
+	0x7d: {"name": "neg-long", "length": 1},
+	0x7e: {"name": "not-long", "length": 1},
+	0x7f: {"name": "neg-float", "length": 1},
+	0x80: {"name": "neg-double", "length": 1},
+	0x81: {"name": "int-to-long", "length": 1},
+	0x82: {"name": "int-to-float", "length": 1},
+	0x83: {"name": "int-to-double", "length": 1},
+	0x84: {"name": "long-to-int", "length": 1},
+	0x85: {"name": "long-to-float", "length": 1},
+	0x86: {"name": "long-to-double", "length": 1},
+	0x87: {"name": "float-to-int", "length": 1},
+	0x88: {"name": "float-to-long", "length": 1},
+	0x89: {"name": "float-to-double", "length": 1},
+	0x8a: {"name": "double-to-int", "length": 1},
+	0x8b: {"name": "double-to-long", "length": 1},
+	0x8c: {"name": "double-to-float", "length": 1},
+	0x8d: {"name": "int-to-byte", "length": 1},
+	0x8e: {"name": "int-to-char", "length": 1},
+	0x8f: {"name": "int-to-short", "length": 1},
+	0x90: {"name": "add-int", "length": 3},
+	0x91: {"name": "sub-int", "length": 3},
+	0x92: {"name": "mul-int", "length": 3},
+	0x93: {"name": "div-int", "length": 3},
+	0x94: {"name": "rem-int", "length": 3},
+	0x95: {"name": "and-int", "length": 3},
+	0x96: {"name": "or-int", "length": 3},
+	0x97: {"name": "xor-int", "length": 3},
+	0x98: {"name": "shl-int", "length": 3},
+	0x99: {"name": "shr-int", "length": 3},
+	0x9a: {"name": "ushr-int", "length": 3},
+	0x9b: {"name": "add-long", "length": 3},
+	0x9c: {"name": "sub-long", "length": 3},
+	0x9d: {"name": "mul-long", "length": 3},
+	0x9e: {"name": "div-long", "length": 3},
+	0x9f: {"name": "rem-long", "length": 3},
+	0xa0: {"name": "and-long", "length": 3},
+	0xa1: {"name": "or-long", "length": 3},
+	0xa2: {"name": "xor-long", "length": 3},
+	0xa3: {"name": "shl-long", "length": 3},
+	0xa4: {"name": "shr-long", "length": 3},
+	0xa5: {"name": "ushr-long", "length": 3},
+	0xa6: {"name": "add-float", "length": 3},
+	0xa7: {"name": "sub-float", "length": 3},
+	0xa8: {"name": "mul-float", "length": 3},
+	0xa9: {"name": "div-float", "length": 3},
+	0xaa: {"name": "rem-float", "length": 3},
+	0xab: {"name": "add-double", "length": 3},
+	0xac: {"name": "sub-double", "length": 3},
+	0xad: {"name": "mul-double", "length": 3},
+	0xae: {"name": "div-double", "length": 3},
+	0xaf: {"name": "rem-double", "length": 3},
+	0xb0: {"name": "add-int/2addr", "length": 1},
+	0xb1: {"name": "sub-int/2addr", "length": 1},
+	0xb2: {"name": "mul-int/2addr", "length": 1},
+	0xb3: {"name": "div-int/2addr", "length": 1},
+	0xb4: {"name": "rem-int/2addr", "length": 1},
+	0xb5: {"name": "and-int/2addr", "length": 1},
+	0xb6: {"name": "or-int/2addr", "length": 1},
+	0xb7: {"name": "xor-int/2addr", "length": 1},
+	0xb8: {"name": "shl-int/2addr", "length": 1},
+	0xb9: {"name": "shr-int/2addr", "length": 1},
+	0xba: {"name": "ushr-int/2addr", "length": 1},
+	0xbb: {"name": "add-long/2addr", "length": 1},
+	0xbc: {"name": "sub-long/2addr", "length": 1},
+	0xbd: {"name": "mul-long/2addr", "length": 1},
+	0xbe: {"name": "div-long/2addr", "length": 1},
+	0xbf: {"name": "rem-long/2addr", "length": 1},
+	0xc0: {"name": "and-long/2addr", "length": 1},
+	0xc1: {"name": "or-long/2addr", "length": 1},
+	0xc2: {"name": "xor-long/2addr", "length": 1},
+	0xc3: {"name": "shl-long/2addr", "length": 1},
+	0xc4: {"name": "shr-long/2addr", "length": 1},
+	0xc5: {"name": "ushr-long/2addr", "length": 1},
+	0xc6: {"name": "add-float/2addr", "length": 1},
+	0xc7: {"name": "sub-float/2addr", "length": 1},
+	0xc8: {"name": "mul-float/2addr", "length": 1},
+	0xc9: {"name": "div-float/2addr", "length": 1},
+	0xca: {"name": "rem-float/2addr", "length": 1},
+	0xcb: {"name": "add-double/2addr", "length": 1},
+	0xcc: {"name": "sub-double/2addr", "length": 1},
+	0xcd: {"name": "mul-double/2addr", "length": 1},
+	0xce: {"name": "div-double/2addr", "length": 1},
+	0xcf: {"name": "rem-double/2addr", "length": 1},
+	0xd0: {"name": "add-int/lit16", "length": 3},
+	0xd1: {"name": "sub-int/lit16", "length": 3},
+	0xd2: {"name": "mul-int/lit16", "length": 3},
+	0xd3: {"name": "div-int/lit16", "length": 3},
+	0xd4: {"name": "rem-int/lit16", "length": 3},
+	0xd5: {"name": "and-int/lit16", "length": 3},
+	0xd6: {"name": "or-int/lit16", "length": 3},
+	0xd7: {"name": "xor-int/lit16", "length": 3},
+	0xd8: {"name": "add-int/lit8", "length": 3},
+	0xd9: {"name": "sub-int/lit8", "length": 3},
+	0xda: {"name": "mul-int/lit8", "length": 3},
+	0xdb: {"name": "div-int/lit8", "length": 3},
+	0xdc: {"name": "rem-int/lit8", "length": 3},
+	0xdd: {"name": "and-int/lit8", "length": 3},
+	0xde: {"name": "or-int/lit8", "length": 3},
+	0xdf: {"name": "xor-int/lit8", "length": 3},
+	0xe0: {"name": "shl-int/lit8", "length": 3},
+	0xe1: {"name": "shr-int/lit8", "length": 3},
+	0xe2: {"name": "ushr-int/lit8", "length": 3},
+	0xe3: {"name": "None", "length": 0},
+	0xe4: {"name": "None", "length": 0},
+	0xe5: {"name": "None", "length": 0},
+	0xe6: {"name": "None", "length": 0},
+	0xe7: {"name": "None", "length": 0},
+	0xe8: {"name": "None", "length": 0},
+	0xe9: {"name": "None", "length": 0},
+	0xea: {"name": "None", "length": 0},
+	0xeb: {"name": "None", "length": 0},
+	0xec: {"name": "None", "length": 0},
+	0xed: {"name": "None", "length": 0},
+	0xee: {"name": "execute-inline", "length": 5},
+	0xef: {"name": "None", "length": 0},
+	0xf0: {"name": "invoke-direct-empty", "length": 5},
+	0xf1: {"name": "None", "length": 0},
+	0xf2: {"name": "iget-quick", "length": 3},
+	0xf3: {"name": "iget-wide-quick", "length": 3},
+	0xf4: {"name": "iget-object-quick", "length": 3},
+	0xf5: {"name": "iput-quick", "length": 3},
+	0xf6: {"name": "iput-wide-quick", "length": 3},
+	0xf7: {"name": "iput-object-quick", "length": 3},
+	0xf8: {"name": "invoke-virtual-quick", "length": 5},
+	0xf9: {"name": "invoke-virtual-quick/range", "length": 5},
+	0xfa: {"name": "invoke-super-quick", "length": 5},
+	0xfb: {"name": "invoke-super-quick/range", "length": 5},
+	0xfc: {"name": "None", "length": 0},
+	0xfd: {"name": "None", "length": 0},
+	0xfe: {"name": "None", "length": 0},
+	0xff: {"name": "None", "length": 0}
+}
+
+'''
 InstructionNames = [
 	"nop",
 	"move", "move/from16", "move/16", "move-wide", "move-wide/from16", "move-wide/16", "move-object", # 0x00
@@ -94,7 +358,7 @@ InstructionNames = [
 	"iget-quick", "iget-wide-quick", "iget-object-quick","iput-quick", "iput-wide-quick", "iput-object-quick",
 	"invoke-virtual-quick", "invoke-virtual-quick/range","invoke-super-quick", "invoke-super-quick/range",
 	None,None,None,None
-]
+]'''
 
 RegisterNames = [
 	"v0", # I believe 0 == v0
@@ -126,6 +390,7 @@ RegisterNames = [
 
 ]
 
+'''
 NONE = 0
 MOVE = 1
 MOVE_FROM16 = 2
@@ -382,9 +647,9 @@ UNUSED_FC = 0xFC
 UNUSED_FD = 0xFD
 UNUSED_FE = 0xFE
 UNUSED_FF = 0xFF
+'''
 
-
-
+'''
 InstructionOperandTypes = [
 	NONE, MOVE,
 
@@ -401,10 +666,12 @@ InstructionOperandTypes = [
 	MOVE_RESULT_WIDE,
 	MOVE_RESULT_OBJECT,
 	MOVE_EXCEPTION,
+
 	RETURN_VOID,
 	RETURN,
 	RETURN_WIDE,
 	RETURN_OBJECT,
+
 	CONST_4,
 	CONST_16,
 	CONST,
@@ -416,8 +683,10 @@ InstructionOperandTypes = [
 	CONST_STRING,
 	CONST_STRING_JUMBO,
 	CONST_CLASS,
+
 	MONITOR_ENTER,
 	MONITOR_EXIT,
+
 	CHECK_CAST,
 	INSTANCE_OF,
 	ARRAY_LENGTH,
@@ -426,16 +695,22 @@ InstructionOperandTypes = [
 	FILLED_NEW_ARRAY,
 	FILLED_NEW_ARRAY_RANGE,
 	FILL_ARRAY_DATA,
+
 	THROW,
+
 	GOTO,
+	GOTO_16,
+	GOTO_32,
 
 	PACKED_SWITCH,
 	SPARSE_SWITCH,
+
 	CMPL_FLOAT,
 	CMPG_FLOAT,
 	CMPL_DOUBLE,
 	CMPG_DOUBLE,
 	CMP_LONG,
+
 	IF_EQ,
 	IF_NE,
 	IF_LT,
@@ -448,12 +723,14 @@ InstructionOperandTypes = [
 	IF_GEZ,
 	IF_GTZ,
 	IF_LEZ,
+
 	UNUSED_3E,
 	UNUSED_3F,
 	UNUSED_40,
 	UNUSED_41,
 	UNUSED_42,
 	UNUSED_43,
+
 	AGET,
 	AGET_WIDE,
 	AGET_OBJECT,
@@ -461,6 +738,7 @@ InstructionOperandTypes = [
 	AGET_BYTE,
 	AGET_CHAR,
 	AGET_SHORT,
+
 	APUT,
 	APUT_WIDE,
 	APUT_OBJECT,
@@ -468,6 +746,7 @@ InstructionOperandTypes = [
 	APUT_BYTE,
 	APUT_CHAR,
 	APUT_SHORT,
+
 	IGET,
 	IGET_WIDE,
 	IGET_OBJECT,
@@ -475,6 +754,7 @@ InstructionOperandTypes = [
 	IGET_BYTE,
 	IGET_CHAR,
 	IGET_SHORT,
+
 	IPUT,
 	IPUT_WIDE,
 	IPUT_OBJECT,
@@ -482,6 +762,7 @@ InstructionOperandTypes = [
 	IPUT_BYTE,
 	IPUT_CHAR,
 	IPUT_SHORT,
+
 	SGET,
 	SGET_WIDE,
 	SGET_OBJECT,
@@ -489,6 +770,7 @@ InstructionOperandTypes = [
 	SGET_BYTE,
 	SGET_CHAR,
 	SGET_SHORT,
+
 	SPUT,
 	SPUT_WIDE,
 	SPUT_OBJECT,
@@ -496,40 +778,49 @@ InstructionOperandTypes = [
 	SPUT_BYTE,
 	SPUT_CHAR,
 	SPUT_SHORT,
+
 	INVOKE_VIRTUAL,
 	INVOKE_SUPER,
 	INVOKE_DIRECT,
 	INVOKE_STATIC,
-	INVOKE_INTERFACE,
+	INVOKE_INTERFACE, # seems to be thought as 71...., but it should be 72
+
 	UNUSED_73,
+
 	INVOKE_VIRTUAL_RANGE,
 	INVOKE_SUPER_RANGE,
 	INVOKE_DIRECT_RANGE,
 	INVOKE_STATIC_RANGE,
 	INVOKE_INTERFACE_RANGE,
+
 	UNUSED_79,
 	UNUSED_7A,
+
 	NEG_INT,
 	NOT_INT,
 	NEG_LONG,
 	NOT_LONG,
 	NEG_FLOAT,
 	NEG_DOUBLE,
+
 	INT_TO_LONG,
 	INT_TO_FLOAT,
 	INT_TO_DOUBLE,
 	LONG_TO_INT,
 	LONG_TO_FLOAT,
 	LONG_TO_DOUBLE,
+
 	FLOAT_TO_INT,
 	FLOAT_TO_LONG,
 	FLOAT_TO_DOUBLE,
 	DOUBLE_TO_INT,
 	DOUBLE_TO_LONG,
 	DOUBLE_TO_FLOAT,
+
 	INT_TO_BYTE,
 	INT_TO_CHAR,
 	INT_TO_SHORT,
+
 	ADD_INT,
 	SUB_INT,
 	MUL_INT,
@@ -645,8 +936,9 @@ InstructionOperandTypes = [
 
 	# FIXME TODO
 	NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE,
-]
+]'''
 
+'''
 OperandLengths = [
 	0, # NONE - nop is either '00' or '0000' - not 100% certain
 	1, # MOVE - TODO: validate/verify
@@ -688,7 +980,7 @@ OperandLengths = [
 	3, # NEW_ARRAY,
 	5, # FILLED_NEW_ARRAY,
 	5, # FILLED_NEW_ARRAY_RANGE
-	5, # FILLED_ARRAY_DATA
+	5, # FILL_ARRAY_DATA
 	1, # THROW
 	1, # GOTO
 	3, # GOTO_16
@@ -925,6 +1217,7 @@ OperandLengths = [
 	0, # UNUSED_FE
 	0 # UNUSED_FF
 ]
+'''
 
 # used for perform_get_instruction_text
 OperandTokens = [
@@ -1033,7 +1326,7 @@ OperandTokens = [
 		InstructionTextToken(TextToken, ", "),
 		InstructionTextToken(RegisterToken, RegisterNames[value >> 20]),
 		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(TextToken, "undefined") # https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats, AFAIK this is relevant
+		InstructionTextToken(TextToken, "unimplemented") # https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats, AFAIK this is relevant
 														# example "0x19", this may be pulling it from the "field_ids" section
 		],
 
@@ -1043,23 +1336,29 @@ OperandTokens = [
 	# FILLED_NEW_ARRAY_RANGE
 	lambda value: [], # NONE
 
-	# FILLED_ARRAY_DATA
-	lambda value: [], # NONE
+	# FILL_ARRAY_DATA - seems working
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 32)]),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(TextToken, "unimplemented") # array_data_offset
+		], # NONE
 
-	# THROW
-	lambda value: [], # NONE
 
-	# GOTO
-	lambda value: [], # NONE
+	lambda value: [], # THROW
+
+	lambda value: [], # GOTO
+	lambda value: [], # GOTO_16
+	lambda value: [], # GOTO_32
 
 	lambda value: [], # PACKED_SWITCH
 	lambda value: [], # SPARSE_SWITCH
-	lambda value: [], # CMPL_FLOAT
+
+	lambda value: [], # 0x2D CMPL_FLOAT
 	lambda value: [], # CMPG_FLOAT
 	lambda value: [], # CMPL_DOUBLE
 	lambda value: [], # CMPG_DOUBLE
 	lambda value: [], # CMP_LONG
-	lambda value: [], # IF_EQ
+
+	lambda value: [], # 0x32 IF_EQ
 	lambda value: [], # IF_NE
 	lambda value: [], # IF_LT
 	lambda value: [], # IF_GE
@@ -1071,51 +1370,71 @@ OperandTokens = [
 	lambda value: [], # IF_GEZ
 	lambda value: [], # IF_GTZ
 	lambda value: [], # IF_LEZ
-	lambda value: [], # UNUSED_3E
+
+	lambda value: [], # 0x3E UNUSED_3E
 	lambda value: [], # UNUSED_3F
 	lambda value: [], # UNUSED_40
 	lambda value: [], # UNUSED_41
 	lambda value: [], # UNUSED_42
 	lambda value: [], # UNUSED_43
-	lambda value: [], # AGET
+
+	lambda value: [], # 0x44 AGET
 	lambda value: [], # AGET_WIDE
 	lambda value: [], # AGET_OBJECT
 	lambda value: [], # AGET_BOOLEAN
 	lambda value: [], # AGET_BYTE
 	lambda value: [], # AGET_CHAR
 	lambda value: [], # AGET_SHORT
-	lambda value: [], # APUT
+
+	lambda value: [], # 0x4B APUT
 	lambda value: [], # APUT_WIDE
 	lambda value: [], # APUT_OBJECT
 	lambda value: [], # APUT_BOOLEAN
 	lambda value: [], # APUT_BYTE
 	lambda value: [], # APUT_CHAR
 	lambda value: [], # APUT_SHORT
-	lambda value: [], # IGET
+
+	lambda value: [], # 0x52 IGET
 	lambda value: [], # IGET_WIDE
 	lambda value: [], # IGET_OBJECT
 	lambda value: [], # IGET_BOOLEAN
 	lambda value: [], # IGET_BYTE
 	lambda value: [], # IGET_CHAR
 	lambda value: [], # IGET_SHORT
-	lambda value: [], # IPUT
+
+	lambda value: [], # 0x5A IPUT
 	lambda value: [], # IPUT_WIDE
 	lambda value: [], # IPUT_OBJECT
 	lambda value: [], # IPUT_BOOLEAN
 	lambda value: [], # IPUT_BYTE
 	lambda value: [], # IPUT_CHAR
 	lambda value: [], # IPUT_SHORT
-	lambda value: [], # SGET
+
+	lambda value: [], # 0x60 SGET
 	lambda value: [], # SGET_WIDE
 	lambda value: [], # SGET_OBJECT
 	lambda value: [], # SGET_BOOLEAN
 	lambda value: [], # SGET_BYTE
 	lambda value: [], # SGET_CHAR
 	lambda value: [], # SGET_SHORT
-	lambda value: [], # SPUT
-	lambda value: [], # SPUT_WIDE
+
+	lambda value: [], # 0x67 SPUT
+
+	# FIXME: not working - not right index?
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 16)]), # not sure if it's 16 or 20
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(TextToken, "unimplemented") #  field_id - this specifies the entry number in the field id table
+		], # SPUT_WIDE
+
 	lambda value: [], # SPUT_OBJECT
-	lambda value: [], # SPUT_BOOLEAN
+
+	# FIXME: this is not working - this must not be the right index in OperandTokens
+	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 16)]), # not sure if it's 16 or 20
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(TextToken, "unimplemented") #  field_id - this specifies the entry number in the field id table
+		], # 0x6A SPUT_BOOLEAN
+
+
 	lambda value: [], # SPUT_BYTE
 	lambda value: [], # SPUT_CHAR
 	lambda value: [], # SPUT_SHORT
@@ -1123,7 +1442,29 @@ OperandTokens = [
 	lambda value: [], # INVOKE_SUPER
 	lambda value: [], # INVOKE_DIRECT
 	lambda value: [], # INVOKE_STATIC
-	lambda value: [], # INVOKE_INTERFACE
+
+	# FIXME: I DO NOT TRUST THIS....
+	lambda value: [
+		# The invocation parameter list encoding is somewhat weird.
+		# Starting if parameter number > 4 and parameter number % 4 == 1, the 5th (9th, etc.) parameter is encoded on the 4 lowest bit of the byte immediately following the instruction.
+		# Curiously, this encoding is not used in case of 1 parameter, in this case an entire 16 bit word is added after the method index of which only 4 bit is used to encode
+ 		# the single parameter while the lowest 4 bit of the byte following the instruction byte is left unused.
+
+		InstructionTextToken(TextToken, "{"),
+		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF00]),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF000]),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF0]),
+		InstructionTextToken(TextToken, "}"),
+		InstructionTextToken(TextToken, ", "),
+		InstructionTextToken(TextToken, "unimplemented"), # methodtocall - it's probably an offset to a method list
+
+		], # INVOKE_INTERFACE
+
+
 	lambda value: [], # UNUSED_73
 	lambda value: [], # INVOKE_VIRTUAL_RANGE
 	lambda value: [], # INVOKE_SUPER_RANGE
@@ -1362,27 +1703,27 @@ class DEX(Architecture):
 			return None, None, None, None
 		opcode = ord(data[0])
 
-		# temp hack - will be elimated when I fully populate InstructionNames list
-		if opcode >= len(InstructionNames):
-			return None, None, None, None
+		# shouldn't be required?
+		#if opcode >= len(InstructionNames): # was "InstructionNames"
+		#	return None, None, None, None
 
-		instr = InstructionNames[opcode]
+		instr = Instruction[opcode]["name"] # was "InstructionNames[opcode]"
 		if instr is None:
 			return None, None, None, None
 
-		operand = InstructionOperandTypes[opcode] # TODO
+		operand = opcode # InstructionOperandTypes[opcode] # TODO - FIXME: pretty sure this will be fine..
 
-		length = 1 + OperandLengths[operand] # TODO
+		length = 1 + Instruction[opcode]["length"] # was OperandLengths[operand]
 		#log(2, "decode_instruction - opcode: %s, operand: %s, length: %s" % (str(opcode), str(operand), str(length)))
 
 		if len(data) < length:
 			return None, None, None, None
 
-		if OperandLengths[operand] == 0:
+		if Instruction[opcode]["length"] == 0: # was OperandLengths[operand]
 			value = None
 		#elif operand == REL:
 		#	value = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
-		elif OperandLengths[operand] == 1:
+		elif Instruction[opcode]["length"] == 1: # was OperandLengths[operand]
 			value = ord(data[1])
 		else:
 			value = struct.unpack("<H", data[1:3])[0]
@@ -1451,18 +1792,6 @@ class DEX(Architecture):
 		if instr is None:
 			return None
 
-		if operand == 3:
-			print "value: ", value # it's the bytes
-			print "type(value): ", type(value) # type "int"
-
-			print "================"
-			print "value >> 2: ", (value >> 2)
-			print "value >> 4: ", (value >> 4)
-			print "value >> 6: ", (value >> 6)
-			print "value >> 8: ", (value >> 8) # pretty sure this is supposed to be first one..
-			print "================"
-
-
 		#if operand == 0x13:
 			#log(2, str(hex(value)) + ": " + str(value))
 
@@ -1470,7 +1799,7 @@ class DEX(Architecture):
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
 		tokens = []
-		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr.replace("@", ""))) # FIXME: error? this is "move" for example??
+		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr)) # FIXME: error? this is "move" for example??
 		tokens += OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
 
 		return tokens, length
@@ -1495,16 +1824,14 @@ class DEXView(BinaryView):
 	def __init__(self, data):
 		print "DEXView::__init__"
 		BinaryView.__init__(self, data.file) # FIXME: is len(data.file.raw) right?
-
 		self.data = data # FIXME: is this what we can do DexFile() on?
+		self.notification = DEXViewUpdateNotification(self)
+		self.data.register_notification(self.notification)
 
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
 
 		self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
-
-		self.notification = DEXViewUpdateNotification(self) # TODO
-		self.data.register_notification(self.notification)
 
 		self.dex_file.print_metadata() # for some reason this is getting regisered with "raw" view??
 
@@ -1520,7 +1847,7 @@ class DEXView(BinaryView):
 		#print self.dex_file.strings # WORKING YAY
 
 
-
+		# add all the methods
 		for code_item in self.dex_file.codes:
 			# might be useful
 			# 	* code_item["registers_size"] - the number of registers used by this code
@@ -1529,9 +1856,9 @@ class DEXView(BinaryView):
 
 		# TODO: method_idx_diff
 
-		#log(2, "found string: " + string)
 
-
+		# THE FOLLOWING IS JUST FOR STRINGS, but it's not actually finding strings to rename functions with..
+		'''
 		# FIXME: it's not populating the functions...
 		# FIXME: TODO - might be easier to get all the code from the mapping...
 		log(3, "self.dex_file.class_defs() count: %i" % len(self.dex_file.class_defs())) # 123 for the example
@@ -1547,59 +1874,69 @@ class DEXView(BinaryView):
 			# FIXME: class_def["class_data_off"] is clearly wrong
 			assert class_def["class_data_off"] < raw_binary_length
 
-			'''
+
+			# THIS IS FOR THE STRINGS...
 			class_data_item_obj = self.dex_file.class_data_item(raw_binary, raw_binary_length, class_def["class_data_off"]) # this line seems correct, TODO: check the actual "class_data_item" function
 
 			# create function for each direct_method
 			for direct_method in class_data_item_obj.direct_methods():
-				assert direct_method["code_off"] < raw_binary_length
-
-				#log(2, "direct_method instance")
-				#print "direct_method code_off: ", direct_method["code_off"]
-				#print "direct_method raw_binary_length: ", raw_binary_length
-
-				# FIXME: code_off is offset to code_item struct, not dex
-				code_item_list = class_data_item_obj.code_item(direct_method["code_off"])
-				method_idx_diff = direct_method["method_idx_diff"]
-				string_idx = method_list[method_idx_diff]["name_idx"]
-
-				#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
-				method_name = string_list[string_idx] # FIXME: this is index to "method_ids"
+				try:
+					assert direct_method["code_off"] < raw_binary_length
 
 
-				# direct_method.code_off - there's no way to pass "insns_size" to binja???
-				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
+					#log(2, "direct_method instance")
+					#print "direct_method code_off: ", direct_method["code_off"]
+					#print "direct_method raw_binary_length: ", raw_binary_length
 
-				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
-				#log(3, str(method_name))
-				fn.name = method_name
+					# FIXME: code_off is offset to code_item struct, not dex
+					code_item_list = self.dex_file.read_code_item(direct_method["code_off"]) # was class_data_item_obj.read_code_item...
+					method_idx_diff = direct_method["method_idx_diff"]
+					string_idx = method_list[method_idx_diff]["name_idx"]
 
-				# FIXME: method_list also provides class_idx, proto_idx
+					#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
+					method_name = string_list[string_idx] # FIXME: this is index to "method_ids"
+
+
+					# direct_method.code_off - there's no way to pass "insns_size" to binja???
+					#data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
+
+					fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
+					#log(3, str(method_name))
+					fn.name = method_name
+
+					# FIXME: method_list also provides class_idx, proto_idx
+				except:
+					# FIXME: print useful info
+					pass
 
 			# create function for each virtual_method
 			for virtual_method in class_data_item_obj.virtual_methods():
 				print "virtual_method code_off:", virtual_method["code_off"]
 
-				# FIXME: code_off is offset to code_item struct, not dex
-				code_item_list = class_data_item_obj.code_item(virtual_method["code_off"])
-				method_idx_diff = virtual_method["method_idx_diff"] # FIXME: this is index to "method_ids"
-				string_idx = method_list[method_idx_diff]["name_idx"]
+				try:
+					# FIXME: code_off is offset to code_item struct, not dex
+					code_item_list = self.dex_file.read_code_item(virtual_method["code_off"]) # was class_data_item_obj.read_code_item...
+					method_idx_diff = virtual_method["method_idx_diff"] # FIXME: this is index to "method_ids"
+					string_idx = method_list[method_idx_diff]["name_idx"]
 
-				#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
-				method_name = string_list[string_idx]
+					#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
+					method_name = string_list[string_idx]
 
-				# virtual_method.code_off - there's no way to pass "insns_size" to binja???
-				data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
+					# virtual_method.code_off - there's no way to pass "insns_size" to binja???
+					#data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
 
 
-				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
-				#log(3, str(method_name))
-				fn.name = method_name
+					fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
+					#log(3, str(method_name))
+					fn.name = method_name
 
-				# FIXME: method_list also provides class_idx, proto_idx
-			'''
+					# FIXME: method_list also provides class_idx, proto_idx
+				except:
+					# FIXME: print useful info
+					pass
+
 			#print "" # for debugging only, improve readability
-
+			'''
 
 		# this might be a better way to do it. Just create functions
 		#data.create_user_function(Architecture['dex'].standalone_platform, 0) # FAILURE TO CREATE VIEW..
@@ -1621,7 +1958,7 @@ class DEXView(BinaryView):
 	def init(self):
 		try:
 			# TODO: look at NES.py
-			self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
+			#self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
 
 			return True
 		except:
@@ -1631,14 +1968,14 @@ class DEXView(BinaryView):
 
 
 	# FIXME
-	def perform_is_valid_offset(self, addr):
-		if (addr >= 0x8000) and (addr < 0x10000):
-				return True
-		return False
+	#def perform_is_valid_offset(self, addr):
+	#	if (addr >= 0x8000) and (addr < 0x10000):
+	#			return True
+	#	return False
 
 	# FIXME
-	def perform_read(self, addr, length):
-		return "" # FIXME
+	#def perform_read(self, addr, length):
+	#	return "" # FIXME
 
 		"""
 				if addr < 0x8000:
@@ -1667,9 +2004,9 @@ class DEXView(BinaryView):
 	#	pass
 
 	# FIXME
-	def perform_get_start(self):
+	#def perform_get_start(self):
 	   #print("[perform_get_start]") # NOTE: seems to infinite loop (for both 0 or 1 return, haven't tested others)
-	   return 0
+	#   return 0
 
 	# FIXME
 	def perform_get_length(self):
@@ -1679,7 +2016,7 @@ class DEXView(BinaryView):
 		return True
 
 	# FIXME
-	def perform_get_entry_point(self):
+	#def perform_get_entry_point(self):
 		# complicated because this is called without self really existing
 		#   * not really sure what self provides...
 
@@ -1700,7 +2037,7 @@ class DEXView(BinaryView):
 		#return dataOff
 
 		# return 0 for now, since perform_get_entry_point gets called before __init__ it overcomplicates some stuff...
-		return int(0) # for some reason I frequently get "0x0 isn't valid entry point"..
+	#	return int(0) # for some reason I frequently get "0x0 isn't valid entry point"..
 
 print("dexView - for real")
 print("test against classes2.dex - because there is actually dex code..")

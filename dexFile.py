@@ -116,7 +116,7 @@ def read_ULEB128(data):
 
 	#print "".join(p)
 
-	if i == 4 and not found:
+	if not found: # redundant to also check for "i == 4"?
 		log(4, "invalid ULEB128")
 		assert False
 
@@ -125,9 +125,68 @@ def read_ULEB128(data):
 
 
 # http://llvm.org/docs/doxygen/html/LEB128_8h_source.html
+# hex => decimal
+###############3
+# 00 => 0
+# 01 => 1
+# 7f => -1
+# 80 7f => -128
+
+'''
+ /// Utility function to decode a SLEB128 value.
+ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr) {
+   const uint8_t *orig_p = p;
+   int64_t Value = 0;
+   unsigned Shift = 0;
+   uint8_t Byte;
+   do {
+     Byte = *p++;
+     Value |= ((Byte & 0x7f) << Shift);
+     Shift += 7;
+   } while (Byte >= 128);
+   // Sign extend negative numbers.
+   if (Byte & 0x40)
+     Value |= (-1ULL) << Shift;
+   if (n)
+     *n = (unsigned)(p - orig_p);
+   return Value;
+}
+'''
+
 def read_sleb128(data):
-	value = 0
-	assert False
+	total = 0
+	found = False
+	shift = 0
+
+	# NOT SURE IF THIS IS RIGHT...
+	for i in xrange(5):
+		value = ord(data[i])
+		high_bit = (ord(data[i]) >> 7)
+
+		total |= (value & 0x7f) << shift
+		shift += 7
+
+		if high_bit == 0:
+			found = True
+			break
+
+	if value & 0x40:
+		total |= (-1) << shift
+
+
+		# TODO: implement
+
+	if not found: # redundant to also check for "i == 4"?
+		assert False
+
+	return total, i+1
+
+# test cases
+assert read_sleb128("\x00")[0] == 0
+assert read_sleb128("\x01")[0] == 1
+assert read_sleb128("\x7f")[0] == -1
+assert read_sleb128("\x80\x7f")[0] == -128
+
 
 class DexFile():
 	def __init__(self, binary_blob, binary_blob_length): # data is binaryView
@@ -385,9 +444,9 @@ class DexFile():
 
 			# now carve out method_id_item
 			method = {
-				"class_idx": self.read_ushort(method_ids_off), # struct.unpack("<H", method_ids_data[0:2])[0],
-				"proto_idx": self.read_ushort(method_ids_off+2), # struct.unpack("<H", method_ids_data[2:4])[0],
-				"name_idx": self.read_uint(method_ids_off+4) # struct.unpack("<I", method_ids_data[4:8])[0], # index into the string_ids
+				"class_idx": self.read_ushort(method_ids_off),
+				"proto_idx": self.read_ushort(method_ids_off+2),
+				"name_idx": self.read_uint(method_ids_off+4)
 			}
 			method_ids_off += 8
 
@@ -411,13 +470,12 @@ class DexFile():
 		offset += 4
 
 		# map_items are 12 bytes
-
 		map_items = []
 
-		log(3, "map_list_size: %i" % map_list_size) # example: 17
+		#log(2, "map_list_size: %i" % map_list_size) # example: 17
 		self.strings = []
 		self.codes = []
-
+		self.class_data_items = []
 
 		# offset should point to the first map_list
 		for map_list_idx in xrange(map_list_size): # FIXME: does this include the last item?
@@ -434,12 +492,7 @@ class DexFile():
 			map_offset = self.read_uint(offset+8) # ok
 			offset += 12
 
-			log(3, "offset: 0x%x, map_type: 0x%x, map_size: %i, map_offset: 0x%x" % (offset, map_type, map_size, map_offset))
-
-			# ignore bugs
-			#if map_offset == 0:
-			#	# well the header will be 0...
-			#	continue
+			# log(2, "offset: 0x%x, map_type: 0x%x, map_size: %i, map_offset: 0x%x" % (offset, map_type, map_size, map_offset))
 
 			# string_id_item works
 			if ItemType[map_type] == "string_id_item": # I don't think we care about "string_data_item" for now (but that may fix the string_list[idx] problem)
@@ -452,20 +505,31 @@ class DexFile():
 
 			# FIXME: code_items are aligned to 4 bytes.. does that matter?
 			elif ItemType[map_type] == "code_item":
-				log(3, "there are %i code_items" % map_size)
+				# log(2, "there are %i code_items" % map_size)
 
 				code_item_off = map_offset
 				for i in range(map_size):
 					#if code_item_off == 0x2e75a:
 
- 					code_item, code_size = self.read_code_item(code_item_off)
-					code_item_off += code_size
-					log(3, "code_size: 0x%x" % code_size)
+					# FIXME: this shouldn't be done...
+					try:
+	 					code_item, code_size = self.read_code_item(code_item_off)
+						code_item_off += code_size
+						# log(2, "code_size: 0x%x" % code_size)
 
-					if code_size == -1:
-						break
-					self.codes.append(code_item)
+						if code_size == -1:
+							break
+						self.codes.append(code_item)
+					except:
+						pass
+			elif ItemType[map_type] == "class_data_items":
+				class_item_off = map_offset
+				for i in range(map_size):
+					class_item, class_size = self.class_data_item(class_item_off)
+					class_item_off += class_size
 
+				# method_id_item
+				pass
 
 			map_item = {
 				"type": map_type,
@@ -474,11 +538,6 @@ class DexFile():
 			}
 			map_items.append(map_item)
 			print "==============================================================================================="
-
-
-		#log(3, "string_count: %i" % string_count) # returning 0
-
-			# TypeItem[map_type] # will print what it actually is..
 
 
 	# each class_defs instance has a "class_data_off" field, this field is the offset to a "class_data_item" which has a direct_methods which has "code_off"
@@ -565,8 +624,7 @@ class DexFile():
 		return read_ULEB128(self.binary_blob[offset:offset+5])
 
 	def read_sleb128(self, offset):
-
-		assert False
+		return read_sleb128(self.binary_blob[offset:offset+5])
 
 	def read_string(self, offset):
 		if offset > self.binary_blob_length:
@@ -602,11 +660,11 @@ class DexFile():
 		original_offset = offset
 
 		# FIXME: I assume "code_item" is incorrect at https://source.android.com/devices/tech/dalvik/dex-format.html
-		print "----------------------------------------------------"
-		log(2, "read_code_item(0x%x)" % offset)
+		#print "----------------------------------------------------"
+		#log(2, "read_code_item(0x%x)" % offset)
 
 		offset = four_byte_align(offset)
-		log(2, "read_code_item(aligned 0x%x)" % offset)
+		#log(2, "read_code_item(aligned 0x%x)" % offset)
 
 		registers_size = self.read_ushort(offset)
 		ins_size = self.read_ushort(offset+2)
@@ -624,42 +682,64 @@ class DexFile():
 		instructions_off = offset
 		instructions = self.binary_blob[instructions_off:instructions_off+(instructions_size*2)] # the actual dex code, but lets not save as variable unless we need to
 
-		log(3, "offset: 0x%x, insns_size: 0x%x" % (offset, instructions_size))
+		#log(3, "offset: 0x%x, insns_size: 0x%x" % (offset, instructions_size))
 
 		offset += (instructions_size*2) # ok
-		log(3, "offset: 0x%x, insns_size: 0x%x" % (offset, instructions_size))
+		#log(3, "offset: 0x%x, insns_size: 0x%x" % (offset, instructions_size))
 
 		# optional padding
 		if (tries_size != 0) and (instructions_size % 2 == 1):
-			log(3, "optional padding is 2 bytes")
+			#log(3, "optional padding is 2 bytes")
 			offset += 2
 
 		# tries try_item[tries_size] - each "try_item" is 8 bytes - ok
 		if tries_size != 0:
-			log(3, "try_item is %i bytes" % (tries_size * 8))
+			#log(3, "try_item is %i bytes" % (tries_size * 8))
 			offset += (tries_size * 8) # ok
 
 		# handlers encoded_catch_handler_list
 		if tries_size != 0:
-			val, handlers_size = self.read_ULEB128(offset) # FAILING HERE...
-			offset += handlers_size # FIXME: is this right
+			handlers_size, read_size = self.read_ULEB128(offset) # FAILING HERE...
+			offset += read_size # FIXME: is this right
 
-			log(3, "handlers is at least %i bytes" % handlers_size)
+			#log(3, "handlers is at least %i bytes" % handlers_size)
 
 			handlers = []
-			log(3, "handlers_size: %i" % handlers_size)
+			log(2, "handlers_size: %i" % handlers_size)
 			for i in range(handlers_size):
 				# read an "encoded_catch_handler" struct
 
-				# what's a "sleb128"
+				# I DO NOT TRUST THIS...
 
-				return -1, -1 # not handling this stuff yet.
+				# number of catch types in this list.
+				# If non-positive, then this is the negative of the number of catch types, and the catches are followed by a catch-all handler.
+				# 		For example: A size of 0 means that there is a catch-all but no explicitly typed catches.
+				# 		A size of 2 means that there are two explicitly typed catches and no catch-all. And a size of -1 means that there is one typed catch along with a catch-all.
+				encoded_catch_handler_size, read_size = self.read_sleb128(offset) # FIXME: I do not trust this function....
+				offset += read_size # is this right..???
 
-				encoded_catch_handler_size = self.read_sleb128(offset) # FIXME: need to create read_sleb128 wrapper
+				# handlers	encoded_type_addr_pair[abs(size)]
+				encoded_type_addr_pairs = []
+
+				# read encoded_type_addr_pairs
+				for pair_count in range(abs(encoded_catch_handler_size)):
+					item = {}
+					item["type_idx"], read_size = self.read_ULEB128(offset)
+					offset += read_size
+
+					item["addr"], read_size = self.read_ULEB128(offset)
+					offset += read_size
+
+					encoded_type_addr_pairs.append(item)
+
+				if encoded_catch_handler_size < 0:
+					catch_all_addr, read_size = self.read_ULEB128(offset)
+					offset += read_size
+
 
 				#offset += ??
 
-				assert False # lots to do here
+				#assert False # lots to do here
 
 		result = {
 			"registers_size": registers_size,
@@ -882,7 +962,7 @@ class DexFile():
 			if offset > self.binary_blob_length:
 				assert False
 
-			assert False
+			return read_sleb128(self.binary_blob[offset:offset+5])
 
 		def read_string(self, offset):
 			if offset > self.binary_blob_length:
@@ -896,20 +976,3 @@ class DexFile():
 				offset += 1
 
 			return "".join(string_result)
-
-
-# https://source.android.com/devices/tech/dalvik/dex-format.html - VERY GOOD RESOURCE
-# Decompiling Android book is very useful, but it's 4 years old..
-# ~/Documents/dexinfo/a.out
-'''
-.dex
-	header
-	strings_ids
-	type_ids
-	proto_ids
-	fields
-	methods
-	classes
-	data
-
-'''
