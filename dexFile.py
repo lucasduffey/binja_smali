@@ -531,17 +531,18 @@ class DexFile():
 				class_item_off = map_offset
 				log(3, "class_data_items - map_size: %i" % map_size) # Example: 123 in the apk I'm testing
 				for i in range(map_size):
+					try:
+						log(2, "class_item_off: 0x%x" % class_item_off)
+						class_item, class_size = self.read_class_data_item(class_item_off) # FIXME: need to implement class_data_item...
+						if class_size <= 0:
+							log(3, "class_size <= 0, breaking")
+							break
 
-					log(2, "class_item_off: %x" % class_item_off)
-					class_item, class_size = self.read_class_data_item(class_item_off) # FIXME: need to implement class_data_item...
-					if class_size <= 0:
-						log(3, "class_size <= 0, breaking")
+
+						class_item_off += class_size
+						class_data_items.append(class_item)
+					except:
 						break
-
-
-					class_item_off += class_size
-					class_data_items.append(class_item)
-
 				# method_id_item
 				pass
 
@@ -848,8 +849,7 @@ class DexFile():
 	# TODO FIXME: are there multiple "class_data_item" instances?
 	def read_class_data_item(self, offset):
 		log(2, "read_class_data_item(0x%x)" % offset)
-
-		original_offset = offset
+		size = 0
 
 		# the size of this item is unknown, which is why it's passed an offset
 		#def __init__(self, binary_blob, binary_blob_length, offset):
@@ -857,58 +857,62 @@ class DexFile():
 			log(3, "length: %i, binary_blob_length: %i" % (offset, self.binary_blob_length))
 			assert False
 
-		#self.size = 0 # unknown so-far, VERY ANNOYING TO CALCULATE
-		#self.binary_blob = binary_blob
-		#self.binary_blob_length = binary_blob_length
-		#self.offset = offset # NEVER MODIFY THIS
-
 		# pull four ULEB128s
 		#print "type(offset): ", type(offset)
 		#print "offset: ", offset
 
-		self.static_fields_size, static_fields_ULEB128_size = self.read_ULEB128(offset) # self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
-		offset += static_fields_ULEB128_size
+		static_fields_size, read_size = self.read_ULEB128(offset)
+		size += read_size
 
-		self.instance_fields_size, instance_fields_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
-		offset += instance_fields_ULEB128_size
+		instance_fields_size, read_size = self.read_ULEB128(offset + size)
+		size += read_size
 
-		self.direct_methods_size, direct_methods_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
-		offset += direct_methods_ULEB128_size
+		direct_methods_size, read_size = self.read_ULEB128(offset + size)
+		size += read_size
 
-		self.virtual_methods_size, virtual_methods_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5]) # ULEB128 can be up to 5 bytes long
-		offset += virtual_methods_ULEB128_size
+		virtual_methods_size, read_size = self.read_ULEB128(offset + size)
+		size += read_size
 
-		# save data field offsets
-		self.static_fields_off = offset
+		###################
 
-		#static_fields = self.static_fields() # populate self.instance_fields_off
-		#instance_fields = self.instance_fields() # populate self.direct_methods_off
-		#direct_methods = self.direct_methods() # populate self.virtual_methods_off # FIXME: is this right?
-		#virtual_methods = self.virtual_methods() # populate self.size
+		# ok for now AFAIK
+		static_fields, read_size = self.static_fields(offset + size, static_fields_size)
+		size += read_size
 
+		# TODO
+		instance_fields, read_size = self.instance_fields(offset + size, instance_fields_size) # FAILING
+		size += read_size
+
+		# TODO
+		direct_methods, read_size = self.direct_methods(offset + size, direct_methods_size)
+		size += read_size
+
+		# TODO
+		virtual_methods, read_size = self.virtual_methods(offset + size, virtual_methods_size)
+		size += read_size
 
 		result = {
-			"static_fields": self.static_fields(self.static_fields_off, self.static_fields_size),
-			"instance_fields": self.instance_fields, # not populated until after static_fields()
-			"direct_methods": self.direct_methods, # not populated until after instance_fields()
-			"virtual_methods": self.virtual_methods # not populated until after direct_methods()
+			"static_fields": static_fields,
+			"instance_fields": instance_fields,
+			"direct_methods": direct_methods,
+			"virtual_methods": virtual_methods
 		}
 
-		return result, (original_offset - offset)
+		return result, size
 
 	# static_fields	encoded_field[static_fields_size]
 	# for now returning a list of dict
-	def static_fields(self, offset, size):
-		log(2, "static_fields(0x%x, %i)" % (offset, size))
-		#offset = self.static_fields_off
+	def static_fields(self, offset, count):
+		size = 0
+		log(2, "static_fields(0x%x, %i)" % (offset, count))
 
 		results = []
-		for i in xrange(size):
-			field_idx_diff, field_idx_diff_ULEB128_size = self.read_ULEB128(offset) # FIXME: failing here
-			offset += field_idx_diff_ULEB128_size
+		for i in xrange(count):
+			field_idx_diff, read_size = self.read_ULEB128(offset + size)
+			size += read_size
 
-			access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += field_idx_diff_ULEB128_size
+			access_flags, read_size = self.read_ULEB128(offset + size)
+			size += read_size
 
 			result = {
 				"field_idx_diff": field_idx_diff,
@@ -916,34 +920,36 @@ class DexFile():
 			}
 			results.append(result)
 
-		self.instance_fields_off = offset
-
 		# return list of dicts
-		return results
+		return results, size
 
 
 	# instance_fields	encoded_field[instance_fields_size]
-	def instance_fields(self):
-		offset = self.instance_fields_off
+	def instance_fields(self, offset, count):
+		size = 0
 
 		results = []
-		for i in xrange(self.instance_fields_size):
-			field_idx_diff, field_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += field_idx_diff_ULEB128_size
+		for i in xrange(count):
+			try:
+				field_idx_diff, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += field_idx_diff_ULEB128_size
+				# FIXME
+				access_flags, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			result = {
-				"field_idx_diff": field_idx_diff,
-				"access_flags": access_flags
-			}
-			results.append(result)
+				result = {
+					"field_idx_diff": field_idx_diff,
+					"access_flags": access_flags
+				}
+				results.append(result)
+			except:
+				break
 
-		self.direct_methods_off = offset
+		#self.direct_methods_off = offset
 
 		# return list of dicts
-		return results
+		return results, size
 
 
 	# Name				| Format	| Description
@@ -955,67 +961,72 @@ class DexFile():
 	# direct_methods	encoded_method[direct_methods_size]
 	#  populate self.virtual_methods_off
 	# FIXME: code_off is a data structure
-	def direct_methods(self, offset):
+	def direct_methods(self, offset, count):
+		size = 0
 		# offset = self.direct_methods_off # this should be true....
 
 		results = []
-		print(4, "self.direct_methods_size: %i" % self.direct_methods_size)
-		for i in xrange(self.direct_methods_size):
-			method_idx_diff, method_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += method_idx_diff_ULEB128_size
+		print(4, "self.direct_methods_size: %i" % count)
+		for i in xrange(count):
+			try:
+				method_idx_diff, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += access_flags_ULEB128_size
+				access_flags, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			# FIXME: code_off value is wrong
-			code_off, code_off_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += code_off_ULEB128_size
+				# FIXME: code_off value is wrong
+				code_off, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			#assert code_off < self.binary_blob_length
-			#log(3, "code_off: %i" % code_off)
-			if code_off < self.binary_blob_length:
-				continue
-				#assert False
+				#assert code_off < self.binary_blob_length
+				#log(3, "code_off: %i" % code_off)
+				if code_off < self.binary_blob_length:
+					continue
+					#assert False
 
-			result = {
-				"method_idx_diff": method_idx_diff,
-				"access_flags": access_flags,
-				"code_off": code_off # GREPME # FIXME: code_off is a data structure
-			}
-			results.append(result)
-
-		self.virtual_methods_off = offset
+				result = {
+					"method_idx_diff": method_idx_diff,
+					"access_flags": access_flags,
+					"code_off": code_off # GREPME # FIXME: code_off is a data structure
+				}
+				results.append(result)
+			except:
+				break
 
 		# return list of dicts
-		return results
+		return results, size
 
 	# virtual_methods	encoded_method[virtual_methods_size]
-	def virtual_methods(self):
-		offset = self.virtual_methods_off # FIXME: is this correct?
+	def virtual_methods(self, offset, count):
+		size = 0
+		# offset = self.virtual_methods_off # FIXME: is this correct?
 
 		results = []
-		for i in xrange(self.virtual_methods_size): #
-			method_idx_diff, method_idx_diff_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += method_idx_diff_ULEB128_size
+		for i in xrange(count): #
+			try:
+				method_idx_diff, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			access_flags, access_flags_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += access_flags_ULEB128_size
+				access_flags, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			# FIXME: code_off value is wrong
-			code_off, code_off_ULEB128_size = self.read_ULEB128(offset) # read_ULEB128(self.binary_blob[offset:offset+5])
-			offset += code_off_ULEB128_size
+				# FIXME: code_off value is wrong
+				code_off, read_size = self.read_ULEB128(offset + size)
+				size += read_size
 
-			result = {
-				"method_idx_diff": method_idx_diff,
-				"access_flags": access_flags,
-				"code_off": code_off # GREPME
-			}
-			results.append(result)
+				result = {
+					"method_idx_diff": method_idx_diff,
+					"access_flags": access_flags,
+					"code_off": code_off # GREPME
+				}
+				results.append(result)
 
-		#self.size = offset - self.offset # FIXME: do this properly?
+			except:
+				break
 
 		# return list of dicts
-		return results
+		return results, size
 
 if __name__ == "__main__":
 	def log(level, message):
@@ -1058,55 +1069,31 @@ if __name__ == "__main__":
 	# add all the methods
 	#log(3, "len(self.dex_file.codes): %i" % len(dex.codes))
 	# looks ok - missing some, but w/e
-	for idx, code_item in enumerate(dex.codes):
-		# might be useful
-		# 	* code_item["registers_size"] - the number of registers used by this code
-		# 	* code_item["ins_size"] - the number of words of incoming arguments to the method that this code is for
-		# print code_item
-
-		# THIS IS AN ASSUMPTION
-		# FIXME: PRETTY SURE THIS DOESN'T MAP THIS SIMPLY
-		print "%s: %x" % ("insns_off", code_item["insns_off"]) # FIXME: they're all wrong, and the same
-
-	# TODO
-
-	# time to populate method_id_items with actual values
-	#for idx, method_id_item in enumerate(method_id_items):
-	#	name_idx = method_id_item["name_idx"]
-
-		# method_id_items[idx]["name"] = strings[name_idx] # doesn't work..
-
-	'''
-	class_data_item
-		static_fields_size
-		instance_fields_size
-		direct_methods_size
-		virtual_methods_size
-		static_fields	encoded_field[static_fields_size]
-		instance_fields	encoded_field[instance_fields_size]
-		direct_methods	encoded_method[direct_methods_size]
-			method_idx_diff **
-			access_flags
-			code_off **
-		virtual_methods	encoded_method[virtual_methods_size]
-			method_idx_diff **
-			access_flags
-			code_off **
-	'''
+	#for idx, code_item in enumerate(dex.codes):
+	#	print "%s: %x" % ("insns_off", code_item["insns_off"]) # FIXME: they're all wrong, and the same
 
 
 	log(3, "len(self.class_data_items): %i" % len(class_data_items)) # this is not getting hit...
+	assert len(class_data_items) > 0
 
-	# class_data_item => "encoded_method" (direct_methods, virtual_methods) => method_id_item (which has method name)
+	# class_data_item => "encoded_method" (direct_methods, virtual_methods) => method_id_item => (class_idx, proto_idx, name_idx)
 	# class_data_item => "encoded_method" (direct_methods, virtual_methods) => code_item
 
 	# FIXME: this whole section seems wrong....
 	for item in class_data_items:
+		methods = item["direct_methods"] + item["virtual_methods"]
 
-		# FIXME: everything hereafter may be wrong...
-		for direct_method in item.direct_methods():
-			method_idx_diff = direct_method["method_idx_diff"]
-			code_off = direct_method["code_off"]
+		for method in methods:
+			method_idx_diff = method["method_idx_diff"] # use this to get (class_idx, proto_idx, name_idx)
+			code_off = method["code_off"]
+
+			method = method_list[method_idx_diff]
+			#method["class_idx"] # TODO
+			#method["proto_idx"] # TODO
+			name_idx = method["name_idx"]
+
+			print "="*100
+			log(2, "%s: %x" % (strings[name_idx], code_off))
 
 			# need to determine if this function has been added
 			#fn = data.get_function_at(Architecture['dex'].standalone_platform, direct_method["code_off"])
@@ -1114,18 +1101,5 @@ if __name__ == "__main__":
 			#log(4, fn)
 			#log(4, "===================================")
 			#if fn != None:
-			#	pass
-			pass
 				#direct_method["method_idx_diff"] # need to determine if this function has been added
-
-
-		for virtual_method in class_data_item.virtual_methods():
-			method_idx_diff = virtual_method["method_idx_diff"]
-			code_off = virtual_method["code_off"]
-
-			# need to determine if this function has been added
-			#fn = data.get_function_at(Architecture['dex'].standalone_platform, virtual_method["code_off"])
-			#if fn != None:
-			#	pass
-			pass
-				# virtual_method["method_idx_diff"] # need to determine if this function has been added
+				#fn.name = strings["name_idx"]

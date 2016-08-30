@@ -1,5 +1,5 @@
 from binaryninja import *
-from dexFile import DexFile
+from dexFile import DexFile, four_byte_align
 import struct
 import traceback
 import hashlib # to validate SHA1 signature
@@ -899,22 +899,16 @@ class DEXView(BinaryView):
 		map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
 
 		strings = map_list["strings"]
+
 		codes = map_list["codes"]
 		class_data_items = map_list["class_data_items"]
 		method_id_items = map_list["method_id_items"]
-
 		method_list = self.dex_file.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
 		string_list = self.dex_file.string_ids() # FIXME: cache the results
 
 		# map_list - is literally the best way to do stuff...
 		# self.dex_file.map_list() # it's called in dex_file init routine
 		#print self.dex_file.strings # WORKING YAY
-
-
-		for idx, method_id_item in enumerate(method_id_items):
-			name_idx =  method_id_item["name_idx"]
-
-			method_id_items[idx]["name"] = strings[name_idx]
 
 
 		# add all the methods
@@ -934,6 +928,37 @@ class DEXView(BinaryView):
 			elif fn == None:
 				log(3, "failed getting address of suspected code")
 
+
+		for idx, method_id_item in enumerate(method_id_items):
+			name_idx =  method_id_item["name_idx"]
+
+			method_id_items[idx]["name"] = strings[name_idx]
+
+		# time
+		for item in class_data_items:
+			methods = item["direct_methods"] + item["virtual_methods"]
+
+			# FIXME: everything hereafter may be wrong...
+			for method in methods:
+				method_idx_diff = method["method_idx_diff"] # use this to get (class_idx, proto_idx, name_idx)
+				code_off = method["code_off"]
+
+				method = method_list[method_idx_diff] # ERROR: out of range
+				#method["class_idx"] # TODO
+				#method["proto_idx"] # TODO
+				name_idx = method["name_idx"]
+
+				print "="*100
+				log(3, "%s: %x" % (strings[name_idx], code_off))
+
+				# need to determine if this function has been added
+				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_off)
+				#log(4, "===================================")
+				#log(4, fn)
+				#log(4, "===================================")
+				if fn != None:
+					#direct_method["method_idx_diff"] # need to determine if this function has been added
+					fn.name = strings[name_idx]
 		'''
 		method_id_item
 			class_idx - index into type_ids list for definer of method - must be class or aray type
@@ -963,13 +988,14 @@ class DEXView(BinaryView):
 
 		log(3, "len(self.class_data_items): %i" % len(class_data_items)) # this is not getting hit...
 		for item in class_data_items:
-			item = self.class_data_item(item) # will this work??
+			#item = self.class_data_item(item) # will this work??
 
-			for direct_method in item.direct_methods():
-				method_idx_diff = direct_method["method_idx_diff"]
+			# DIRECT_METHOD
+			for direct_method in item["direct_methods"]:
+				method_idx_diff = four_byte_align(direct_method["method_idx_diff"])
 				code_off = direct_method["code_off"]
 
-				method_id_item = self.read_method_id_item(method_idx_diff)
+				method_id_item =  self.dex_file.read_method_id_item(method_idx_diff) # NOTE: is this right?
 
  				# need to determine if this function has been added
 				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_off)
@@ -977,108 +1003,31 @@ class DEXView(BinaryView):
 				#log(4, fn)
 				#log(4, "===================================")
 				if fn != None:
+					log(3, "trying to rename fn.name")
 					name_idx = method_id_item["name_idx"]
 					fn.name = string_list[name_idx]
 									#direct_method["method_idx_diff"] # need to determine if this function has been added
+				else:
+					log(3, "fn is NONE!!")
 
+			# VIRTUAL_METHOD
+			for virtual_method in item["virtual_methods"]: # FIXME:
+				method_idx_diff = four_byte_align(virtual_method["method_idx_diff"])
+				code_off = virtual_method["code_off"]
 
-			for virtual_method in class_data_item.virtual_methods():
-				method_idx_diff = direct_method["method_idx_diff"]
-				code_off = direct_method["code_off"]
-
-				method_id_item =  self.read_method_id_item(method_idx_diff)
+				method_id_item = self.dex_file.read_method_id_item(method_idx_diff) # NOTE: is this right?
 
 				# need to determine if this function has been added
 				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_off)
 				if fn != None:
+					log(3, "trying to rename fn.name")
 					name_idx = method_id_item["name_idx"]
 					fn.name = string_list[name_idx]
 
 					# virtual_method["method_idx_diff"] # need to determine if this function has been added
-
+				else:
+					log(3, "fn is NONE!!")
 		# TODO: method_idx_diff
-
-
-		# THE FOLLOWING IS JUST FOR STRINGS, but it's not actually finding strings to rename functions with..
-		'''
-		# FIXME: it's not populating the functions...
-		# FIXME: TODO - might be easier to get all the code from the mapping...
-		log(3, "self.dex_file.class_defs() count: %i" % len(self.dex_file.class_defs())) # 123 for the example
-
-		for class_def in self.dex_file.class_defs():  # this line seems ok - I read class_defs source as well
-			#log(2, "class_def instance")
-
-			assert type(class_def["class_data_off"]) == int
-
-			#print "len(raw_binary): ", len(raw_binary) # seems good
-			#print "class_de["class_data_off"]: ", class_def["class_data_off"]
-
-			# FIXME: class_def["class_data_off"] is clearly wrong
-			assert class_def["class_data_off"] < raw_binary_length
-
-
-			# THIS IS FOR THE STRINGS...
-			class_data_item_obj = self.dex_file.class_data_item(raw_binary, raw_binary_length, class_def["class_data_off"]) # this line seems correct, TODO: check the actual "class_data_item" function
-
-			# create function for each direct_method
-			for direct_method in class_data_item_obj.direct_methods():
-				try:
-					assert direct_method["code_off"] < raw_binary_length
-
-
-					#log(2, "direct_method instance")
-					#print "direct_method code_off: ", direct_method["code_off"]
-					#print "direct_method raw_binary_length: ", raw_binary_length
-
-					# FIXME: code_off is offset to code_item struct, not dex
-					code_item_list = self.dex_file.read_code_item(direct_method["code_off"]) # was class_data_item_obj.read_code_item...
-					method_idx_diff = direct_method["method_idx_diff"]
-					string_idx = method_list[method_idx_diff]["name_idx"]
-
-					#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
-					method_name = string_list[string_idx] # FIXME: this is index to "method_ids"
-
-
-					# direct_method.code_off - there's no way to pass "insns_size" to binja???
-					#data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
-
-					fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
-					#log(3, str(method_name))
-					fn.name = method_name
-
-					# FIXME: method_list also provides class_idx, proto_idx
-				except:
-					# FIXME: print useful info
-					pass
-
-			# create function for each virtual_method
-			for virtual_method in class_data_item_obj.virtual_methods():
-				print "virtual_method code_off:", virtual_method["code_off"]
-
-				try:
-					# FIXME: code_off is offset to code_item struct, not dex
-					code_item_list = self.dex_file.read_code_item(virtual_method["code_off"]) # was class_data_item_obj.read_code_item...
-					method_idx_diff = virtual_method["method_idx_diff"] # FIXME: this is index to "method_ids"
-					string_idx = method_list[method_idx_diff]["name_idx"]
-
-					#print "len(string_list): ", len(string_list), " method_idx_diff: ", method_idx_diff
-					method_name = string_list[string_idx]
-
-					# virtual_method.code_off - there's no way to pass "insns_size" to binja???
-					#data.create_user_function(Architecture['dex'].standalone_platform, code_item_list["insns_off"]) # FIXME: failing
-
-
-					fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item_list["insns_off"])
-					#log(3, str(method_name))
-					fn.name = method_name
-
-					# FIXME: method_list also provides class_idx, proto_idx
-				except:
-					# FIXME: print useful info
-					pass
-
-			#print "" # for debugging only, improve readability
-			'''
 
 		# this might be a better way to do it. Just create functions
 		#data.create_user_function(Architecture['dex'].standalone_platform, 0) # FAILURE TO CREATE VIEW..
@@ -1096,7 +1045,6 @@ class DEXView(BinaryView):
 
 		return True
 
-
 	def init(self):
 		try:
 			# TODO: look at NES.py
@@ -1106,8 +1054,6 @@ class DEXView(BinaryView):
 		except:
 			log_error(traceback.format_exc())
 			return False
-
-
 
 	# FIXME
 	#def perform_is_valid_offset(self, addr):
@@ -1140,24 +1086,6 @@ class DEXView(BinaryView):
 		# complicated because this is called without self really existing
 		#   * not really sure what self provides...
 
-		#self.data = data # FIXME: is this what we can do DexFile() on?
-
-		# FOLLOWING CODE DOENS'T WORK..
-		#binary_blob_length = len(self.data.raw)
-		#binary_blob = self.data.file.read(0, binary_blob_length)
-		#tmp = DexFile(binary_blob, binary_blob_length) # how do I make sure this has access to BinaryView... (to read from it)
-
-		#dataOff = tmp.dataOff()
-		#fileSize = len(self.data.file.raw) # TODO: is this checking size of APK, or size of dex...
-
-		#print "dexView::perform_get_entry_point: ", dataOff, "hex(dataOff): ", hex(dataOff), ", file size: ", fileSize
-
-		#assert dataOff <= fileSize
-
-		#return dataOff
-
-		# return 0 for now, since perform_get_entry_point gets called before __init__ it overcomplicates some stuff...
-	#	return int(0) # for some reason I frequently get "0x0 isn't valid entry point"..
 
 print("dexView - for real")
 print("test against classes2.dex - because there is actually dex code..")
