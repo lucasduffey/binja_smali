@@ -385,50 +385,21 @@ OperandTokens = [
 		InstructionTextToken(TextToken, ", "),
 		InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)], # 16 bit constant
 
-	# CONST
-	lambda value: [], # NONE
-
-	# CONST_HIGH16
-	lambda value: [], # NONE
-
-	# CONST_WIDE16
-	lambda value: [], # NONE
-
-	# CONST_WIDE32
-	lambda value: [], # NONE
-
-	# CONST_WIDE
-	lambda value: [], # NONE
-
-	# CONST_WIDE_HIGH16
-	lambda value: [], # NONE
-
-	# CONST_STRING
-	lambda value: [], # NONE
-
-	# CONST_STRING_JUMBO
-	lambda value: [], # NONE
-
-	# CONST_CLASS
-	lambda value: [], # NONE
-
-	# MONITOR_ENTER
-	lambda value: [], # NONE
-
-	# MONITOR_EXIT
-	lambda value: [], # NONE
-
-	# CHECK_CAST
-	lambda value: [], # NONE
-
-	# INSTANCE_OF
-	lambda value: [], # NONE
-
-	# ARRAY_LENGTH
-	lambda value: [], # NONE
-
-	# NEW_INSTANCE
-	lambda value: [], # NONE
+	lambda value: [], # CONST
+	lambda value: [], # CONST_HIGH16
+	lambda value: [], # CONST_WIDE16
+	lambda value: [], # CONST_WIDE32
+	lambda value: [], # CONST_WIDE
+	lambda value: [], # CONST_WIDE_HIGH16
+	lambda value: [], # CONST_STRING
+	lambda value: [], # CONST_STRING_JUMBO
+	lambda value: [], # CONST_CLASS
+	lambda value: [], # MONITOR_ENTER
+	lambda value: [], # MONITOR_EXIT
+	lambda value: [], # CHECK_CAST
+	lambda value: [], # INSTANCE_OF
+	lambda value: [], # ARRAY_LENGTH
+	lambda value: [], # NEW_INSTANCE
 
 	# NEW_ARRAY
 	# https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats
@@ -440,18 +411,12 @@ OperandTokens = [
 														# example "0x19", this may be pulling it from the "field_ids" section
 		],
 
-	# FILLED_NEW_ARRAY
-	lambda value: [], # NONE
-
-	# FILLED_NEW_ARRAY_RANGE
-	lambda value: [], # NONE
-
-	# FILL_ARRAY_DATA - seems working
+	lambda value: [], # FILLED_NEW_ARRAY
+	lambda value: [], # FILLED_NEW_ARRAY_RANGE
 	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 32)]),
 		InstructionTextToken(TextToken, ", "),
 		InstructionTextToken(TextToken, "unimplemented") # array_data_offset
-		], # NONE
-
+		], # FILL_ARRAY_DATA - seems working
 
 	lambda value: [], # THROW
 
@@ -544,7 +509,6 @@ OperandTokens = [
 		InstructionTextToken(TextToken, "unimplemented") #  field_id - this specifies the entry number in the field id table
 		], # 0x6A SPUT_BOOLEAN
 
-
 	lambda value: [], # SPUT_BYTE
 	lambda value: [], # SPUT_CHAR
 	lambda value: [], # SPUT_SHORT
@@ -561,7 +525,7 @@ OperandTokens = [
  		# the single parameter while the lowest 4 bit of the byte following the instruction byte is left unused.
 
 		InstructionTextToken(TextToken, "{"),
-		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF00]),
+		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF00]), # FIXME: ERROR HERE
 		InstructionTextToken(TextToken, ", "),
 		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF000]),
 		InstructionTextToken(TextToken, ", "),
@@ -718,9 +682,6 @@ OperandTokens = [
 	lambda value: [] # UNUSED_FF
 
 ]
-# hack to make it work for now
-#for i in range(0x28, 0xFF):
-#	OperandTokens[i] = []
 
 InstructionIL = {
 }
@@ -902,10 +863,6 @@ class DEX(Architecture):
 		if instr is None:
 			return None
 
-		#if operand == 0x13:
-			#log(2, str(hex(value)) + ": " + str(value))
-
-
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
 		tokens = []
@@ -913,15 +870,6 @@ class DEX(Architecture):
 		tokens += OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
 
 		return tokens, length
-
-
-		#print "================"
-		#print "tokens: ", tokens
-		#print "================"
-
-		#log(2, "perform_get_instruction_text finished messing with tokens")
-
-
 
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
@@ -943,11 +891,17 @@ class DEXView(BinaryView):
 
 		self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
 
-		self.dex_file.print_metadata() # for some reason this is getting regisered with "raw" view??
+		# self.dex_file.print_metadata() # for some reason this is getting regisered with "raw" view??
 
 		# self.map_list() - either I coded wrong, or not all apks support map_list...
 
 		# map_off
+		map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
+
+		strings = map_list["strings"]
+		codes = map_list["codes"]
+		class_data_items = map_list["class_data_items"]
+		method_id_items = map_list["method_id_items"]
 
 		method_list = self.dex_file.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
 		string_list = self.dex_file.string_ids() # FIXME: cache the results
@@ -957,12 +911,90 @@ class DEXView(BinaryView):
 		#print self.dex_file.strings # WORKING YAY
 
 
+		for idx, method_id_item in enumerate(method_id_items):
+			name_idx =  method_id_item["name_idx"]
+
+			method_id_items[idx]["name"] = strings[name_idx]
+
+
 		# add all the methods
-		for code_item in self.dex_file.codes:
+		log(3, "len(self.dex_file.codes): %i" % len(codes))
+		for idx, code_item in enumerate(codes):
 			# might be useful
 			# 	* code_item["registers_size"] - the number of registers used by this code
 			# 	* code_item["ins_size"] - the number of words of incoming arguments to the method that this code is for
 			data.create_user_function(Architecture['dex'].standalone_platform, code_item["insns_off"])
+
+			fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item["insns_off"]) # or "code_off"
+			if fn != None:
+				# THIS IS AN ASSUMPTION
+				# FIXME: PRETTY SURE THIS DOESN'T MAP THIS SIMPLY
+				#fn.name = method_id_items[idx]["name"]
+				pass
+			elif fn == None:
+				log(3, "failed getting address of suspected code")
+
+		'''
+		method_id_item
+			class_idx - index into type_ids list for definer of method - must be class or aray type
+			proto_idx - index into proto_ids list for proto of this method
+			name_ids - index ito string_ids list for name of method
+		'''
+		#for method_id_items in self.method_id_items():
+		#	pass
+
+		'''
+		class_data_item
+			static_fields_size
+			instance_fields_size
+			direct_methods_size
+			virtual_methods_size
+			static_fields	encoded_field[static_fields_size]
+			instance_fields	encoded_field[instance_fields_size]
+			direct_methods	encoded_method[direct_methods_size]
+				method_idx_diff **
+				access_flags
+				code_off **
+			virtual_methods	encoded_method[virtual_methods_size]
+				method_idx_diff **
+				access_flags
+				code_off **
+		'''
+
+		log(3, "len(self.class_data_items): %i" % len(class_data_items)) # this is not getting hit...
+		for item in class_data_items:
+			item = self.class_data_item(item) # will this work??
+
+			for direct_method in item.direct_methods():
+				method_idx_diff = direct_method["method_idx_diff"]
+				code_off = direct_method["code_off"]
+
+				method_id_item = self.read_method_id_item(method_idx_diff)
+
+ 				# need to determine if this function has been added
+				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_off)
+				#log(4, "===================================")
+				#log(4, fn)
+				#log(4, "===================================")
+				if fn != None:
+					name_idx = method_id_item["name_idx"]
+					fn.name = string_list[name_idx]
+									#direct_method["method_idx_diff"] # need to determine if this function has been added
+
+
+			for virtual_method in class_data_item.virtual_methods():
+				method_idx_diff = direct_method["method_idx_diff"]
+				code_off = direct_method["code_off"]
+
+				method_id_item =  self.read_method_id_item(method_idx_diff)
+
+				# need to determine if this function has been added
+				fn = data.get_function_at(Architecture['dex'].standalone_platform, code_off)
+				if fn != None:
+					name_idx = method_id_item["name_idx"]
+					fn.name = string_list[name_idx]
+
+					# virtual_method["method_idx_diff"] # need to determine if this function has been added
 
 		# TODO: method_idx_diff
 
@@ -1083,31 +1115,9 @@ class DEXView(BinaryView):
 	#			return True
 	#	return False
 
-	# FIXME
-	#def perform_read(self, addr, length):
-	#	return "" # FIXME
-
-		"""
-				if addr < 0x8000:
-						return None
-				if addr >= (0x8000 ):
-						return None
-				if (addr + length) > 0x10000:
-						length = 0x10000 - addr
-				result = ""
-
-				while length > 0:
-						bank_ofs = addr & 0x3fff
-						to_read = 0x4000 - bank_ofs
-						data = self.data.read(bank_ofs + 0x4000), to_read)
-						result += data
-						if len(data) < to_read:
-								break
-						length -= to_read
-						addr += to_read
-
-				return result
-		"""
+	def perform_read(self, addr, length):
+		# for now...
+		return self.data.read(addr, length)
 
 	# FIXME
 	#def perform_write(self, addr, value):

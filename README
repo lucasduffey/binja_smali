@@ -5,9 +5,45 @@ from dexBinja.apkView import *
 from dexBinja.dexView import *
 from dexBinja.dexFile import *
 
-
-
 # about
 * apkView.py - carves out the dex file, then overwrites the view with it
 * dexView.py - responsible for rendering the dexView + dex arch in binary ninja
 * dexFile.py - this deals with the dex file structure
+
+# binja relevant issues
+* structure UI: https://github.com/Vector35/binaryninja-api/issues/269
+* block highlighting apis: https://github.com/Vector35/binaryninja-api/issues/417
+
+# DEX FILE
+header	header_item
+				magic	ubyte[8]
+				checksum	uint
+				signature	ubyte[20]
+				file_size	uint
+				header_size	uint
+				endian_tag	uint
+				link_size	uint
+				link_off	uint
+				map_off	uint
+				string_ids_size	uint
+				string_ids_off	uint
+				type_ids_size	uint
+				type_ids_off	uint
+				proto_ids_size	uint
+				proto_ids_off	uint
+				field_ids_size	uint
+				field_ids_off	uint
+				method_ids_size	uint
+				method_ids_off	uint
+				class_defs_size	uint
+				class_defs_off	uint
+				data_size	uint
+				data_off	uint
+string_ids	string_id_item[]
+type_ids		type_id_item[]
+proto_ids		proto_id_item[] - hmm...
+field_ids		field_id_item[]
+method_ids	method_id_item[] - of interest
+class_defs	class_def_item[] - of interest
+data				ubyte[]
+link_data		ubyte[]
