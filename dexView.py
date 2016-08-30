@@ -14,16 +14,11 @@ DEX_MAGIC = "dex\x0a035\x00"
 # ~/binaryninja/binaryninja /home/noot/CTF/tmp/classes2.dex
 	# they already did it https://gist.github.com/ezterry/1239615
 
-#
-# WARNING: dex file format changes constantly...
-#
-
 # style guideline: https://google.github.io/styleguide/pyguide.html
 # 010Editor: https://github.com/strazzere/010Editor-stuff/blob/master/Templates/DEXTemplate.bt
 # export PYTHONPATH=$PYTHONPATH:$HOME/binaryninja/python
 
 # https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
-
 
 # style guideline: https://google.github.io/styleguide/pyguide.html
 # export PYTHONPATH=$PYTHONPATH:$HOME/binaryninja/python
@@ -33,6 +28,11 @@ DEX_MAGIC = "dex\x0a035\x00"
 # http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
 
 # TODO: verify accuracy - http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
+
+codes = {
+	# "offset": "length",
+
+}
 
 '''
 # read from "android dex opcodes" google spreadsheet
@@ -538,7 +538,6 @@ OperandTokens = [
 
 		], # INVOKE_INTERFACE
 
-
 	lambda value: [], # UNUSED_73
 	lambda value: [], # INVOKE_VIRTUAL_RANGE
 	lambda value: [], # INVOKE_SUPER_RANGE
@@ -900,7 +899,7 @@ class DEXView(BinaryView):
 
 		strings = map_list["strings"]
 
-		codes = map_list["codes"]
+		codes = map_list["codes"] # now a dict, key is offset to
 		class_data_items = map_list["class_data_items"]
 		method_id_items = map_list["method_id_items"] # I'm not sure how these are used..
 		method_list = self.dex_file.method_ids() # FIXME: check the function. this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
@@ -915,13 +914,14 @@ class DEXView(BinaryView):
 		log(3, "len(self.dex_file.codes): %i" % len(codes))
 
 		# SEEMS OK
-		for idx, code_item in enumerate(codes):
+		'''
+		for code_offset, code_item in codes.iteritems():
 			# might be useful
 			# 	* code_item["registers_size"] - the number of registers used by this code
 			# 	* code_item["ins_size"] - the number of words of incoming arguments to the method that this code is for
-			data.create_user_function(Architecture['dex'].standalone_platform, code_item["insns_off"])
+			data.create_user_function(Architecture['dex'].standalone_platform, code_offset)
 
-			fn = data.get_function_at(Architecture['dex'].standalone_platform, code_item["insns_off"]) # or "code_off"
+			fn = data.get_function_at(Architecture['dex'].standalone_platform, code_offset) # or "code_off"
 			if fn != None:
 				# THIS IS AN ASSUMPTION
 				# FIXME: PRETTY SURE THIS DOESN'T MAP THIS SIMPLY
@@ -929,17 +929,18 @@ class DEXView(BinaryView):
 				pass
 			elif fn == None:
 				log(3, "failed getting address of suspected code")
+		'''
 
-
-
+		'''
 		for idx, method_id_item in enumerate(method_id_items):
 			name_idx = method_id_item["name_idx"]
 
 			method_id_items[idx]["name"] = strings[name_idx]
+		'''
 
 		# time
-		for item in class_data_items:
-			encoded_methods = item["direct_methods"] + item["virtual_methods"]
+		for class_data_item in class_data_items:
+			encoded_methods = class_data_item["direct_methods"] + class_data_item["virtual_methods"]
 
 			# FIXME: everything hereafter may be wrong...
 			for encoded_method in encoded_methods:
@@ -949,7 +950,8 @@ class DEXView(BinaryView):
 					# method is either abstract or native
 					continue
 
-				instructions_off = self.dex_file.read_code_item(code_off)
+				code_item = self.dex_file.read_code_item(code_off)
+				instructions_off = code_item["insns_off"]
 
 				name_idx = method_list[method_idx_diff]["name_idx"]
 				# method_list[method_idx_diff]["class_idx"] # TODO
@@ -968,6 +970,7 @@ class DEXView(BinaryView):
 					#direct_method["method_idx_diff"] # need to determine if this function has been added
 					fn.name = strings[name_idx]
 				else:
+					data.create_user_function(Architecture['dex'].standalone_platform, instructions_off)
 					log(3, "code_off is not currently listed as a function...")
 
 				'''

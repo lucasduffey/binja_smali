@@ -22,6 +22,8 @@ https://github.com/ondreji/dex_parser/blob/master/dex.py
 IMPORTANT
 .read(offset, 4) # last arg is the "count", not the "last idex to read"
 
+DEX NOTES - design problems
+* they use "size" when "count" for map_item
 '''
 
 # sizes of fields
@@ -49,11 +51,6 @@ annotation_item	TYPE_ANNOTATION_ITEM	0x2004	implicit; must parse
 encoded_array_item	TYPE_ENCODED_ARRAY_ITEM	0x2005	implicit; must parse
 annotations_directory_item	TYPE_ANNOTATIONS_DIRECTORY_ITEM	0x2006	implicit; must parse
 '''
-
-# offset: {"name": "blah, etc..}
-Items = {
-
-}
 
 ItemType = {
 	0x0000: "header_item",
@@ -437,7 +434,7 @@ class DexFile():
 		map_items = []
 
 		strings = []
-		codes = []
+		codes = {}
 		class_data_items = [] # FIXME: the encoded_methods are wrong...
 		method_id_items = []
 
@@ -466,7 +463,6 @@ class DexFile():
 			map_offset = self.read_uint(offset+8) # ok
 			offset += 12
 
-
 			map_item = {
 				"type": map_type,
 				"size": map_size,
@@ -474,95 +470,29 @@ class DexFile():
 			}
 			map_items.append(map_item)
 
-		log(2, "offset: 0x%x, map_type: 0x%x, map_size: %i, map_offset: 0x%x" % (offset, map_type, map_size, map_offset))
-
-		############################
-		# splitting this logic up - yes it is inefficiently looping through the same list twice....
-		for map_item in map_items:
-			map_type = map_item["type"]
-			map_size = map_item["size"]
-			map_offset = map_item["offset"]
-
-			log(2, "offset: 0x%x, map_type: 0x%x, map_size: %i, map_offset: 0x%x" % (offset, map_type, map_size, map_offset))
+			log(1, "offset: 0x%x, map_type: 0x%x, map_size: %i, map_offset: 0x%x" % (offset, map_type, map_size, map_offset))
 
 			# string_id_item works
 			##############################
 			if ItemType[map_type] == "string_id_item": # I don't think we care about "string_data_item" for now (but that may fix the string_list[idx] problem)
-				for i in range(map_size):
-					if map_offset & 3 != 0:
-						log(3, "string_id_item should be 4 byte aligned")
-						# map_offset += four_byte_align(map_offset) WARNING: need to account for the padding, and add that to the main offset counter
-
-					# map_offset points to a string_id_item
-					string_off = self.read_uint(map_offset + i*4)
-
-					string = self.read_string(string_off)
-					strings.append(string)
+				strings = self.read_string_id_items(map_offset, map_size)
 
 			# FIXME: code_items are aligned to 4 bytes.. does that matter?
 			# variable length item
 			##############################
 			elif ItemType[map_type] == "code_item":
-				# log(2, "there are %i code_items" % map_size)
-
-				code_item_off = map_offset
-				#log(3, "code_item map_size: %i" % map_size)
-				for i in range(map_size):
-					# FIXME: this shouldn't be done...
-					try:
-						code_item_off = four_byte_align(code_item_off)
-	 					code_item, code_size = self.read_code_item(code_item_off)
-						code_item_off += code_size # but what if code_size == -1....
-
-						# log(2, "code_size: 0x%x" % code_size)
-
-						if code_size == -1:
-							break
-						codes.append(code_item)
-					except:
-						# if it's invalid, or we can't read it we have to break. Otherwise it will keep reading the same invalid one
-						log(3, "breaking out of code_item loop - this means we're skipping %i methods" % (map_size-i))
-						break
-
+				codes = self.read_code_items(map_offset, map_size) # FIXME: make sure these args are right
 
 			# size is 0x20
 			# FIXME: BYTE ALIGNED - aka irrelevant  AFAIK...
 			elif ItemType[map_type] == "class_data_item":
-				class_item_off = map_offset
-				log(3, "class_data_items - map_size: %i" % map_size) # Example: 123 in the apk I'm testing
-				for i in range(map_size):
-					try:
-						log(2, "class_item_off: 0x%x" % class_item_off)
-						class_item, read_size = self.read_class_data_item(class_item_off) # FIXME: need to implement class_data_item...
-						if read_size <= 0:
-							log(3, "class_size <= 0, breaking")
-							break
-
-
-						class_item_off += read_size
-						class_data_items.append(class_item)
-					except:
-						break
-				# method_id_item
-				pass
+				class_data_items = self.read_class_data_items(map_offset, map_size)
 
 			# size is 0x8
 			# TODO: save in dict by offset
 			# alignment: 4 bytes -??
 			elif ItemType[map_type] == "method_id_item":
-				# four_byte_align
-				method_id_item_off = map_offset
-				for i in range(map_size):
-					method_id_item_off = four_byte_align(method_id_item_off)
-
-					# pull a method_id_item
-					method_item, read_size = self.read_method_id_item(method_id_item_off)
-					method_id_item_off += read_size
-
-					if read_size <= 0:
-						break
-
-					method_id_items.append(method_item)
+				method_id_items = self.read_method_id_items(map_offset, map_size)
 
 		# return list of map_item dicts
 
@@ -666,6 +596,21 @@ class DexFile():
 
 		return read_sleb128(self.binary_blob[offset:offset+5])
 
+	def read_string_id_items(self, offset, item_count):
+		strings = []
+		for i in range(item_count):
+			if offset & 3 != 0:
+				log(3, "string_id_item should be 4 byte aligned")
+				# map_offset += four_byte_align(map_offset) WARNING: need to account for the padding, and add that to the main offset counter
+
+			# map_offset points to a string_id_item
+			string_off = self.read_uint(offset + i*4)
+
+			string = self.read_string(string_off)
+			strings.append(string)
+
+		return strings
+
 	def read_string(self, offset):
 		if offset > self.binary_blob_length:
 			assert False
@@ -692,12 +637,40 @@ class DexFile():
 	# tries				| try_item[tries_size] (optional)			| array indicating where in the code exceptions
 	# handlers			| encoded_catch_handler_list (optional)		| bytes representing a list of lists
 
+	# "code_item" alignment: 4 bytes
+	def read_code_items(self, offset, item_count):
+		#log(3, "code_item map_size: %i" % map_size)
+
+		codes = {}
+		for i in range(item_count):
+			try:
+			#if True:
+				offset = four_byte_align(offset) # is this really needed?
+				code_item, read_size = self.read_code_item(offset)
+
+				# log(2, "code_size: 0x%x" % code_size)
+				if read_size == -1:
+					break
+
+				offset += read_size # but what if code_size == -1....
+
+				# the actual code offset, not the code_item_offset
+				code_offset = code_item["insns_off"]
+				codes[code_offset] = code_item
+
+			except:
+
+				# if it's invalid, or we can't read it we have to break. Otherwise it will keep reading the same invalid one
+			#	log(3, "breaking out of code_item loop - this means we're skipping %i methods" % (map_size-i))
+				break
+		return codes
+
 	# ushort == 2 bytes
 	# FIXME: incomplete
 
 	def read_code_item(self, offset):
 		size = 0
-		log(2, "read_code_item(0x%x)" % offset)
+		log(1, "read_code_item(0x%x)" % offset)
 
 		# alignment: 4 bytes
 		assert offset & 3 == 0
@@ -792,6 +765,23 @@ class DexFile():
 
 		return result, size
 
+	def read_method_id_items(self, offset, item_count):
+		method_id_items = []
+
+		# four_byte_align
+		for i in range(item_count):
+			offset = four_byte_align(offset)
+
+			# pull a method_id_item
+			method_item, read_size = self.read_method_id_item(offset)
+			offset += read_size
+
+			if read_size <= 0:
+				break
+
+			method_id_items.append(method_item)
+		return method_id_items
+
 	def read_method_id_item(self, offset):
 		# alignment: 4 bytes
 		assert offset & 3 == 0
@@ -836,10 +826,30 @@ class DexFile():
 	# direct_methods		| encoded_method[direct_methods_size]
 	# virtual_methods		| encoded_method[virtual_methods_size]
 
+	def read_class_data_items(self, offset, item_count):
+		class_data_items = []
+
+		log(1, "class_data_items - map_size: %i" % item_count) # Example: 123 in the apk I'm testing
+		for i in range(item_count):
+			#try:
+			if True:
+				log(1, "class_item_off: 0x%x" % offset)
+				class_item, read_size = self.read_class_data_item(offset) # FIXME: need to implement class_data_item...
+				if read_size <= 0:
+					log(3, "class_size <= 0, breaking")
+					break
+
+				offset += read_size
+				class_data_items.append(class_item)
+			#except:
+			#	break
+		# method_id_item
+		return class_data_items
+
 	# alignment: none
 	# THIS SEEMS CORRECT
 	def read_class_data_item(self, offset):
-		log(2, "read_class_data_item(0x%x)" % offset)
+		log(1, "read_class_data_item(0x%x)" % offset)
 		size = 0
 
 		if offset > self.binary_blob_length:
@@ -890,7 +900,7 @@ class DexFile():
 	# THIS SEEMS CORRECT
 	def read_encoded_fields(self, offset, count):
 		size = 0
-		log(2, "static_fields(0x%x, %i)" % (offset, count))
+		log(1, "static_fields(0x%x, %i)" % (offset, count))
 
 		results = []
 		for i in xrange(count):
@@ -923,9 +933,10 @@ class DexFile():
 		size = 0
 
 		results = []
-		print(4, "self.direct_methods_size: %i" % count)
+		#print(4, "self.direct_methods_size: %i" % count)
 		for i in xrange(count):
-			try:
+			#try:
+			if True:
 				method_idx_diff, read_size = self.read_ULEB128(offset + size)
 				size += read_size
 
@@ -947,8 +958,8 @@ class DexFile():
 					"code_off": code_off # GREPME # FIXME: code_off is a data structure
 				}
 				results.append(result)
-			except:
-				break
+			#except:
+			#	break
 
 		# return list of dicts
 		return results, size
@@ -968,11 +979,11 @@ if __name__ == "__main__":
 
 	map_list = dex.map_list() # this contains everything - but still need to finish map_list function...
 	strings = map_list["strings"]
-	codes = map_list["codes"]
+	codes = map_list["codes"] # NOW A DICT, key is the offset
 	class_data_items = map_list["class_data_items"] # has  (direct_methods, virtual_methods) which contain code_off + method name
 	method_id_items = map_list["method_id_items"]
 
-	print "dex_length: %i" % dex_length
+	#print "dex_length: %i" % dex_length
 
 	##################################
 	##################################
@@ -983,7 +994,7 @@ if __name__ == "__main__":
 	#	print "%s: %x" % ("insns_off", code_item["insns_off"]) # FIXME: they're all wrong, and the same
 
 
-	log(3, "len(self.class_data_items): %i" % len(class_data_items)) # this is not getting hit...
+	#log(3, "len(self.class_data_items): %i" % len(class_data_items)) # this is not getting hit...
 	assert len(class_data_items) > 0
 
 	# class_data_item => "encoded_method" (direct_methods, virtual_methods) => method_id_item => (class_idx, proto_idx, name_idx)
@@ -994,7 +1005,8 @@ if __name__ == "__main__":
 		encoded_methods = class_data_item["direct_methods"] + class_data_item["virtual_methods"]
 
 		for encoded_method in encoded_methods:
-			try:
+			#try:
+			if True:
 				method_idx_diff = encoded_method["method_idx_diff"] # use this to get (class_idx, proto_idx, name_idx)
 				code_off = encoded_method["code_off"]
 				if code_off == 0:
@@ -1011,5 +1023,5 @@ if __name__ == "__main__":
 
 				print "="*100
 				log(2, "%s: %x" % (strings[name_idx], instructions_off))
-			except:
-				pass
+			#except:
+			#	pass
