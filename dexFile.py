@@ -876,19 +876,19 @@ class DexFile():
 		###################
 
 		# ok for now AFAIK
-		static_fields, read_size = self.static_fields(offset + size, static_fields_size)
+		static_fields, read_size = self.encoded_fields(offset + size, static_fields_size)
 		size += read_size
 
 		# TODO
-		instance_fields, read_size = self.instance_fields(offset + size, instance_fields_size) # FAILING
+		instance_fields, read_size = self.encoded_fields(offset + size, instance_fields_size) # FAILING
 		size += read_size
 
 		# TODO
-		direct_methods, read_size = self.direct_methods(offset + size, direct_methods_size)
+		direct_methods, read_size = self.encoded_methods(offset + size, direct_methods_size)
 		size += read_size
 
 		# TODO
-		virtual_methods, read_size = self.virtual_methods(offset + size, virtual_methods_size)
+		virtual_methods, read_size = self.encoded_methods(offset + size, virtual_methods_size)
 		size += read_size
 
 		result = {
@@ -902,7 +902,7 @@ class DexFile():
 
 	# static_fields	encoded_field[static_fields_size]
 	# for now returning a list of dict
-	def static_fields(self, offset, count):
+	def encoded_fields(self, offset, count):
 		size = 0
 		log(2, "static_fields(0x%x, %i)" % (offset, count))
 
@@ -923,35 +923,6 @@ class DexFile():
 		# return list of dicts
 		return results, size
 
-
-	# instance_fields	encoded_field[instance_fields_size]
-	def instance_fields(self, offset, count):
-		size = 0
-
-		results = []
-		for i in xrange(count):
-			try:
-				field_idx_diff, read_size = self.read_ULEB128(offset + size)
-				size += read_size
-
-				# FIXME
-				access_flags, read_size = self.read_ULEB128(offset + size)
-				size += read_size
-
-				result = {
-					"field_idx_diff": field_idx_diff,
-					"access_flags": access_flags
-				}
-				results.append(result)
-			except:
-				break
-
-		#self.direct_methods_off = offset
-
-		# return list of dicts
-		return results, size
-
-
 	# Name				| Format	| Description
 	#########################################################
 	# method_idx_diff	| uleb128	| index into the method_ids list for the identity of this method
@@ -961,7 +932,7 @@ class DexFile():
 	# direct_methods	encoded_method[direct_methods_size]
 	#  populate self.virtual_methods_off
 	# FIXME: code_off is a data structure
-	def direct_methods(self, offset, count):
+	def encoded_methods(self, offset, count):
 		size = 0
 		# offset = self.direct_methods_off # this should be true....
 
@@ -991,37 +962,6 @@ class DexFile():
 					"code_off": code_off # GREPME # FIXME: code_off is a data structure
 				}
 				results.append(result)
-			except:
-				break
-
-		# return list of dicts
-		return results, size
-
-	# virtual_methods	encoded_method[virtual_methods_size]
-	def virtual_methods(self, offset, count):
-		size = 0
-		# offset = self.virtual_methods_off # FIXME: is this correct?
-
-		results = []
-		for i in xrange(count): #
-			try:
-				method_idx_diff, read_size = self.read_ULEB128(offset + size)
-				size += read_size
-
-				access_flags, read_size = self.read_ULEB128(offset + size)
-				size += read_size
-
-				# FIXME: code_off value is wrong
-				code_off, read_size = self.read_ULEB128(offset + size)
-				size += read_size
-
-				result = {
-					"method_idx_diff": method_idx_diff,
-					"access_flags": access_flags,
-					"code_off": code_off # GREPME
-				}
-				results.append(result)
-
 			except:
 				break
 
