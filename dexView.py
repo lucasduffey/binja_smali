@@ -10,7 +10,6 @@ DEX_MAGIC = "dex\x0a035\x00"
 
 # android dex opcodes: https://docs.google.com/spreadsheets/d/1SN5W0uwl0BRRAIngPOk9eMAt9VSkGCGD6w4bCe5akvc/edit#gid=0
 
-
 # ~/binaryninja/binaryninja /home/noot/CTF/tmp/classes2.dex
 	# they already did it https://gist.github.com/ezterry/1239615
 

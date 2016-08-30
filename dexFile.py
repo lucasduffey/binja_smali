@@ -88,14 +88,14 @@ def four_byte_align(number):
 # Little-Endian Base 128 - consists of one to five bytes, which represent a single 32-bit value
 # data is up to five bytes
 # return value, size_of_ULEB128
-def read_ULEB128(data):
+def read_uleb128(data):
 	# the first bit of each byte is 1, unless that's the last byte
 	total = 0
 	found = False
 
 	# so technically it doesn't have to be 5...
 	if len(data) != 5:
-		log(3, "read_ULEB128, where len(data) == %i" % len(data))
+		log(3, "read_uleb128, where len(data) == %i" % len(data))
 		#assert len(data) == 5
 
 
@@ -162,8 +162,17 @@ class DexFile():
 		self.binary_blob = binary_blob
 		self.binary_blob_length = binary_blob_length
 
+		self.string_table = self.string_ids() # initalize self.string_ids_size, self.string_ids_off
+
+		self.method_ids() # initalize self.method_ids_size, self.method_ids_off
+		self.field_ids() # initalize stuff
+		self.type_ids() # initalize stuff
+		self.proto_ids() # initalize stuff
+		self.class_defs() # initalize stuff
+
+
 		# just map everything in..
-		self.map_list() # FIXME: disable this
+		#self.map_list() # FIXME: disable this
 
 	'''
 	header
@@ -335,20 +344,19 @@ class DexFile():
 		string_ids_size_offset = 56
 		string_ids_off_offset = 60
 
-		string_ids_size = self.read_uint(string_ids_size_offset)
-		# FIXME: loot at class_defs for how to calculate size in bytes
-
-		string_ids_off = self.read_uint(string_ids_off_offset)
+		self.string_ids_size = self.read_uint(string_ids_size_offset)
+		self.string_ids_off = self.read_uint(string_ids_off_offset)
 
 		strings = []
-		for i in xrange(string_ids_size):
-			string_data_off = self.read_uint(string_ids_off)
+		offset = self.string_ids_off
+		for i in xrange(self.string_ids_size):
+			offset = self.read_uint(offset)
 
-			string = self.read_string(string_data_off)
+			string = self.read_string(offset)
 			strings.append(string)
 
 			#string_data_offs.append(string_data_off)
-			string_ids_off += 4
+			offset += 4
 
 		return strings
 
@@ -358,10 +366,10 @@ class DexFile():
 		type_ids_size_offset = 64
 		type_ids_off_offset = 68
 
-		type_ids_size = self.read_uint(type_ids_size_offset)
+		self.type_ids_size = self.read_uint(type_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		type_ids_off = self.read_uint(type_ids_off_offset)
+		self.type_ids_off = self.read_uint(type_ids_off_offset)
 
 	# TODO: implement
 	# pulls proto_ids_size, proto_ids_off
@@ -369,10 +377,10 @@ class DexFile():
 		proto_ids_size_offset = 72
 		proto_ids_off_offset = 76
 
-		proto_ids_size = self.read_uint(proto_ids_size_offset)
+		self.proto_ids_size = self.read_uint(proto_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		proto_ids_off = self.read_uint(proto_ids_off_offset)
+		self.proto_ids_off = self.read_uint(proto_ids_off_offset)
 
 	# TODO: implement
 	# pulls field_ids_size, field_ids_off
@@ -380,10 +388,11 @@ class DexFile():
 		field_ids_size_offset = 80
 		field_ids_off_offset = 84
 
-		field_ids_size = self.read_uint(field_ids_size_offset)
+		self.field_ids_size = self.read_uint(field_ids_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		field_ids_off = self.read_uint(field_ids_off_offset)
+		self.field_ids_off = self.read_uint(field_ids_off_offset)
+
 
 	# TODO - validate
 	# pulls method_ids_size, method_ids_off
@@ -392,11 +401,12 @@ class DexFile():
 		method_ids_size_offset = 88
 		method_ids_off_offset = 92
 
-		method_ids_size = self.read_uint(method_ids_size_offset)
-		method_ids_off = self.read_uint(method_ids_off_offset)
+		self.method_ids_size = self.read_uint(method_ids_size_offset)
+		self.method_ids_off = self.read_uint(method_ids_off_offset)
 
 		methods = []
-		for i in xrange(method_ids_size):
+		offset = self.method_ids_off
+		for i in xrange(self.method_ids_size):
 			# Name			| Format	| Description
 			############################################
 			# class_idx		| ushort	| index into the type_ids list for the definer of this method. This must be a class or array type, and not a primitive type.
@@ -404,13 +414,13 @@ class DexFile():
 			# name_idx		| uint		| index into the string_ids list for the name of this method. The string must conform to the syntax for MemberName, defined above.
 
 			# now carve out method_id_item
-			method_ids_off = four_byte_align(method_ids_off)
+			offset = four_byte_align(offset)
 			method = {
-				"class_idx": self.read_ushort(method_ids_off),
-				"proto_idx": self.read_ushort(method_ids_off+2),
-				"name_idx": self.read_uint(method_ids_off+4)
+				"class_idx": self.read_ushort(offset),
+				"proto_idx": self.read_ushort(offset+2),
+				"name_idx": self.read_uint(offset+4)
 			}
-			method_ids_off += 8
+			offset += 8
 
 			methods.append(method)
 
@@ -518,8 +528,8 @@ class DexFile():
 		class_defs_size_offset = 96 # VERIFIED
 		class_defs_off_offset = 100 # VERIFIED
 
-		class_defs_size = self.read_uint(class_defs_size_offset) # ok
-		class_defs_off = self.read_uint(class_defs_off_offset) # ok
+		self.class_defs_size = self.read_uint(class_defs_size_offset) # ok
+		self.class_defs_off = self.read_uint(class_defs_off_offset) # ok
 
 		print "\n===============================\n"
 		print "class_defs_size: ", class_defs_size, "\n"
@@ -566,6 +576,173 @@ class DexFile():
 		print "link_data not yet implemented"
 		assert False
 
+	###########################
+	# data retrieval functions
+	###########################
+	def get_method_name(self, methodId):
+		if methodId >= self.method_ids_size:
+			return ""
+		offset = self.method_ids_off + methodId * struct.calcsize("HHI")
+
+		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
+
+		return self.string_table[name_idx]
+
+	def get_method_fullname(self, methodId, hidden_classname=False):
+		if methodId >= self.method_ids_size:
+			return ""
+
+		offset = self.method_ids_off + methodId * struct.calcsize("HHI")
+		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
+
+		# FIXME: TODO
+		classname = self.get_type_name(class_idx) # TODO implement
+		classname = shorty_decode(classname) # TODO implement
+		funcname = self.get_string_by_id(name_idx) # TODO implement
+		if not hidden_classname:
+			classname = ""
+		return self.get_proto_fullname(proto_idx,classname,funcname)
+
+	def get_field_name(self, fieldId):
+			if fieldId >= self.m_fieldIdsSize:
+				return ""
+			offset = self.field_ids_off + fieldId * struct.calcsize("HHI")
+			class_idx, type_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
+			return self.string_table[name_idx]
+
+	def get_field_fullname(self, fieldId):
+		if fieldId >= self.field_ids_size:
+			return ""
+
+		offset = self.field_ids_off + fieldId * struct.calcsize("HHI")
+		class_idx, type_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
+		name = self.get_type_name(type_idx)
+		name = shorty_decode(name)
+		fname = self.get_string_by_id(name_idx)
+		return "%s %s" % (name, fname)
+
+	def get_field_type_name(self, fieldId):
+		if fieldid >= self.field_ids_size:
+			return ""
+
+		offset = self.field_ids_off + fieldId * struct.calcsize("HHI")
+		class_idx, type_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
+		name = self.get_type_name(type_idx)
+		if name[-1] != ";":
+			name = shorty_decode(name)
+		return name
+
+	def get_type_name(self, typeId):
+		if typeId >= self.type_ids_size:
+			return ""
+		offset = self.type_ids_off + typeId * struct.calcsize("I")
+		descriptor_idx, = struct.unpack_from("I" ,self.binary_blob, offset)
+		return self.string_table[descriptor_idx]
+
+	def get_proto_name(self, protoId):
+		if protoId >= self.proto_ids_size:
+			return ""
+		offset = self.proto_ids_off + protoId * struct.calcsize("3I")
+		shorty_idx, return_type_idx, parameters_off, = struct.unpack_from("3I", self.binary_blob, offset)
+		return self.string_table[shorty_idx]
+
+	def get_proto_fullname(self, protoId, classname, func_name):
+		if protoId >= self.proto_ids_size:
+			return ""
+		offset = self.proto_ids_off + protoId * struct.calcsize("3I")
+		shorty_idx, return_type_idx, parameters_off, = struct.unpack_from("3I", self.binary_blob, offset)
+		retname = self.get_type_name(return_type_idx)
+		retname = shorty_decode(retname)
+		retstr = retname + " "
+		if len(classname) == 0:
+			retstr += "%s(" % func_name
+		else:
+			retstr += "%s::%s(" % (classname, func_name)
+		if parameters_off != 0:
+			offset = parameters_off
+			size, = struct.unpack_from("I", self.binary_blob, offset)
+			offset += struct.calcsize("I")
+			n = 0
+			for i in xrange(0,size):
+				type_idx, = struct.unpack_from("H", self.binary_blob, offset)
+				offset += struct.calcsize("H")
+				arg = self.get_type_name(type_idx)
+				arg = shorty_decode(arg)
+				if n != 0:
+					retstr += ","
+				retstr += arg
+				n += 1
+		retstr += ")"
+		return retstr
+
+	def get_class_method_count(self, classId):
+		if classId >= self.class_defs_size:
+			return ""
+		offset = self.class_defs_off + classId * struct.calcsize("8I")
+		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.binary_blob, offset)
+		if class_data_off:
+			offset = class_data_off
+			static_fields_size, n = self.read_uleb128(offset)
+			offset += n
+			instance_fields_size, n = self.read_uleb128(offset)
+			offset += n
+			direct_methods_size, n = self.read_uleb128(offset)
+			offset += n
+			virtual_methods_size, n = self.read_uleb128(offset)
+			offset += n
+			return static_fields_size + instance_fields_size
+		return 0
+
+	def get_class_method(self, classId, method_idx):
+		count = 0
+		if classId >= self.class_defs_size:
+			return ""
+		offset = self.class_defs_off + classId * struct.calcsize("8I")
+		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.binary_blob, offset)
+		if class_data_off:
+			offset = class_data_off
+			static_fields_size, n = self.read_uleb128(offset)
+			offset += n
+			instance_fields_size, n = self.read_uleb128(offset)
+			offset += n
+			direct_methods_size, n = self.read_uleb128(offset)
+			offset += n
+			virtual_methods_size, n = self.read_uleb128(offset)
+			offset += n
+			count = direct_methods_size + virtual_methods_size
+		if method_idx >= count:
+			return ""
+		ncount = static_fields_size + instance_fields_size
+		ncount *= 2
+		for i in xrange(0, ncount):
+			tmp, n = self.read_uleb128(offset)
+			offset += n
+		ncount *= 3
+		for i in xrange(0, ncount):
+			tmp, n = self.read_uleb128(offset)
+			offset += n
+		method_idx_diff, n = self.read_uleb128(offset)
+		offset += n
+		access_flags, n = self.read_uleb128(offset)
+		offset += n
+		code_off, n = self.read_uleb128(offset)
+
+	def get_class_name(self, classId):
+		if classId >= self.class_def_size:
+			return ""
+		offset = self.class_def_off + classId * struct.calcsize("8I")
+		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.binary_blob, offset)
+		return self.get_type_name(class_idx)
+
+	def get_type_name_by_id(self, typeId):
+		if typeId >= self.type_ids_size:
+			return ""
+		offset = self.type_ids_off + typeId * struct.calcsize("I")
+		descriptor_idx, = struct.unpack_from("I", self.binary_blob, offset)
+		return self.string_table[descriptor_idx]
+
+
+	# TODO: get_access_flags, get_access_flags1, getclass
 
 	###########################
 	# helper functions
@@ -583,12 +760,12 @@ class DexFile():
 		return struct.unpack("<H", self.binary_blob[offset:offset+2])[0]
 
 	# wrapper function
-	def read_ULEB128(self, offset):
+	def read_uleb128(self, offset):
 		if offset > self.binary_blob_length:
-			log(3, "read_ULEB128(0x%x)" % offset)
+			log(3, "read_uleb128(0x%x)" % offset)
 			assert False
 
-		return read_ULEB128(self.binary_blob[offset:offset+5])
+		return read_uleb128(self.binary_blob[offset:offset+5])
 
 	def read_sleb128(self, offset):
 		if offset > self.binary_blob_length:
@@ -643,8 +820,8 @@ class DexFile():
 
 		codes = {}
 		for i in range(item_count):
-			try:
-			#if True:
+			#try:
+			if True:
 				offset = four_byte_align(offset) # is this really needed?
 				code_item, read_size = self.read_code_item(offset)
 
@@ -658,11 +835,11 @@ class DexFile():
 				code_offset = code_item["insns_off"]
 				codes[code_offset] = code_item
 
-			except:
+			# except:
 
 				# if it's invalid, or we can't read it we have to break. Otherwise it will keep reading the same invalid one
 			#	log(3, "breaking out of code_item loop - this means we're skipping %i methods" % (map_size-i))
-				break
+			#	break
 		return codes
 
 	# ushort == 2 bytes
@@ -714,7 +891,7 @@ class DexFile():
 
 		# handlers encoded_catch_handler_list
 		if tries_size != 0:
-			handlers_size, read_size = self.read_ULEB128(offset + size) # FAILING HERE...
+			handlers_size, read_size = self.read_uleb128(offset + size) # FAILING HERE...
 			size += read_size # FIXME: is this right
 
 			#log(3, "handlers is at least %i bytes" % handlers_size)
@@ -739,16 +916,16 @@ class DexFile():
 				# read encoded_type_addr_pairs
 				for pair_count in range(abs(encoded_catch_handler_size)):
 					item = {}
-					item["type_idx"], read_size = self.read_ULEB128(offset + size)
+					item["type_idx"], read_size = self.read_uleb128(offset + size)
 					size += read_size
 
-					item["addr"], read_size = self.read_ULEB128(offset + size)
+					item["addr"], read_size = self.read_uleb128(offset + size)
 					size += read_size
 
 					encoded_type_addr_pairs.append(item)
 
 				if encoded_catch_handler_size < 0:
-					catch_all_addr, read_size = self.read_ULEB128(offset + size)
+					catch_all_addr, read_size = self.read_uleb128(offset + size)
 					size += read_size
 
 
@@ -850,47 +1027,52 @@ class DexFile():
 	# THIS SEEMS CORRECT
 	def read_class_data_item(self, offset):
 		log(1, "read_class_data_item(0x%x)" % offset)
+		result = {}
 		size = 0
 
 		if offset > self.binary_blob_length:
 			log(3, "length: %i, binary_blob_length: %i" % (offset, self.binary_blob_length))
 			assert False
 
-		static_fields_size, read_size = self.read_ULEB128(offset)
+		static_fields_size, read_size = self.read_uleb128(offset)
 		size += read_size
 
-		instance_fields_size, read_size = self.read_ULEB128(offset + size)
+		instance_fields_size, read_size = self.read_uleb128(offset + size)
 		size += read_size
 
-		direct_methods_size, read_size = self.read_ULEB128(offset + size)
+		direct_methods_size, read_size = self.read_uleb128(offset + size)
 		size += read_size
 
-		virtual_methods_size, read_size = self.read_ULEB128(offset + size)
+		virtual_methods_size, read_size = self.read_uleb128(offset + size)
 		size += read_size
 
 		###################
 
 		# ok for now AFAIK
-		static_fields, read_size = self.read_encoded_fields(offset + size, static_fields_size)
-		size += read_size
+		if static_fields_size > 0:
+			result["static_fields"], read_size = self.read_encoded_fields(offset + size, static_fields_size)
+			size += read_size
 
 		# TODO
-		instance_fields, read_size = self.read_encoded_fields(offset + size, instance_fields_size)
-		size += read_size
+		if instance_fields_size > 0:
+			result["instance_fields"], read_size = self.read_encoded_fields(offset + size, instance_fields_size)
+			size += read_size
 
 		# TODO
-		direct_methods, read_size = self.read_encoded_methods(offset + size, direct_methods_size)
-		size += read_size
+		if direct_methods_size > 0:
+			result["direct_methods"], read_size = self.read_encoded_methods(offset + size, direct_methods_size)
+			size += read_size
 
 		# TODO
-		virtual_methods, read_size = self.read_encoded_methods(offset + size, virtual_methods_size)
-		size += read_size
+		if virtual_methods_size > 0:
+			result["virtual_methods"], read_size = self.read_encoded_methods(offset + size, virtual_methods_size)
+			size += read_size
 
 		result = {
-			"static_fields": static_fields,
-			"instance_fields": instance_fields,
-			"direct_methods": direct_methods,
-			"virtual_methods": virtual_methods
+			#"static_fields": static_fields,
+			#"instance_fields": instance_fields,
+			#"direct_methods": direct_methods,
+			#"virtual_methods": virtual_methods
 		}
 
 		return result, size
@@ -904,10 +1086,10 @@ class DexFile():
 
 		results = []
 		for i in xrange(count):
-			field_idx_diff, read_size = self.read_ULEB128(offset + size)
+			field_idx_diff, read_size = self.read_uleb128(offset + size)
 			size += read_size
 
-			access_flags, read_size = self.read_ULEB128(offset + size)
+			access_flags, read_size = self.read_uleb128(offset + size)
 			size += read_size
 
 			result = {
@@ -937,18 +1119,18 @@ class DexFile():
 		for i in xrange(count):
 			#try:
 			if True:
-				method_idx_diff, read_size = self.read_ULEB128(offset + size)
+				method_idx_diff, read_size = self.read_uleb128(offset + size)
 				size += read_size
 
-				access_flags, read_size = self.read_ULEB128(offset + size)
+				access_flags, read_size = self.read_uleb128(offset + size)
 				size += read_size
 
-				code_off, read_size = self.read_ULEB128(offset + size)
+				code_off, read_size = self.read_uleb128(offset + size)
 				size += read_size
 
 				#assert code_off < self.binary_blob_length
 				#log(3, "code_off: %i" % code_off)
-				if code_off < self.binary_blob_length:
+				if 0 < code_off < self.binary_blob_length: # FIXME:  and code_off != 0
 					continue
 					#assert False
 
