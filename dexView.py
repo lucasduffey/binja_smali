@@ -1,5 +1,5 @@
 from binaryninja import *
-from dexFile import DexFile, four_byte_align
+from dexFile import DexFile, four_byte_align, dex_class
 import struct
 import traceback
 import hashlib # to validate SHA1 signature
@@ -870,18 +870,19 @@ class DEXView(BinaryView):
 
 		self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
 		self.dex_file.header_item() # for some reason this is getting regisered with "raw" view??
-		dex.class_defs() # instantiate self.class_defs_size
+		self.dex_file.class_defs() # instantiate self.class_defs_size
 
-		for i in xrange(self.class_defs_size): # was class_def_size
-			str1 = self.get_class_name(i)
-			self.m_class_name_id[str] = i
-			dex_class(self, i).printf(self) # WHAT....
+
+		for i in xrange(self.dex_file.class_defs_size): # was class_def_size
+			str1 = self.dex_file.get_class_name(i)
+			self.dex_file.m_class_name_id[str] = i
+			dex_class(self.dex_file, i).printf(self.dex_file) # WHAT....
 
 
 
 
 		# map_off
-		#map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
+		map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
 
 		strings = map_list["strings"]
 

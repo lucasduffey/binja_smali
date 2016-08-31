@@ -157,9 +157,232 @@ assert read_sleb128("\x01")[0] == 1
 assert read_sleb128("\x7f")[0] == -1
 assert read_sleb128("\x80\x7f")[0] == -128
 
+class method_code:
+	def __init__(self,dex_object,offset):
+		format = "H"
+		self.registers_size, = struct.unpack_from(format, dex_object.binary_blob,offset)
+		offset += struct.calcsize(format)
+		self.ins_size,=struct.unpack_from(format, dex_object.binary_blob,offset)
+		offset += struct.calcsize(format)
+		self.outs_size,=struct.unpack_from(format, dex_object.binary_blob,offset)
+		offset += struct.calcsize(format)
+		self.tries_size,=struct.unpack_from(format, dex_object.binary_blob,offset)
+		offset += struct.calcsize(format)
+		format = "I"
+		self.debug_info_off,=struct.unpack_from(format, dex_object.binary_blob,offset)
+		offset += struct.calcsize(format)
+		self.insns_size,=struct.unpack_from(format, dex_object.binary_blob,offset)
+		offset += struct.calcsize(format)
+		self.insns = offset
+		offset += 2*self.insns_size
+		if self.insns_size %2 ==1:
+			offset+=2
+		if self.tries_size == 0:
+			self.tries = 0
+			self.handlers = 0
+		else:
+			self.tries = offset
+			self.handlers = offset + self.tries_size * struct.calcsize("I2H")
+	def get_param_list(self,dex_object):
+		if self.debug_info_off != 0:
+			return parse_debug_info_method_parameter_list(dex_object, self.debug_info_off)
+		return []
+	def printf(self,dex_object,prefix=""):
+		print "%s%-20s:%08x:%10d" % (prefix,"registers_size", self.registers_size, self.registers_size)
+		print "%s%-20s:%08x:%10d" % (prefix,"insns_size", self.insns_size, self.insns_size)
+		print "%s%-20s:%08x:%10d" % (prefix,"debug_info_off", self.debug_info_off, self.debug_info_off)
+		print "%s%-20s:%08x:%10d" % (prefix,"ins_size", self.ins_size, self.ins_size)
+		print "%s%-20s:%08x:%10d" % (prefix,"outs_size", self.outs_size,self.outs_size)
+		print "%s%-20s:%08x:%10d" % (prefix,"tries_size", self.tries_size,self.tries_size)
+		print "%s%-20s:%08x:%10d" % (prefix,"insns", self.insns,self.insns)
+		print "%s%-20s:%08x:%10d" % (prefix,"tries", self.tries,self.tries)
+		print "%s%-20s:%08x:%10d" % (prefix,"handlers", self.handlers,self.handlers)
+
+		# FIXME: TODO - implement parse_instruction?
+		#parse_instruction(dex_object.binary_blob[self.insns:self.insns+self.insns_size*2],self.insns, dex_object)
+		#if self.debug_info_off != 0:
+		#        parse_debug_info(dex_object,self.debug_info_off)
+
+def shorty_decode(name):
+		val = {"V":"void",
+				"Z":"boolean",
+				"B":"byte",
+				"S":"short",
+				"C":"char",
+				"I":"int",
+				"J":"long",
+				"F":"float",
+				"D":"double",
+				"L":"L"
+				}
+		value = ""
+
+		if name[-1] == ';':
+				if name[0] == 'L':
+						return name[1:-1].replace("/",".")
+				if name[0]=='[':
+						if name[1] == 'L':
+								return name[2:-1].replace("/",".")+"[]"
+						else:
+								return name[1:-1].replace("/",".")+"[]"
+		i = 0
+		for ch in name:
+				if val.has_key(ch):
+						if i != 0:
+								value += " | "
+						value += val[ch]
+						i += 1
+		if '[' in name:
+				value += "[]"
+		return value
+
+def get_static_offset(content,index):
+	offset = 0
+	size, m =  read_uleb128(content[offset:offset+5])
+	if index >= size:
+		return -1
+	offset += m
+	for i in xrange(0,index):
+		offset += get_encoded_value_size(content[offset:])
+	return offset
+
+def get_encoded_value_size(content):
+	offset = 0
+	arg_type, = struct.unpack_from("B",content,offset)
+	offset+=struct.calcsize("B")
+	value_arg = arg_type>>5
+	value_type = arg_type &0x1f
+	if value_type in [0x2,3,4,6,0x10,0x11,0x17,0x18,0x19,0x1a,0x1b]:
+		offset += (value_arg+1)
+	elif value_type == 0:
+		offset += 1
+	elif value_type == 0x1e or value_type == 0x1f:
+		offset += 0
+	elif value_type == 0x1d:
+		offset += get_encoded_annotation_size(content[offset:])
+	elif value_type == 0x1c:
+		asize, m = read_uleb128(binary_blob[offset:5+offset])
+		offset += m
+		for q in xrange(0,asize):
+			offset += get_encoded_value_size(content[offset:])
+	else:
+		print "***************error parse encode_value**************"
+	return offset
+
+def get_encoded_annotation_size(content):
+	offset = 0
+	type_idx, n = read_uleb128(content[offset:5+offset])
+	offset += n
+	size, n = read_uleb128(content[offset:5+offset])
+	offset += n
+	for i in xrange(0,n):
+		name_idx, n = read_uleb128(content[offset:5+offset])
+		offset += n
+		offset += get_encoded_value_size(content[offset:])
+	return offset
+
+
+def parse_encoded_value(lex_object,content,is_root=False):
+	offset = 0
+	arg_type, = struct.unpack_from("B",content,offset)
+	offset+=struct.calcsize("B")
+	value_arg = arg_type>>5
+	value_type = arg_type &0x1f
+	if value_type in [0x2,3,4,6,0x10,0x11,0x17,0x18,0x19,0x1a,0x1b]:
+		sum = 0
+		for q in xrange(0,value_arg+1):
+			mm = ord(content[offset+q])
+			mm <<= 8*q
+			sum|=mm
+			#sum += ord(content[offset+q])
+		if value_type == 0x17:
+			print "string@%d"%sum,
+			print lex_object.get_string_by_id(sum),
+		elif value_type == 0x18:
+			print "type@%d"%sum,
+			print lex_object.get_type_name(sum),
+		elif value_type == 0x19:
+			print "field@%d"%sum,
+			print lex_object.get_field_name(sum),
+		elif value_type == 0x1a:
+			print "method@%d"%sum,
+			print lex_object.get_method_name(sum),
+		else:
+			str = ""
+			for q in xrange(0,value_arg+1):
+					str += "%02x "%(ord(content[offset+q]))
+			print str,
+		offset += (value_arg+1)
+	elif value_type == 0:
+		print "%02x"%ord(content[offset]),
+		offset += 1
+
+	elif value_type == 0x1e :
+		print "NULL",
+	elif value_type == 0x1f:
+		if value_arg == 0:
+			print "False",
+		else:
+			print "True",
+		offset += 0
+	elif value_type == 0x1d:
+		offset += parse_encoded_annotation(lex_object, content[offset:])
+	elif value_type == 0x1c:
+		asize, m = read_uleb128(content[offset:5])
+		offset += m
+		print "[%d]" % asize,
+		for q in xrange(0, asize):
+			offset += parse_encoded_value(lex_object, content[offset:],False)
+	else:
+		print "***************error parse encode_value**************"
+	return offset
+
+def parse_encoded_annotation(lex_object,content,is_root=False):
+	offset = 0
+	type_idx, n = read_uleb128(content[offset:5+offset])
+	offset += n
+	size, n = read_uleb128(content[offset:5+offset])
+	offset += n
+	if is_root:
+		print lex_object.get_type_name_by_id(type_idx),
+	for i in xrange(0,size):
+		name_idx, n = read_uleb128(content[offset:5+offset])
+		if i == 0 and is_root:
+				print lex_object.get_string_by_id(name_idx),
+				offset += n
+				offset += parse_encoded_value(lex_object,content[offset:],is_root)
+	return offset
+
+def parse_annotation_set_item(lex_object,offset,is_root=False):
+	size, = struct.unpack_from("I",lex_object.binary_blob,offset)
+	offset += struct.calcsize("I")
+	for i in xrange(0,size):
+		off,=struct.unpack_from("I",lex_object.binary_blob,offset)
+		visibility, = struct.unpack_from("B",lex_object.binary_blob,off)
+		if visibility == 0:
+			print "VISIBILITY_BUILD",
+		elif visibility == 1:
+			print "VISIBILITY_RUNTIME",
+		elif visibility == 2:
+			print "VISIBILITY_SYSTEM",
+		else:
+			print "visibility is unknow %02x"%visibility
+		off += struct.calcsize("B")
+		parse_encoded_annotation(lex_object,lex_object.binary_blob[off:],True)
+		offset += struct.calcsize("I")
+		print ""
+
+def parse_annotation_set_ref_list(lex_object,offset,is_root=False):
+        size, = struct.unpack_from("I",lex_object.binary_blob,offset)
+        offset += struct.calcsize("I")
+        for i in xrange(0,size):
+                off,=struct.unpack_from("I",lex_object.binary_blob,offset)
+                parse_annotation_set_item(lex_object,off,True)
+                offset += struct.calcsize("I")
+
 
 class dex_class:
-	def __init__(self,dex_object, classId):
+	def __init__(self, dex_object, classId):
 		if classId >= dex_object.class_defs_size:
 			return ""
 		offset = dex_object.class_defs_off + classId * struct.calcsize("8I")
@@ -187,13 +410,13 @@ class dex_class:
 			self.interfacesSize, = struct.unpack_from("I", dex_object.binary_blob, self.interfacesOff)
 		if self.classDataOff != 0:
 			offset = self.classDataOff
-			count,self.numStaticFields = read_uleb128(dex_object.binary_blob[offset:])
+			self.numStaticFields, count = read_uleb128(dex_object.binary_blob[offset:])
 			offset += count
-			count,self.numInstanceFields = read_uleb128(dex_object.binary_blob[offset:])
+			self.numInstanceFields, count = read_uleb128(dex_object.binary_blob[offset:])
 			offset += count
-			count,self.numDirectMethods = read_uleb128(dex_object.binary_blob[offset:])
+			self.numDirectMethods, count = read_uleb128(dex_object.binary_blob[offset:])
 			offset += count
-			count,self.numVirtualMethods = read_uleb128(dex_object.binary_blob[offset:])
+			self.numVirtualMethods, count = read_uleb128(dex_object.binary_blob[offset:])
 		else:
 			self.numStaticFields = 0
 			self.numInstanceFields = 0
@@ -218,22 +441,22 @@ class dex_class:
 			str1 += self.format_classname(supername)
 		str1 += "\n{\n"
 		offset = self.classDataOff
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
 		field_idx = 0
 		prev_access = -1
 		for i in xrange(0,self.numStaticFields):
-			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			n,field_idx_diff = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			field_idx+=field_idx_diff
 
-			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			modifiers, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 
 			access_str,cur_access = dex_object.get_access_flags1(modifiers)
 			if cur_access != prev_access:
@@ -257,10 +480,10 @@ class dex_class:
 		field_idx=0
 		str1+="////////////////////////////////////////////////////////\n"
 		for i in xrange(0,self.numInstanceFields):
-			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			field_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			field_idx+=field_idx_diff
-			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			modifiers, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			access_str,cur_access = dex_object.get_access_flags1(modifiers)
 			if cur_access != prev_access:
 				str1 += access_str
@@ -276,11 +499,11 @@ class dex_class:
 		method_idx = 0
 		prev_access = -1
 		for i in xrange(0,self.numDirectMethods):
-			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
 			access_str,cur_access = dex_object.get_access_flags1(access_flags)
@@ -298,11 +521,11 @@ class dex_class:
 		method_idx = 0
 		str1+="//////////////////////virtual method//////////////////////////////////\n"
 		for i in xrange(0,self.numVirtualMethods):
-			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
 			access_str,cur_access = dex_object.get_access_flags1(access_flags)
@@ -321,88 +544,88 @@ class dex_class:
 		f.write(str1)
 		f.close()
 		return typelist
-	def printf(self,dex_object):
+	def printf(self, dex_object):
 		#if dex_object.get_type_name(self.thisClass)!="Landroid/Manifest$permission;":
 		#	return
-		print "%-20s:%08x:%10d  %s"%("thisClass",self.thisClass,self.thisClass,dex_object.get_type_name(self.thisClass))
-		print "%-20s:%08x:%10d  %s"%("superClass",self.superClass,self.superClass,dex_object.get_type_name(self.superClass))
-		print "%-20s:%08x:%10d"%("modifiers",self.modifiers,self.modifiers)
-		print "%-20s:%08x:%10d"%("offset",self.offset,self.offset)
-		print "%-20s:%08x:%10d"%("annotationsOff",self.annotationsOff,self.annotationsOff)
-		print "%-20s:%08x:%10d"%("numStaticFields",self.numStaticFields,self.numStaticFields)
-		print "%-20s:%08x:%10d"%("numInstanceFields",self.numInstanceFields,self.numInstanceFields)
-		print "%-20s:%08x:%10d"%("numDirectMethods",self.numDirectMethods,self.numDirectMethods)
-		print "%-20s:%08x:%10d"%("numVirtualMethods",self.numVirtualMethods,self.numVirtualMethods)
-		print "%-20s:%08x:%10d"%("classDataOff",self.classDataOff,self.classDataOff)
-		print "%-20s:%08x:%10d"%("interfacesOff",self.interfacesOff,self.interfacesOff)
-		print "%-20s:%08x:%10d"%("interfacesSize",self.interfacesSize,self.interfacesSize)
+		print "%-20s:%08x:%10d  %s" % ("thisClass",self.thisClass, self.thisClass, dex_object.get_type_name(self.thisClass))
+		print "%-20s:%08x:%10d  %s" % ("superClass",self.superClass,self.superClass, dex_object.get_type_name(self.superClass))
+		print "%-20s:%08x:%10d" % ("modifiers",self.modifiers,self.modifiers)
+		print "%-20s:%08x:%10d" % ("offset",self.offset,self.offset)
+		print "%-20s:%08x:%10d" % ("annotationsOff",self.annotationsOff,self.annotationsOff)
+		print "%-20s:%08x:%10d" % ("numStaticFields",self.numStaticFields,self.numStaticFields)
+		print "%-20s:%08x:%10d" % ("numInstanceFields",self.numInstanceFields,self.numInstanceFields)
+		print "%-20s:%08x:%10d" % ("numDirectMethods",self.numDirectMethods,self.numDirectMethods)
+		print "%-20s:%08x:%10d" % ("numVirtualMethods",self.numVirtualMethods,self.numVirtualMethods)
+		print "%-20s:%08x:%10d" % ("classDataOff",self.classDataOff,self.classDataOff)
+		print "%-20s:%08x:%10d" % ("interfacesOff",self.interfacesOff,self.interfacesOff)
+		print "%-20s:%08x:%10d" % ("interfacesSize",self.interfacesSize,self.interfacesSize)
 		offset = self.interfacesOff + struct.calcsize("I")
 		for n in xrange(0,self.interfacesSize):
 			typeid, = struct.unpack_from("H",dex_object.binary_blob,offset)
 			offset += struct.calcsize("H")
 			print "\t\t"+ dex_object.get_type_name(typeid)
 
-		print "%-20s:%08x:%10d"%("staticValuesOff",self.staticValuesOff,self.staticValuesOff)
-		print "%-20s:%08x:%10d  %s"%("sourceFileIdx",self.sourceFileIdx,self.sourceFileIdx,dex_object.get_string_by_id(self.sourceFileIdx))
+		print "%-20s:%08x:%10d" % ("staticValuesOff", self.staticValuesOff, self.staticValuesOff)
+		print "%-20s:%08x:%10d  %s" % ("sourceFileIdx", self.sourceFileIdx, self.sourceFileIdx, dex_object.get_string_by_id(self.sourceFileIdx))
 		offset = self.classDataOff
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
-		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
 		field_idx=0
 		for i in xrange(0,self.numStaticFields):
-			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			field_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			field_idx+=field_idx_diff
-			print dex_object.getfieldfullname(field_idx),
-			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			print dex_object.get_field_fullname(field_idx),
+			modifiers, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			if self.staticValuesOff:
-				staticoffset=get_static_offset(dex_object.binary_blob[self.staticValuesOff:],i)
+				staticoffset = get_static_offset(dex_object.binary_blob[self.staticValuesOff:], i) # FIXME
 				if staticoffset == -1:
 					print "0;"
 					continue
-				parse_encoded_value(dex_object,dex_object.binary_blob[self.staticValuesOff+staticoffset:])
+				parse_encoded_value(dex_object, dex_object.binary_blob[self.staticValuesOff+staticoffset:])
 			print ""
 
 		field_idx=0
 		for i in xrange(0,self.numInstanceFields):
-			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			field_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			field_idx+=field_idx_diff
-			print dex_object.getfieldfullname(field_idx)
-			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			field_idx += field_idx_diff
+			print dex_object.get_field_fullname(field_idx)
+			modifiers, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 
 		print "=========numDirectMethods[%d]=numVirtualMethods[%d]=numStaticMethods[0]========="%(self.numDirectMethods,self.numVirtualMethods)
 		method_idx = 0
 		for i in xrange(0,self.numDirectMethods):
-			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			print dex_object.getmethodfullname(method_idx,True)
+			print dex_object.get_method_fullname(method_idx,True)
 			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
+				method_code(dex_object, code_off).printf(dex_object, "\t\t")
 
-				method_code(dex_object,code_off).printf(dex_object,"\t\t")
 		method_idx = 0
 		for i in xrange(0,self.numVirtualMethods):
-			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
-			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			print dex_object.getmethodfullname(method_idx,True)
+			print dex_object.get_method_fullname(method_idx,True)
 			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
 				method_code(dex_object,code_off).printf(dex_object,"\t\t")
@@ -419,21 +642,21 @@ class dex_class:
 
 			if self.fields_size:
 				for  i in xrange(0,self.fields_size):
-					field_idx,annotations_off,=struct.unpack_from("2I",dex_object.binary_blob,offset)
+					field_idx, annotations_off, = struct.unpack_from("2I",dex_object.binary_blob,offset)
 					offset += struct.calcsize("2I")
-					print dex_object.getfieldname(field_idx),
-					parse_annotation_set_item(dex_object,annotations_off)
+					print dex_object.get_field_name(field_idx),
+					parse_annotation_set_item(dex_object, annotations_off)
 
 			if self.annotated_methods_size:
 				print "=====annotated_methods_size=====    offset=[%x]===="%offset
-				for  i in xrange(0,self.annotated_methods_size):
-					method_idx,annotations_off,=struct.unpack_from("2I",dex_object.binary_blob,offset)
+				for  i in xrange(0, self.annotated_methods_size):
+					method_idx,annotations_off, = struct.unpack_from("2I", dex_object.binary_blob, offset)
 					offset += struct.calcsize("2I")
 					print dex_object.get_method_name(method_idx),
 					parse_annotation_set_item(dex_object,annotations_off)
 			if self.annotated_parameters_size:
 				for  i in xrange(0,self.annotated_parameters_size):
-					method_idx,annotations_off,=struct.unpack_from("2I",dex_object.binary_blob,offset)
+					method_idx,annotations_off, = struct.unpack_from("2I",dex_object.binary_blob,offset)
 					offset+=struct.calcsize("2I")
 					print dex_object.get_method_name(method_idx),
 					parse_annotation_set_ref_list(dex_object,annotations_off)
@@ -819,6 +1042,11 @@ class DexFile():
 	###########################
 	# data retrieval functions
 	###########################
+	def get_string_by_id(self, strIdx): # aka getstringbyid
+		if strIdx >= self.string_ids_size:
+			return ""
+		return self.string_table[strIdx]
+
 	def get_method_name(self, methodId):
 		if methodId >= self.method_ids_size:
 			return ""
@@ -844,7 +1072,7 @@ class DexFile():
 		return self.get_proto_fullname(proto_idx,classname,funcname)
 
 	def get_field_name(self, fieldId):
-			if fieldId >= self.m_fieldIdsSize:
+			if fieldId >= self.field_ids_size:
 				return ""
 			offset = self.field_ids_off + fieldId * struct.calcsize("HHI")
 			class_idx, type_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
@@ -857,7 +1085,7 @@ class DexFile():
 		offset = self.field_ids_off + fieldId * struct.calcsize("HHI")
 		class_idx, type_idx, name_idx, = struct.unpack_from("HHI", self.binary_blob, offset)
 		name = self.get_type_name(type_idx)
-		name = shorty_decode(name)
+		name = shorty_decode(name) # FIXME: not defined
 		fname = self.get_string_by_id(name_idx)
 		return "%s %s" % (name, fname)
 
