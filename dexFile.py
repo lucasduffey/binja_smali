@@ -112,7 +112,7 @@ def read_uleb128(data):
 			break
 
 	if not found: # redundant to also check for "i == 4"?
-		log(4, "invalid ULEB128")
+		log(3, "invalid ULEB128")
 		assert False
 
 	# return (value, num_of_bytes) # where num_of_bytes indicates how much space this LEB128 took up
@@ -217,15 +217,12 @@ class DexFile():
 		print "header_size: ", self.header_size()
 		print "endian_tag: ", self.endian_tag()
 	'''
+
 	# returns hex
 	# ubyte[8] = DEX_FILE_MAGIC
 	def magic(self):
-		result = self.binary_blob[0:8] # FIXME: it says data is not defined
-
-		assert len(result) != 0
-
-		# dex file validation
-		if result != DEX_MAGIC:
+		self.magic = self.binary_blob[0:8] # FIXME: it says data is not defined
+		if self.magic != DEX_MAGIC:
 			print "magic result: ", hex(result), " correct magic: ", hex(DEX_MAGIC)
 			assert False
 
@@ -348,11 +345,11 @@ class DexFile():
 		self.string_ids_off = self.read_uint(string_ids_off_offset)
 
 		strings = []
-		offset = self.string_ids_off
+		offset = self.string_ids_off # offset points to "string_ids" section, which is just a list of uint "string_data_off"
 		for i in xrange(self.string_ids_size):
-			offset = self.read_uint(offset)
+			string_off = self.read_uint(offset)
 
-			string = self.read_string(offset)
+			string = self.read_string(string_off)
 			strings.append(string)
 
 			#string_data_offs.append(string_data_off)
@@ -504,6 +501,14 @@ class DexFile():
 			elif ItemType[map_type] == "method_id_item":
 				method_id_items = self.read_method_id_items(map_offset, map_size)
 
+		# TEMP - THIS IS FOR TESTING
+		for class_data_item in class_data_items:
+			methods = class_data_item["direct_methods"] + class_data_item["virtual_methods"]
+
+			for method in methods:
+				method_idx = method["method_idx_diff"]
+				log(3, "TODO - %s" % self.get_method_name(method_idx))
+
 		# return list of map_item dicts
 
 		result = {
@@ -532,8 +537,8 @@ class DexFile():
 		self.class_defs_off = self.read_uint(class_defs_off_offset) # ok
 
 		print "\n===============================\n"
-		print "class_defs_size: ", class_defs_size, "\n"
-		print "class_defs_off: ", hex(class_defs_off), "\n"
+		print "class_defs_size: ", self.class_defs_size, "\n"
+		print "class_defs_off: ", hex(self.class_defs_off), "\n"
 
 		# class_def_items will store the class_def_items, see "class_def_item" @ https://source.android.com/devices/tech/dalvik/dex-format.html
 
@@ -551,10 +556,11 @@ class DexFile():
 		class_def_item_size = 0x20 # 0x20 is 32 decimal, the class_def_item size in bytes
 
 		class_def_items = []
-		for i in range(class_defs_size):
-			class_defs_off = four_byte_align(class_defs_off)
-			item = self.read_class_def_item(class_defs_off)
-			class_defs_off += class_def_item_size
+		offset = 0
+		for i in range(self.class_defs_size):
+			offset = four_byte_align(offset)
+			item = self.read_class_def_item(offset)
+			offset += class_def_item_size
 
 			class_def_items.append(item)
 
@@ -684,12 +690,16 @@ class DexFile():
 			offset = class_data_off
 			static_fields_size, n = self.read_uleb128(offset)
 			offset += n
+
 			instance_fields_size, n = self.read_uleb128(offset)
 			offset += n
-			direct_methods_size, n = self.read_uleb128(offset)
+
+			direct_methods_size, n = self.read_uleb128(offset) # NOTE: this might be important
 			offset += n
+
 			virtual_methods_size, n = self.read_uleb128(offset)
 			offset += n
+
 			return static_fields_size + instance_fields_size
 		return 0
 
@@ -820,13 +830,14 @@ class DexFile():
 
 		codes = {}
 		for i in range(item_count):
-			#try:
-			if True:
+			try:
+			#if True:
 				offset = four_byte_align(offset) # is this really needed?
-				code_item, read_size = self.read_code_item(offset)
+				code_item, read_size = self.read_code_item(offset) # FAILING..
 
 				# log(2, "code_size: 0x%x" % code_size)
 				if read_size == -1:
+					log(3, "read_code_items - read_size == -1")
 					break
 
 				offset += read_size # but what if code_size == -1....
@@ -835,11 +846,11 @@ class DexFile():
 				code_offset = code_item["insns_off"]
 				codes[code_offset] = code_item
 
-			# except:
+			except:
 
 				# if it's invalid, or we can't read it we have to break. Otherwise it will keep reading the same invalid one
 			#	log(3, "breaking out of code_item loop - this means we're skipping %i methods" % (map_size-i))
-			#	break
+				break
 		return codes
 
 	# ushort == 2 bytes
@@ -1008,8 +1019,8 @@ class DexFile():
 
 		log(1, "class_data_items - map_size: %i" % item_count) # Example: 123 in the apk I'm testing
 		for i in range(item_count):
-			#try:
-			if True:
+			try:
+			#if True:
 				log(1, "class_item_off: 0x%x" % offset)
 				class_item, read_size = self.read_class_data_item(offset) # FIXME: need to implement class_data_item...
 				if read_size <= 0:
@@ -1018,8 +1029,8 @@ class DexFile():
 
 				offset += read_size
 				class_data_items.append(class_item)
-			#except:
-			#	break
+			except:
+				break
 		# method_id_item
 		return class_data_items
 
@@ -1028,6 +1039,8 @@ class DexFile():
 	def read_class_data_item(self, offset):
 		log(1, "read_class_data_item(0x%x)" % offset)
 		result = {}
+		result["direct_methods"] = []
+		result["virtual_methods"] = []
 		size = 0
 
 		if offset > self.binary_blob_length:
@@ -1068,13 +1081,6 @@ class DexFile():
 			result["virtual_methods"], read_size = self.read_encoded_methods(offset + size, virtual_methods_size)
 			size += read_size
 
-		result = {
-			#"static_fields": static_fields,
-			#"instance_fields": instance_fields,
-			#"direct_methods": direct_methods,
-			#"virtual_methods": virtual_methods
-		}
-
 		return result, size
 
 	# static_fields	encoded_field[static_fields_size]
@@ -1086,17 +1092,20 @@ class DexFile():
 
 		results = []
 		for i in xrange(count):
-			field_idx_diff, read_size = self.read_uleb128(offset + size)
-			size += read_size
+			try:
+				field_idx_diff, read_size = self.read_uleb128(offset + size)
+				size += read_size
 
-			access_flags, read_size = self.read_uleb128(offset + size)
-			size += read_size
+				access_flags, read_size = self.read_uleb128(offset + size)
+				size += read_size
 
-			result = {
-				"field_idx_diff": field_idx_diff,
-				"access_flags": access_flags
-			}
-			results.append(result)
+				result = {
+					"field_idx_diff": field_idx_diff,
+					"access_flags": access_flags
+				}
+				results.append(result)
+			except:
+				break
 
 		# return list of dicts
 		return results, size
@@ -1117,8 +1126,8 @@ class DexFile():
 		results = []
 		#print(4, "self.direct_methods_size: %i" % count)
 		for i in xrange(count):
-			#try:
-			if True:
+			try:
+			#if True:
 				method_idx_diff, read_size = self.read_uleb128(offset + size)
 				size += read_size
 
@@ -1140,8 +1149,8 @@ class DexFile():
 					"code_off": code_off # GREPME # FIXME: code_off is a data structure
 				}
 				results.append(result)
-			#except:
-			#	break
+			except:
+				break
 
 		# return list of dicts
 		return results, size

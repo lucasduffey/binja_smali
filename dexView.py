@@ -60,7 +60,7 @@ Instruction = {
 	0x11: {"name": "return-object", "length": 1},
 	0x12: {"name": "const/4", "length": 1},
 	0x13: {"name": "const/16", "length": 3},
-	0x14: {"name": "const", "length": 3},
+	0x14: {"name": "const", "length": 3}, # FIXME - look at the lambda
 	0x15: {"name": "const/high16", "length": 2},
 	0x16: {"name": "const-wide/16", "length": 2},
 	0x17: {"name": "const-wide/32", "length": 5},
@@ -382,7 +382,8 @@ OperandTokens = [
 	# [00 0A][00] => const/16 v0, 10   - I believe this is true
 	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
 		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)], # 16 bit constant
+		InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)
+		], # 16 bit constant
 
 	lambda value: [], # CONST
 	lambda value: [], # CONST_HIGH16
@@ -863,6 +864,7 @@ class DEX(Architecture):
 
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
+
 		tokens = []
 		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr)) # FIXME: error? this is "move" for example??
 		tokens += OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
@@ -913,22 +915,22 @@ class DEXView(BinaryView):
 		log(3, "len(self.dex_file.codes): %i" % len(codes))
 
 		# SEEMS OK
-		'''
+		#'''
 		for code_offset, code_item in codes.iteritems():
 			# might be useful
 			# 	* code_item["registers_size"] - the number of registers used by this code
 			# 	* code_item["ins_size"] - the number of words of incoming arguments to the method that this code is for
 			data.create_user_function(Architecture['dex'].standalone_platform, code_offset)
 
-			fn = data.get_function_at(Architecture['dex'].standalone_platform, code_offset) # or "code_off"
-			if fn != None:
+			#fn = data.get_function_at(Architecture['dex'].standalone_platform, code_offset) # or "code_off"
+			#if fn != None:
 				# THIS IS AN ASSUMPTION
 				# FIXME: PRETTY SURE THIS DOESN'T MAP THIS SIMPLY
 				#fn.name = method_id_items[idx]["name"]
-				pass
-			elif fn == None:
-				log(3, "failed getting address of suspected code")
-		'''
+			#	pass
+			#elif fn == None:
+			#	log(3, "failed getting address of suspected code")
+		#'''
 
 		'''
 		for idx, method_id_item in enumerate(method_id_items):
@@ -944,6 +946,9 @@ class DEXView(BinaryView):
 			# FIXME: everything hereafter may be wrong...
 			for encoded_method in encoded_methods:
 				method_idx_diff = encoded_method["method_idx_diff"] # use this to get (class_idx, proto_idx, name_idx) - FIXME: this may be wrong...
+
+				log(4, "%s: TODO offset" % self.dex_file.getmethodname(method_idx_diff))
+
 				code_off = encoded_method["code_off"]
 				if code_off == 0:
 					# method is either abstract or native
