@@ -879,8 +879,6 @@ class DEXView(BinaryView):
 			dex_class(self.dex_file, i).printf(self.dex_file) # WHAT....
 
 
-
-
 		# map_off
 		map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
 

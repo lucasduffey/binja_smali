@@ -261,7 +261,7 @@ def get_encoded_value_size(content):
 	elif value_type == 0x1d:
 		offset += get_encoded_annotation_size(content[offset:])
 	elif value_type == 0x1c:
-		asize, m = read_uleb128(binary_blob[offset:5+offset])
+		asize, m = read_uleb128(binary_blob[offset:offset+5])
 		offset += m
 		for q in xrange(0,asize):
 			offset += get_encoded_value_size(content[offset:])
@@ -271,12 +271,12 @@ def get_encoded_value_size(content):
 
 def get_encoded_annotation_size(content):
 	offset = 0
-	type_idx, n = read_uleb128(content[offset:5+offset])
+	type_idx, n = read_uleb128(content[offset:offset+5])
 	offset += n
-	size, n = read_uleb128(content[offset:5+offset])
+	size, n = read_uleb128(content[offset:offset+5])
 	offset += n
 	for i in xrange(0,n):
-		name_idx, n = read_uleb128(content[offset:5+offset])
+		name_idx, n = read_uleb128(content[offset:offset+5])
 		offset += n
 		offset += get_encoded_value_size(content[offset:])
 	return offset
@@ -328,7 +328,7 @@ def parse_encoded_value(lex_object,content,is_root=False):
 	elif value_type == 0x1d:
 		offset += parse_encoded_annotation(lex_object, content[offset:])
 	elif value_type == 0x1c:
-		asize, m = read_uleb128(content[offset:5])
+		asize, m = read_uleb128(content[offset:5]) # FIXME: is this right??
 		offset += m
 		print "[%d]" % asize,
 		for q in xrange(0, asize):
@@ -339,14 +339,14 @@ def parse_encoded_value(lex_object,content,is_root=False):
 
 def parse_encoded_annotation(lex_object,content,is_root=False):
 	offset = 0
-	type_idx, n = read_uleb128(content[offset:5+offset])
+	type_idx, n = read_uleb128(content[offset:offset+5])
 	offset += n
-	size, n = read_uleb128(content[offset:5+offset])
+	size, n = read_uleb128(content[offset:offset+5])
 	offset += n
 	if is_root:
 		print lex_object.get_type_name_by_id(type_idx),
 	for i in xrange(0,size):
-		name_idx, n = read_uleb128(content[offset:5+offset])
+		name_idx, n = read_uleb128(content[offset:offset+5])
 		if i == 0 and is_root:
 				print lex_object.get_string_by_id(name_idx),
 				offset += n
@@ -611,8 +611,8 @@ class dex_class:
 			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			print dex_object.get_method_fullname(method_idx,True)
-			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+			print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)
+			print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
 				method_code(dex_object, code_off).printf(dex_object, "\t\t")
 
@@ -625,8 +625,8 @@ class dex_class:
 			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			print dex_object.get_method_fullname(method_idx,True)
-			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+			print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)
+			print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
 				method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
