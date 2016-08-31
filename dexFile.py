@@ -1394,8 +1394,8 @@ if __name__ == "__main__":
 		print message
 
 	dexPath = os.path.expanduser("~") + "/Downloads/classes2.dex"
-	dex = open(dexPath).read()
 
+	dex = open(dexPath).read()
 	dex_length = len(dex)
 
 	dex = DexFile(dex, dex_length)

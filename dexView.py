@@ -338,9 +338,11 @@ OperandTokens = [
 	lambda value: [], # TODO: implement MOVE_FROM16
 
 	# MOVE_16
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value >> 8])], # TODO: implement
+	lambda value: [
+		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(RegisterToken, RegisterNames[value >> 8])
+		], # TODO: implement
 
 	lambda value: [], # TODO: implement MOVE_WIDE
 	lambda value: [], # TODO: implement MOVE_WIDE_FROM_16
@@ -380,9 +382,10 @@ OperandTokens = [
 
 	# CONST_16 - OK AFAIK
 	# [00 0A][00] => const/16 v0, 10   - I believe this is true
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)
+	lambda value: [
+		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)
 		], # 16 bit constant
 
 	lambda value: [], # CONST
@@ -403,17 +406,19 @@ OperandTokens = [
 
 	# NEW_ARRAY
 	# https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 16) & 0xF]),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value >> 20]),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(TextToken, "unimplemented") # https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats, AFAIK this is relevant
+	lambda value: [
+		#InstructionTextToken(RegisterToken, RegisterNames[(value >> 16) & 0xF]),
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(RegisterToken, RegisterNames[value >> 20]),
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(TextToken, "unimplemented") # https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats, AFAIK this is relevant
 														# example "0x19", this may be pulling it from the "field_ids" section
 		],
 
 	lambda value: [], # FILLED_NEW_ARRAY
 	lambda value: [], # FILLED_NEW_ARRAY_RANGE
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 32)]),
+	lambda value: [
+		InstructionTextToken(RegisterToken, RegisterNames[(value >> 32)]),
 		InstructionTextToken(TextToken, ", "),
 		InstructionTextToken(TextToken, "unimplemented") # array_data_offset
 		], # FILL_ARRAY_DATA - seems working
@@ -524,17 +529,17 @@ OperandTokens = [
 		# Curiously, this encoding is not used in case of 1 parameter, in this case an entire 16 bit word is added after the method index of which only 4 bit is used to encode
  		# the single parameter while the lowest 4 bit of the byte following the instruction byte is left unused.
 
-		InstructionTextToken(TextToken, "{"),
-		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF00]), # FIXME: ERROR HERE
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF000]),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value & 0xF0]),
-		InstructionTextToken(TextToken, "}"),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(TextToken, "unimplemented"), # methodtocall - it's probably an offset to a method list
+		#InstructionTextToken(TextToken, "{"),
+		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF00]), # FIXME: ERROR HERE
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF000]),
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF0]),
+		#InstructionTextToken(TextToken, "}"),
+		#InstructionTextToken(TextToken, ", "),
+		#InstructionTextToken(TextToken, "unimplemented"), # methodtocall - it's probably an offset to a method list
 
 		], # INVOKE_INTERFACE
 
