@@ -157,29 +157,313 @@ assert read_sleb128("\x01")[0] == 1
 assert read_sleb128("\x7f")[0] == -1
 assert read_sleb128("\x80\x7f")[0] == -128
 
+
+class dex_class:
+	def __init__(self,dex_object, classId):
+		if classId >= dex_object.class_defs_size:
+			return ""
+		offset = dex_object.class_defs_off + classId * struct.calcsize("8I")
+		self.offset = offset
+		format = "I"
+		self.thisClass, = struct.unpack_from(format, dex_object.binary_blob, offset) # m_content => binary_blob
+		offset += struct.calcsize(format)
+		self.modifiers, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.superClass, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.interfacesOff, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.sourceFileIdx, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.annotationsOff, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.classDataOff, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.staticValuesOff, = struct.unpack_from(format, dex_object.binary_blob, offset)
+		offset += struct.calcsize(format)
+		self.index = classId
+		self.interfacesSize = 0
+		if self.interfacesOff != 0:
+			self.interfacesSize, = struct.unpack_from("I", dex_object.binary_blob, self.interfacesOff)
+		if self.classDataOff != 0:
+			offset = self.classDataOff
+			count,self.numStaticFields = read_uleb128(dex_object.binary_blob[offset:])
+			offset += count
+			count,self.numInstanceFields = read_uleb128(dex_object.binary_blob[offset:])
+			offset += count
+			count,self.numDirectMethods = read_uleb128(dex_object.binary_blob[offset:])
+			offset += count
+			count,self.numVirtualMethods = read_uleb128(dex_object.binary_blob[offset:])
+		else:
+			self.numStaticFields = 0
+			self.numInstanceFields = 0
+			self.numDirectMethods = 0
+			self.numVirtualMethods = 0
+
+	def format_classname(self, name):
+		name = name[1:-1].replace("/","_")
+		name = name.replace("$","_")
+		return name
+
+	def create_header_file_for_cplusplus(self, dex_object):
+		typelist = []
+		name = self.format_classname(dex_object.get_type_name(self.thisClass))
+		f = open(name+".h","w")
+		str1 =  "class %s"%name
+		supername = dex_object.get_type_name(self.superClass)
+
+		if dex_object.m_class_name_id.has_key(supername) :
+			str1 += " : "
+			supername = dex_object.get_type_name(self.superClass)
+			str1 += self.format_classname(supername)
+		str1 += "\n{\n"
+		offset = self.classDataOff
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		field_idx = 0
+		prev_access = -1
+		for i in xrange(0,self.numStaticFields):
+			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			field_idx+=field_idx_diff
+
+			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+
+			access_str,cur_access = dex_object.get_access_flags1(modifiers)
+			if cur_access != prev_access:
+				str1 += access_str
+				str1 += "\n"
+				prev_access = cur_access
+			str1 += "\tconst "
+			str1 += dex_object.getfieldfullname1(field_idx)
+			if field_idx not in typelist:
+				typelist.append(field_idx)
+			offset += n
+			if self.staticValuesOff:
+				str1 += " = "
+				staticoffset=get_static_offset(dex_object.binary_blob[self.staticValuesOff:],i)
+				if staticoffset == -1:
+					str1 += "0;\n"
+					continue
+				size,str2 = parse_encoded_value1(dex_object, dex_object.binary_blob[self.staticValuesOff+staticoffset:])
+				str1 += str2
+			str1 += ";\n"
+		field_idx=0
+		str1+="////////////////////////////////////////////////////////\n"
+		for i in xrange(0,self.numInstanceFields):
+			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			field_idx+=field_idx_diff
+			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			access_str,cur_access = dex_object.get_access_flags1(modifiers)
+			if cur_access != prev_access:
+				str1 += access_str
+				str1 += "\n"
+				prev_access = cur_access
+			str1 += "\t"
+			str1 += dex_object.getfieldfullname1(field_idx)
+			if field_idx not in typelist:
+				typelist.append(field_idx)
+			str1 += ";\n"
+			offset += n
+		#print str1
+		method_idx = 0
+		prev_access = -1
+		for i in xrange(0,self.numDirectMethods):
+			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			method_idx += method_idx_diff
+			access_str,cur_access = dex_object.get_access_flags1(access_flags)
+			if cur_access != prev_access:
+				str1 += access_str
+				str1 += "\n"
+				prev_access = cur_access
+			str1 += "\t"
+			parameter_list=[]
+			if code_off != 0:
+				parameter_list = method_code(dex_object,code_off).get_param_list(dex_object)
+			str1 += dex_object.getmethodfullname1(method_idx,parameter_list,True)
+			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+			str1 += ";\n"
+		method_idx = 0
+		str1+="//////////////////////virtual method//////////////////////////////////\n"
+		for i in xrange(0,self.numVirtualMethods):
+			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			method_idx += method_idx_diff
+			access_str,cur_access = dex_object.get_access_flags1(access_flags)
+			if cur_access != prev_access:
+				str1 += access_str
+				str1 += "\n"
+				prev_access = cur_access
+			str1 +="\tvirtual "
+			parameter_list=[]
+			if code_off != 0:
+				parameter_list = method_code(dex_object,code_off).get_param_list(dex_object)
+			str1 += dex_object.getmethodfullname1(method_idx,parameter_list,True)
+			str1 += ";\n"
+		str1 += "}"
+		#print str1
+		f.write(str1)
+		f.close()
+		return typelist
+	def printf(self,dex_object):
+		#if dex_object.get_type_name(self.thisClass)!="Landroid/Manifest$permission;":
+		#	return
+		print "%-20s:%08x:%10d  %s"%("thisClass",self.thisClass,self.thisClass,dex_object.get_type_name(self.thisClass))
+		print "%-20s:%08x:%10d  %s"%("superClass",self.superClass,self.superClass,dex_object.get_type_name(self.superClass))
+		print "%-20s:%08x:%10d"%("modifiers",self.modifiers,self.modifiers)
+		print "%-20s:%08x:%10d"%("offset",self.offset,self.offset)
+		print "%-20s:%08x:%10d"%("annotationsOff",self.annotationsOff,self.annotationsOff)
+		print "%-20s:%08x:%10d"%("numStaticFields",self.numStaticFields,self.numStaticFields)
+		print "%-20s:%08x:%10d"%("numInstanceFields",self.numInstanceFields,self.numInstanceFields)
+		print "%-20s:%08x:%10d"%("numDirectMethods",self.numDirectMethods,self.numDirectMethods)
+		print "%-20s:%08x:%10d"%("numVirtualMethods",self.numVirtualMethods,self.numVirtualMethods)
+		print "%-20s:%08x:%10d"%("classDataOff",self.classDataOff,self.classDataOff)
+		print "%-20s:%08x:%10d"%("interfacesOff",self.interfacesOff,self.interfacesOff)
+		print "%-20s:%08x:%10d"%("interfacesSize",self.interfacesSize,self.interfacesSize)
+		offset = self.interfacesOff + struct.calcsize("I")
+		for n in xrange(0,self.interfacesSize):
+			typeid, = struct.unpack_from("H",dex_object.binary_blob,offset)
+			offset += struct.calcsize("H")
+			print "\t\t"+ dex_object.get_type_name(typeid)
+
+		print "%-20s:%08x:%10d"%("staticValuesOff",self.staticValuesOff,self.staticValuesOff)
+		print "%-20s:%08x:%10d  %s"%("sourceFileIdx",self.sourceFileIdx,self.sourceFileIdx,dex_object.get_string_by_id(self.sourceFileIdx))
+		offset = self.classDataOff
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		n,tmp = get_uleb128(dex_object.binary_blob[offset:offset+5])
+		offset += n
+		field_idx=0
+		for i in xrange(0,self.numStaticFields):
+			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			field_idx+=field_idx_diff
+			print dex_object.getfieldfullname(field_idx),
+			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			if self.staticValuesOff:
+				staticoffset=get_static_offset(dex_object.binary_blob[self.staticValuesOff:],i)
+				if staticoffset == -1:
+					print "0;"
+					continue
+				parse_encoded_value(dex_object,dex_object.binary_blob[self.staticValuesOff+staticoffset:])
+			print ""
+
+		field_idx=0
+		for i in xrange(0,self.numInstanceFields):
+			n,field_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			field_idx+=field_idx_diff
+			print dex_object.getfieldfullname(field_idx)
+			n,modifiers = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+
+		print "=========numDirectMethods[%d]=numVirtualMethods[%d]=numStaticMethods[0]========="%(self.numDirectMethods,self.numVirtualMethods)
+		method_idx = 0
+		for i in xrange(0,self.numDirectMethods):
+			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			method_idx += method_idx_diff
+			print dex_object.getmethodfullname(method_idx,True)
+			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+			if code_off != 0:
+
+				method_code(dex_object,code_off).printf(dex_object,"\t\t")
+		method_idx = 0
+		for i in xrange(0,self.numVirtualMethods):
+			n,method_idx_diff = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,access_flags = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			n,code_off = get_uleb128(dex_object.binary_blob[offset:offset+5])
+			offset += n
+			method_idx += method_idx_diff
+			print dex_object.getmethodfullname(method_idx,True)
+			#print "%s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+			if code_off != 0:
+				method_code(dex_object,code_off).printf(dex_object,"\t\t")
+
+		print "================================================================================"
+		if self.annotationsOff != 0:
+			offset = self.annotationsOff
+			self.class_annotations_off,self.fields_size,self.annotated_methods_size,self.annotated_parameters_size,=struct.unpack_from("4I",dex_object.binary_blob,offset)
+			#print "%-30s:%08x:%09d"%("class_annotations_off",self.class_annotations_off,self.class_annotations_off)
+			#print "%-30s:%08x:%09d"%("fields_size",self.fields_size,self.fields_size)
+			#print "%-30s:%08x:%09d"%("annotated_methods_size",self.annotated_methods_size,self.annotated_methods_size)
+			#print "%-30s:%08x:%09d"%("annotated_parameters_size",self.annotated_parameters_size,self.annotated_parameters_size)
+			offset =  self.annotationsOff + struct.calcsize("4I")
+
+			if self.fields_size:
+				for  i in xrange(0,self.fields_size):
+					field_idx,annotations_off,=struct.unpack_from("2I",dex_object.binary_blob,offset)
+					offset += struct.calcsize("2I")
+					print dex_object.getfieldname(field_idx),
+					parse_annotation_set_item(dex_object,annotations_off)
+
+			if self.annotated_methods_size:
+				print "=====annotated_methods_size=====    offset=[%x]===="%offset
+				for  i in xrange(0,self.annotated_methods_size):
+					method_idx,annotations_off,=struct.unpack_from("2I",dex_object.binary_blob,offset)
+					offset += struct.calcsize("2I")
+					print dex_object.get_method_name(method_idx),
+					parse_annotation_set_item(dex_object,annotations_off)
+			if self.annotated_parameters_size:
+				for  i in xrange(0,self.annotated_parameters_size):
+					method_idx,annotations_off,=struct.unpack_from("2I",dex_object.binary_blob,offset)
+					offset+=struct.calcsize("2I")
+					print dex_object.get_method_name(method_idx),
+					parse_annotation_set_ref_list(dex_object,annotations_off)
+			if self.class_annotations_off == 0:
+				return
+			print "self.class_annotations_off = %x" % self.class_annotations_off
+			parse_annotation_set_item(dex_object, self.class_annotations_off)
+
+
+
 class DexFile():
 	def __init__(self, binary_blob, binary_blob_length): # data is binaryView
 		self.binary_blob = binary_blob
 		self.binary_blob_length = binary_blob_length
 
+		self.m_class_name_id = {}
+
+		self.header_item() # initalize header variables
+
 		self.string_table = self.string_ids() # initalize self.string_ids_size, self.string_ids_off
-
-		self.method_ids() # initalize self.method_ids_size, self.method_ids_off
-		self.field_ids() # initalize stuff
-		self.type_ids() # initalize stuff
-		self.proto_ids() # initalize stuff
-		self.class_defs() # initalize stuff
-
 
 		# just map everything in..
 		#self.map_list() # FIXME: disable this
 
 	'''
 	header
-		self.magic() - believed correct
-		self.checksum() - validated
-		self.signature() - validated
-		self.file_size() - validated
+		self.magic - believed correct
+		self.checksum - validated
+		self.signature - validated
+		self.file_size - validated
 		self.header_size - validated
 		self.endian_tag - validated
 
@@ -213,122 +497,118 @@ class DexFile():
 		print "magic: ", self.magic()
 		print "checksum: ", self.checksum()
 		print "signature: ", self.signature()
-		print "file_size: ", self.file_size()
+		print "file_size: ", self.file_size
 		print "header_size: ", self.header_size()
 		print "endian_tag: ", self.endian_tag()
 	'''
-
-	# returns hex
-	# ubyte[8] = DEX_FILE_MAGIC
-	def magic(self):
+	def header_item(self):
+		############################################################################################################
+		# magic
+		############################################################################################################
+		# ubyte[8] = DEX_FILE_MAGIC
 		self.magic = self.binary_blob[0:8] # FIXME: it says data is not defined
 		if self.magic != DEX_MAGIC:
 			print "magic result: ", hex(result), " correct magic: ", hex(DEX_MAGIC)
 			assert False
 
-		return DEX_MAGIC
+		#return DEX_MAGIC
 
-	# adler32 checksum of the rest of the file (everything but magic and this field); used to detect file corruption
-	# format: uint
-	def checksum(self):
-		offset = 8
+		############################################################################################################
+		# checksum: adler32 checksum of the rest of the file (everything but magic and this field); used to detect file corruption
+		############################################################################################################
+		# format: uint
+		checksum_offset = 8
 		checksum_size = 4
 
-		result = self.read_uint(offset)
+		self.checksum = self.read_uint(checksum_offset)
 
-		idx_start = offset+checksum_size
-		idx_end = idx_start + self.file_size() - offset - checksum_size
+		idx_start = checksum_offset+checksum_size
+		idx_end = idx_start + self.binary_blob_length - checksum_offset - checksum_size
 		adler32 = zlib.adler32(self.binary_blob[idx_start: idx_end]) & (2**32-1)
 		# 32 bit: & (2**32-1)
 		# 64 bit: & (2**64-1)
 
-		if adler32 != result:
-			print "adler32: ", hex(adler32), " checksum: ", hex(result)
+		if adler32 != self.checksum:
+			print "adler32: ", hex(adler32), " checksum: ", hex(self.checksum)
 			assert False
 
-		return result
 
-	# sha-1 signature of the rest of the file (excluding magic, checksum, and signature)
-	# format: ubyte[20]
-	def signature(self):
-		offset = 12
+		############################################################################################################
+		# signature: sha-1 signature of the rest of the file (excluding magic, checksum, and signature)
+		############################################################################################################
+		# format: ubyte[20]
+		signature_offset = 12
 		signature_size = 20
 
-		result = self.binary_blob[offset: offset+signature_size]
-		result = result.encode('hex')
+		self.signature = self.binary_blob[signature_offset: signature_offset+signature_size]
+		self.signature = self.signature.encode('hex')
 
-		idx_start = offset+signature_size
-		idx_end = idx_start + self.file_size()-offset-signature_size
+		idx_start = signature_offset + signature_size
+		idx_end = idx_start + self.binary_blob_length - signature_offset - signature_size
 		sha1 = hashlib.sha1(self.binary_blob[idx_start:idx_end]).hexdigest()
 
-		if result != sha1:
-			print "sha1: ", sha1, " signature: ", result
+		if self.signature != sha1:
+			print "sha1: ", sha1, " signature: ", self.signature
 			assert False
 
-		return result
-
-	# returns unsigned int
-	def file_size(self):
-		offset = 32
-
-		result = self.read_uint(offset)
+		############################################################################################################
+		# file_size
+		############################################################################################################
+		# returns unsigned int
+		self.file_size = self.read_uint(32)
 
 		# dex file validation
-		if result != self.binary_blob_length:
+		if self.file_size != self.binary_blob_length:
 			print "file_size method: ", hex(result), ", self.file.raw: ", hex(binary_blob_length)
 			assert False
 
-		# binary string => unsigned int
-		return result
+		############################################################################################################
+		# header_size
+		############################################################################################################
+		# format: unit = 0x70
+		self.header_size = self.read_uint(36)
 
-	# format: unit = 0x70
-	def header_size(self):
-		offset = 36
-		result = self.read_uint(offset)
-
-		if result != 0x70:
-			print "header_size: ", result
+		if self.header_size != 0x70:
+			print "header_size: ", self.header_size
 			assert False
 
-		return 0x70
-
-	# format: uint = 0x12345678
-	def endian_tag(self):
-		offset = 40
+		############################################################################################################
+		# endian_tag
+		############################################################################################################
+		# format: uint = 0x12345678
 		ENDIAN_CONSTANT = 0x12345678
 
-		result = self.read_uint(offset)
-		if result != ENDIAN_CONSTANT:
-			print "endian_tag: ", result
+		self.endian_tag = self.read_uint(40)
+		if self.endian_tag != ENDIAN_CONSTANT:
+			print "endian_tag: ", self.endian_tag
 			assert False
 
-		return result
+		############################################################################################################
+		# link_size - can it be validated?
+		############################################################################################################
+		self.link_size = self.read_uint(44)
+		self.link_off = self.read_uint(48)
 
-	###############################################3
+		############################################################################################################
+		# map_off - offset from the start of the file to the map item. offset must be non-zero
+		############################################################################################################
+		# format: uint
+		self.map_off = self.read_uint(52)
+		assert self.map_off > 0 # must be non-zero
 
-	# TODO - can it be validated?
-	# format: uint
-	def link_size(self):
-		return self.read_uint(44)
-
-	# TODO - can it be validated?
-	# format: uint
-	def link_off(self):
-		return self.read_uint(48)
-
-	# TODO - validate
-	# format: uint
-	# Purpose: offset from the start of the file to the map item. The offset, which must be non-zero, should be to an offset into the data section,
-	#  				and the data should be in the format specified by "map_list" below.
-	# Questions: what is the "map item"?
-		# VERY IMPORTANT FUNCTION - simplifies everything
-	def map_off(self):
-		result = self.read_uint(52)
-
-		# must be non-zero
-		assert result > 0
-
-		return result # this offset is correct..., but the map
+		############################################################################################################
+		# string_ids_size, string_ids_off
+		############################################################################################################
+		self.string_ids_size = self.read_uint(56)
+		self.string_ids_off = self.read_uint(60)
+		self.type_ids_size = self.read_uint(64)
+		self.type_ids_off = self.read_uint(68)
+		self.proto_ids_size = self.read_uint(72)
+		self.proto_ids_off = self.read_uint(76)
+		self.field_ids_size = self.read_uint(80)
+		self.field_ids_off = self.read_uint(84)
+		self.method_ids_size = self.read_uint(88)
+		self.method_ids_off = self.read_uint(92)
 
 	########################################
 	# string_ids_size, string_ids_off
@@ -337,13 +617,7 @@ class DexFile():
 	#	* Only the one-, two-, and three-byte encodings are used.
 	#	* A plain null byte (value 0) indicates the end of a string, as is the standard C language interpretation.
 	# TODO: cache results
-	def string_ids(self):
-		string_ids_size_offset = 56
-		string_ids_off_offset = 60
-
-		self.string_ids_size = self.read_uint(string_ids_size_offset)
-		self.string_ids_off = self.read_uint(string_ids_off_offset)
-
+	def string_ids(self): # FIXME: maybe deprecating??
 		strings = []
 		offset = self.string_ids_off # offset points to "string_ids" section, which is just a list of uint "string_data_off"
 		for i in xrange(self.string_ids_size):
@@ -357,50 +631,10 @@ class DexFile():
 
 		return strings
 
-	# TODO: implement
-	# type_ids_size, type_ids_off
-	def type_ids(self):
-		type_ids_size_offset = 64
-		type_ids_off_offset = 68
-
-		self.type_ids_size = self.read_uint(type_ids_size_offset)
-		# FIXME: loot at class_defs for how to calculate size in bytes
-
-		self.type_ids_off = self.read_uint(type_ids_off_offset)
-
-	# TODO: implement
-	# pulls proto_ids_size, proto_ids_off
-	def proto_ids(self):
-		proto_ids_size_offset = 72
-		proto_ids_off_offset = 76
-
-		self.proto_ids_size = self.read_uint(proto_ids_size_offset)
-		# FIXME: loot at class_defs for how to calculate size in bytes
-
-		self.proto_ids_off = self.read_uint(proto_ids_off_offset)
-
-	# TODO: implement
-	# pulls field_ids_size, field_ids_off
-	def field_ids(self):
-		field_ids_size_offset = 80
-		field_ids_off_offset = 84
-
-		self.field_ids_size = self.read_uint(field_ids_size_offset)
-		# FIXME: loot at class_defs for how to calculate size in bytes
-
-		self.field_ids_off = self.read_uint(field_ids_off_offset)
-
-
 	# TODO - validate
 	# pulls method_ids_size, method_ids_off
 	# method_ids	method_id_item[]
 	def method_ids(self):
-		method_ids_size_offset = 88
-		method_ids_off_offset = 92
-
-		self.method_ids_size = self.read_uint(method_ids_size_offset)
-		self.method_ids_off = self.read_uint(method_ids_off_offset)
-
 		methods = []
 		offset = self.method_ids_off
 		for i in xrange(self.method_ids_size):
@@ -435,7 +669,7 @@ class DexFile():
 	# SUPER CRITICAL
 	# alignment: 4 bytes
 	def map_list(self):
-		offset = self.map_off()
+		offset = self.map_off
 
 		# map_items are 12 bytes
 		map_items = []
@@ -738,9 +972,9 @@ class DexFile():
 		code_off, n = self.read_uleb128(offset)
 
 	def get_class_name(self, classId):
-		if classId >= self.class_def_size:
+		if classId >= self.class_defs_size:
 			return ""
-		offset = self.class_def_off + classId * struct.calcsize("8I")
+		offset = self.class_defs_off + classId * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.binary_blob, offset)
 		return self.get_type_name(class_idx)
 
@@ -1161,11 +1395,13 @@ if __name__ == "__main__":
 
 	dexPath = os.path.expanduser("~") + "/Downloads/classes2.dex"
 	dex = open(dexPath).read()
+
 	dex_length = len(dex)
 
 	dex = DexFile(dex, dex_length)
-	method_list = dex.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
-	string_list = dex.string_ids() # FIXME: cache the results
+	dex.header_item()
+	#method_list = dex.method_ids() # this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
+	#string_list = dex.string_ids() # FIXME: cache the results
 	#function_list =
 
 	map_list = dex.map_list() # this contains everything - but still need to finish map_list function...
@@ -1173,6 +1409,14 @@ if __name__ == "__main__":
 	codes = map_list["codes"] # NOW A DICT, key is the offset
 	class_data_items = map_list["class_data_items"] # has  (direct_methods, virtual_methods) which contain code_off + method name
 	method_id_items = map_list["method_id_items"]
+
+	dex.class_defs() # instantiate class_defs_size
+
+	for i in xrange(dex.class_defs_size): # was originally "class_def_size"
+		str1 = dex.get_class_name(i)
+		dex.m_class_name_id[str1] = i
+		dex_class(dex, i).printf(dex) # WHAT
+
 
 	#print "dex_length: %i" % dex_length
 

@@ -689,34 +689,6 @@ class DEXViewUpdateNotification(BinaryDataNotification):
 	def __init__(self, view):
 		self.view = view
 
-	# FIXME: don't trust - pulled from NES.py
-	# NOTE: when you patche and write dex code
-	#	* must update checksum + signature + file size + something else?
-	def data_written(self, view, offset, length):
-		addr = offset - self.view.rom_offset
-		while length > 0:
-				bank_ofs = addr & 0x3fff
-				if (bank_ofs + length) > 0x4000:
-						to_read = 0x4000 - bank_ofs
-				else:
-						to_read = length
-				if length < to_read:
-						to_read = length
-				if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
-						self.view.notify_data_written(0x8000 + bank_ofs, to_read)
-				elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
-						self.view.notify_data_written(0xc000 + bank_ofs, to_read)
-				length -= to_read
-				addr += to_read
-
-	# FIXME: don't trust - pulled from NES.py
-	def data_inserted(self, view, offset, length):
-		self.view.notify_data_written(0x8000, 0x8000)
-
-	# FIXME: don't trust - pulled from NES.py
-	def data_removed(self, view, offset, length):
-		self.view.notify_data_written(0x8000, 0x8000)
-
 
 # FIXME TODO
 # https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
@@ -889,14 +861,22 @@ class DEXView(BinaryView):
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
 
+		self.m_class_name_id = {} # I don't like this name
+
 		self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
+		self.dex_file.header_item() # for some reason this is getting regisered with "raw" view??
+		dex.class_defs() # instantiate self.class_defs_size
 
-		# self.dex_file.print_metadata() # for some reason this is getting regisered with "raw" view??
+		for i in xrange(self.class_defs_size): # was class_def_size
+			str1 = self.get_class_name(i)
+			self.m_class_name_id[str] = i
+			dex_class(self, i).printf(self) # WHAT....
 
-		# self.map_list() - either I coded wrong, or not all apks support map_list...
+
+
 
 		# map_off
-		map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
+		#map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
 
 		strings = map_list["strings"]
 
@@ -947,7 +927,7 @@ class DEXView(BinaryView):
 			for encoded_method in encoded_methods:
 				method_idx_diff = encoded_method["method_idx_diff"] # use this to get (class_idx, proto_idx, name_idx) - FIXME: this may be wrong...
 
-				log(4, "%s: TODO offset" % self.dex_file.getmethodname(method_idx_diff))
+				log(3, "%s: TODO offset" % self.dex_file.get_method_name(method_idx_diff))
 
 				code_off = encoded_method["code_off"]
 				if code_off == 0:
