@@ -158,7 +158,7 @@ assert read_sleb128("\x7f")[0] == -1
 assert read_sleb128("\x80\x7f")[0] == -128
 
 class method_code:
-	def __init__(self,dex_object,offset):
+	def __init__(self, dex_object, offset):
 		format = "H"
 		self.registers_size, = struct.unpack_from(format, dex_object.binary_blob,offset)
 		offset += struct.calcsize(format)
@@ -187,16 +187,18 @@ class method_code:
 		if self.debug_info_off != 0:
 			return parse_debug_info_method_parameter_list(dex_object, self.debug_info_off)
 		return []
-	def printf(self,dex_object,prefix=""):
-		print "%s%-20s:%08x:%10d" % (prefix,"registers_size", self.registers_size, self.registers_size)
-		print "%s%-20s:%08x:%10d" % (prefix,"insns_size", self.insns_size, self.insns_size)
-		print "%s%-20s:%08x:%10d" % (prefix,"debug_info_off", self.debug_info_off, self.debug_info_off)
-		print "%s%-20s:%08x:%10d" % (prefix,"ins_size", self.ins_size, self.ins_size)
-		print "%s%-20s:%08x:%10d" % (prefix,"outs_size", self.outs_size,self.outs_size)
-		print "%s%-20s:%08x:%10d" % (prefix,"tries_size", self.tries_size,self.tries_size)
-		print "%s%-20s:%08x:%10d" % (prefix,"insns", self.insns,self.insns)
-		print "%s%-20s:%08x:%10d" % (prefix,"tries", self.tries,self.tries)
-		print "%s%-20s:%08x:%10d" % (prefix,"handlers", self.handlers,self.handlers)
+	def printf(self, dex_object, prefix=""):
+		# FIXME: can do better limiters
+		if self.insns_size < dex_object.data_size:
+			print "%s%-20s:%08x:%10d" % (prefix,"registers_size", self.registers_size, self.registers_size)
+			print "%s%-20s:%08x:%10d" % (prefix,"insns_size", self.insns_size, self.insns_size)
+			print "%s%-20s:%08x:%10d" % (prefix,"debug_info_off", self.debug_info_off, self.debug_info_off)
+			print "%s%-20s:%08x:%10d" % (prefix,"ins_size", self.ins_size, self.ins_size)
+			print "%s%-20s:%08x:%10d" % (prefix,"outs_size", self.outs_size, self.outs_size)
+			print "%s%-20s:%08x:%10d" % (prefix,"tries_size", self.tries_size, self.tries_size)
+			print "%s%-20s:%08x:%10d" % (prefix,"insns", self.insns, self.insns)
+			print "%s%-20s:%08x:%10d" % (prefix,"tries", self.tries, self.tries)
+			print "%s%-20s:%08x:%10d" % (prefix,"handlers", self.handlers, self.handlers)
 
 		# FIXME: TODO - implement parse_instruction?
 		#parse_instruction(dex_object.binary_blob[self.insns:self.insns+self.insns_size*2],self.insns, dex_object)
@@ -328,7 +330,7 @@ def parse_encoded_value(lex_object,content,is_root=False):
 	elif value_type == 0x1d:
 		offset += parse_encoded_annotation(lex_object, content[offset:])
 	elif value_type == 0x1c:
-		asize, m = read_uleb128(content[offset:5]) # FIXME: is this right??
+		asize, m = read_uleb128(content[offset:offset+5]) # FIXME: originally said content[offset:5]
 		offset += m
 		print "[%d]" % asize,
 		for q in xrange(0, asize):
@@ -410,13 +412,13 @@ class dex_class:
 			self.interfacesSize, = struct.unpack_from("I", dex_object.binary_blob, self.interfacesOff)
 		if self.classDataOff != 0:
 			offset = self.classDataOff
-			self.numStaticFields, count = read_uleb128(dex_object.binary_blob[offset:])
+			self.numStaticFields, count = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += count
-			self.numInstanceFields, count = read_uleb128(dex_object.binary_blob[offset:])
+			self.numInstanceFields, count = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += count
-			self.numDirectMethods, count = read_uleb128(dex_object.binary_blob[offset:])
+			self.numDirectMethods, count = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += count
-			self.numVirtualMethods, count = read_uleb128(dex_object.binary_blob[offset:])
+			self.numVirtualMethods, count = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		else:
 			self.numStaticFields = 0
 			self.numInstanceFields = 0
@@ -520,7 +522,7 @@ class dex_class:
 			str1 += ";\n"
 		method_idx = 0
 		str1+="//////////////////////virtual method//////////////////////////////////\n"
-		for i in xrange(0,self.numVirtualMethods):
+		for i in xrange(0, self.numVirtualMethods):
 			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
@@ -545,20 +547,23 @@ class dex_class:
 		f.close()
 		return typelist
 	def printf(self, dex_object):
-		#if dex_object.get_type_name(self.thisClass)!="Landroid/Manifest$permission;":
+		#if dex_object.get_type_name(self.thisClass) != "Landroid/Manifest$permission;":
 		#	return
-		print "%-20s:%08x:%10d  %s" % ("thisClass",self.thisClass, self.thisClass, dex_object.get_type_name(self.thisClass))
-		print "%-20s:%08x:%10d  %s" % ("superClass",self.superClass,self.superClass, dex_object.get_type_name(self.superClass))
-		print "%-20s:%08x:%10d" % ("modifiers",self.modifiers,self.modifiers)
-		print "%-20s:%08x:%10d" % ("offset",self.offset,self.offset)
-		print "%-20s:%08x:%10d" % ("annotationsOff",self.annotationsOff,self.annotationsOff)
-		print "%-20s:%08x:%10d" % ("numStaticFields",self.numStaticFields,self.numStaticFields)
-		print "%-20s:%08x:%10d" % ("numInstanceFields",self.numInstanceFields,self.numInstanceFields)
-		print "%-20s:%08x:%10d" % ("numDirectMethods",self.numDirectMethods,self.numDirectMethods)
-		print "%-20s:%08x:%10d" % ("numVirtualMethods",self.numVirtualMethods,self.numVirtualMethods)
-		print "%-20s:%08x:%10d" % ("classDataOff",self.classDataOff,self.classDataOff)
-		print "%-20s:%08x:%10d" % ("interfacesOff",self.interfacesOff,self.interfacesOff)
-		print "%-20s:%08x:%10d" % ("interfacesSize",self.interfacesSize,self.interfacesSize)
+		print "#"*150
+		print "# dex_class"
+		print "#"*150
+		print "%-20s:%08x:%10d  %s" % ("thisClass", self.thisClass, self.thisClass, dex_object.get_type_name(self.thisClass))
+		print "%-20s:%08x:%10d  %s" % ("superClass", self.superClass, self.superClass, dex_object.get_type_name(self.superClass))
+		print "%-20s:%08x:%10d" % ("modifiers", self.modifiers, self.modifiers)
+		print "%-20s:%08x:%10d" % ("offset", self.offset, self.offset)
+		print "%-20s:%08x:%10d" % ("annotationsOff", self.annotationsOff, self.annotationsOff)
+		print "%-20s:%08x:%10d" % ("numStaticFields", self.numStaticFields, self.numStaticFields)
+		print "%-20s:%08x:%10d" % ("numInstanceFields", self.numInstanceFields, self.numInstanceFields)
+		print "%-20s:%08x:%10d" % ("numDirectMethods", self.numDirectMethods, self.numDirectMethods)
+		print "%-20s:%08x:%10d" % ("numVirtualMethods", self.numVirtualMethods, self.numVirtualMethods)
+		print "%-20s:%08x:%10d" % ("classDataOff", self.classDataOff, self.classDataOff)
+		print "%-20s:%08x:%10d" % ("interfacesOff", self.interfacesOff, self.interfacesOff)
+		print "%-20s:%08x:%10d" % ("interfacesSize", self.interfacesSize, self.interfacesSize)
 		offset = self.interfacesOff + struct.calcsize("I")
 		for n in xrange(0,self.interfacesSize):
 			typeid, = struct.unpack_from("H",dex_object.binary_blob,offset)
@@ -577,7 +582,7 @@ class dex_class:
 		tmp, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 		offset += n
 		field_idx=0
-		for i in xrange(0,self.numStaticFields):
+		for i in xrange(0, self.numStaticFields):
 			field_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			field_idx+=field_idx_diff
@@ -603,7 +608,7 @@ class dex_class:
 
 		print "=========numDirectMethods[%d]=numVirtualMethods[%d]=numStaticMethods[0]========="%(self.numDirectMethods,self.numVirtualMethods)
 		method_idx = 0
-		for i in xrange(0,self.numDirectMethods):
+		for i in xrange(0, self.numDirectMethods):
 			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
@@ -611,13 +616,14 @@ class dex_class:
 			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)
-			print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+
 			if code_off != 0:
+				#print "method_fullname: %s" % dex_object.get_method_fullname(method_idx, True) # I Don't like this
+				print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 				method_code(dex_object, code_off).printf(dex_object, "\t\t")
 
 		method_idx = 0
-		for i in xrange(0,self.numVirtualMethods):
+		for i in xrange(0, self.numVirtualMethods):
 			method_idx_diff, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			access_flags, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
@@ -625,9 +631,10 @@ class dex_class:
 			code_off, n = read_uleb128(dex_object.binary_blob[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)
-			print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+
 			if code_off != 0:
+				#print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)  # I Don't like this
+				print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 				method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
 		print "================================================================================"
@@ -675,6 +682,12 @@ class DexFile():
 		self.m_class_name_id = {}
 
 		self.header_item() # initalize header variables
+		self.data() # self.data_off, self.data_size
+		self.data_min = self.data_off
+		self.data_max = self.data_off+self.data_size
+
+		# min: 0x9da0, max: 0x32164
+		#log(4, "self.data_min: 0x%x, self.data_max: 0x%x" % (self.data_off, self.data_off+self.data_size))
 
 		self.string_table = self.string_ids() # initalize self.string_ids_size, self.string_ids_off
 
@@ -1030,10 +1043,10 @@ class DexFile():
 		data_size_offset = 104
 		data_off_offset = 108
 
-		data_size = self.read_uint(data_size_offset)
+		self.data_size = self.read_uint(data_size_offset)
 		# FIXME: loot at class_defs for how to calculate size in bytes
 
-		data_off = self.read_uint(data_off_offset)
+		self.data_off = self.read_uint(data_off_offset)
 
 	def link_data(self):
 		print "link_data not yet implemented"
@@ -1643,7 +1656,7 @@ if __name__ == "__main__":
 	for i in xrange(dex.class_defs_size): # was originally "class_def_size"
 		str1 = dex.get_class_name(i)
 		dex.m_class_name_id[str1] = i
-		dex_class(dex, i).printf(dex) # WHAT
+		dex_class(dex, i).printf(dex) # print each dex_class
 
 
 	#print "dex_length: %i" % dex_length
