@@ -923,6 +923,7 @@ class DEXView(BinaryView):
 			method_id_items[idx]["name"] = strings[name_idx]
 		'''
 
+		'''
 		# time
 		for class_data_item in class_data_items:
 			encoded_methods = class_data_item["direct_methods"] + class_data_item["virtual_methods"]
@@ -938,7 +939,7 @@ class DEXView(BinaryView):
 					# method is either abstract or native
 					continue
 
-				code_item = self.dex_file.read_code_item(code_off)
+				code_item = self.dex_file.read_code_item(code_off) #
 				instructions_off = code_item["insns_off"]
 
 				name_idx = method_list[method_idx_diff]["name_idx"]
@@ -961,29 +962,31 @@ class DEXView(BinaryView):
 					data.create_user_function(Architecture['dex'].standalone_platform, instructions_off)
 					log(3, "code_off is not currently listed as a function...")
 
-				'''
-				method_id_item
-					class_idx - index into type_ids list for definer of method - must be class or aray type
-					proto_idx - index into proto_ids list for proto of this method
-					name_ids - index ito string_ids list for name of method
-
-				class_data_item
-					static_fields_size
-					instance_fields_size
-					direct_methods_size
-					virtual_methods_size
-					static_fields	encoded_field[static_fields_size]
-					instance_fields	encoded_field[instance_fields_size]
-					direct_methods	encoded_method[direct_methods_size]
-						method_idx_diff **
-						access_flags
-						code_off **
-					virtual_methods	encoded_method[virtual_methods_size]
-						method_idx_diff **
-						access_flags
-						code_off **
-				'''
 				pass
+		'''
+		'''
+		method_id_item
+			class_idx - index into type_ids list for definer of method - must be class or aray type
+			proto_idx - index into proto_ids list for proto of this method
+			name_ids - index ito string_ids list for name of method
+
+		class_data_item
+			static_fields_size
+			instance_fields_size
+			direct_methods_size
+			virtual_methods_size
+			static_fields	encoded_field[static_fields_size]
+			instance_fields	encoded_field[instance_fields_size]
+			direct_methods	encoded_method[direct_methods_size]
+				method_idx_diff **
+				access_flags
+				code_off **
+			virtual_methods	encoded_method[virtual_methods_size]
+				method_idx_diff **
+				access_flags
+				code_off **
+		'''
+
 
 	@classmethod
 	def is_valid_for_data(self, data):

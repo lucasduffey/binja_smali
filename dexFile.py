@@ -617,7 +617,7 @@ class dex_class:
 			offset += n
 			method_idx += method_idx_diff
 
-			if code_off != 0:
+			if code_off != 0 and code_off < dex_object.binary_blob_length:
 				#print "method_fullname: %s" % dex_object.get_method_fullname(method_idx, True) # I Don't like this
 				print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 				method_code(dex_object, code_off).printf(dex_object, "\t\t")
@@ -632,7 +632,7 @@ class dex_class:
 			offset += n
 			method_idx += method_idx_diff
 
-			if code_off != 0:
+			if code_off != 0 and code_off < dex_object.binary_blob_length:
 				#print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)  # I Don't like this
 				print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
 				method_code(dex_object,code_off).printf(dex_object,"\t\t")
@@ -648,7 +648,7 @@ class dex_class:
 			offset =  self.annotationsOff + struct.calcsize("4I")
 
 			if self.fields_size:
-				for  i in xrange(0,self.fields_size):
+				for i in xrange(0,self.fields_size):
 					field_idx, annotations_off, = struct.unpack_from("2I",dex_object.binary_blob,offset)
 					offset += struct.calcsize("2I")
 					print dex_object.get_field_name(field_idx),
