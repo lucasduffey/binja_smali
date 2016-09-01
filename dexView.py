@@ -1,5 +1,5 @@
 from binaryninja import *
-from dexFile import dex_parser
+from dexFile import *
 import struct
 import traceback
 import hashlib # to validate SHA1 signature
@@ -749,6 +749,8 @@ class DEX(Architecture):
 		if len(data) < 1:
 			return None, None, None, None
 		opcode = ord(data[0])
+		fn = dex_decode[opcode][3]
+
 
 		# shouldn't be required?
 		#if opcode >= len(InstructionNames): # was "InstructionNames"
@@ -835,9 +837,18 @@ class DEX(Architecture):
 
 	def perform_get_instruction_text(self, data, addr):
 		# NOTE: value is an "int"
+		# FIXME: rename instr to opcode?
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
+
+		op = ord(data[0]) # is this really the op (opcode)? the first byte that indicates the "function" to be performed?
+
+		fn = dex_decode[op][3]
+		val = func_point[fn](data, dex_object, offset+start, start/2) # TODO: how can I pass the dex_object...
+		# val = func_point[fn](data, dex_object, offset+start, start/2) # removed "offset+start"
+		# 1st arg is either data, or data[2:]
+		log(3, val)
 
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
