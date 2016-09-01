@@ -936,7 +936,6 @@ class DEXView(BinaryView):
 		# complicated because this is called without self really existing
 		#   * not really sure what self provides...
 
-
 print("dexView - for real")
 print("test against classes2.dex - because there is actually dex code..")
 class DEXViewBank(DEXView):

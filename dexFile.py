@@ -81,7 +81,6 @@ class method_code:
 			return parse_debug_info_method_parameter_list(dex_object,self.debug_info_off)
 		return []
 	def printf(self,dex_object,prefix=""):
-
 		print "%s%-20s:%08x:%10d"%(prefix,"registers_size",self.registers_size,self.registers_size)
 		print "%s%-20s:%08x:%10d"%(prefix,"insns_size",self.insns_size,self.insns_size)
 		print "%s%-20s:%08x:%10d"%(prefix,"debug_info_off",self.debug_info_off,self.debug_info_off)
@@ -93,7 +92,7 @@ class method_code:
 		print "%s%-20s:%08x:%10d"%(prefix,"handlers",self.handlers,self.handlers)
 
 		# FIXME: currently not printing "parse_instruction"
-		#parse_instruction(dex_object.m_content[self.insns:self.insns+self.insns_size*2],self.insns,dex_object)
+		parse_instruction(dex_object.m_content[self.insns:self.insns+self.insns_size*2], self.insns, dex_object)
 		#if self.debug_info_off != 0:
 		#	parse_debug_info(dex_object,self.debug_info_off)
 
@@ -1129,7 +1128,7 @@ class dex_parser:
 			classname = ""
 
 		binja_proto_fullname = self.get_binja_proto_fullname(proto_idx, classname, funcname)
-		log(3, "classname: %s, funcname: %s, proto_fullname: %s" % (classname, funcname, binja_proto_fullname))
+		#log(3, "classname: %s, funcname: %s, proto_fullname: %s" % (classname, funcname, binja_proto_fullname))
 
 		return binja_proto_fullname
 

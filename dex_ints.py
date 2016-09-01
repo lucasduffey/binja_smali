@@ -51,7 +51,7 @@ def parse_FMT20T(buffer,dex_object,pc_point,offset):
 	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"%04x"%(v+offset))
 def parse_FMT21C(buffer,dex_object,pc_point,offset):
 	val = ord(buffer[0])
-	
+
 	v, = struct.unpack_from("H",buffer,2)
 	arg1 = "@%d"%v
 	if val == 0x1a:
@@ -86,7 +86,7 @@ def parse_FMT22C(buffer,dex_object,pc_point,offset):
 	else:
 		prefix="field@%s  //%s"%(dex_object.getfieldname(cccc),dex_object.getfieldfullname(cccc))
 
-	
+
 	bb = ord(buffer[1])>>4
 	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%s"%prefix)
 def parse_FMT22S(buffer,dex_object,pc_point,offset):
@@ -122,7 +122,7 @@ def parse_FMT32X(buffer,dex_object,pc_point,offset):
 	aaaa,bbbb,=struct.unpack_from("hh",buffer,2)
 	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%aaaa,"v%d"%bbbb)
 def parse_FMT35C(buffer,dex_object,pc_point,offset):
-	
+
 
 	A = ord(buffer[1])>>4
 	G = ord(buffer[1])&0xf
@@ -159,50 +159,52 @@ def parse_FMT51L(buffer,dex_object,pc_point,offset):
 	bb=struct.unpack_from("q",buffer,2)
 	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),"%d"%bb)
 
-func_point=[parse_FMT10T, parse_FMT10X, parse_FMT11N, parse_FMT11X, parse_FMT12X, parse_FMT20T, parse_FMT21C, parse_FMT21H, parse_FMT21S, parse_FMT21T, parse_FMT22B, parse_FMT22C, parse_FMT22S, parse_FMT22T, parse_FMT22X, parse_FMT23X, parse_FMT30T, parse_FMT31C, parse_FMT31I, parse_FMT31T, parse_FMT32X, parse_FMT35C, parse_FMT3RC, parse_FMT51L]
+func_point = [parse_FMT10T, parse_FMT10X, parse_FMT11N, parse_FMT11X, parse_FMT12X, parse_FMT20T, parse_FMT21C, parse_FMT21H, parse_FMT21S, parse_FMT21T, parse_FMT22B, parse_FMT22C, parse_FMT22S, parse_FMT22T, parse_FMT22X, parse_FMT23X, parse_FMT30T, parse_FMT31C, parse_FMT31I, parse_FMT31T, parse_FMT32X, parse_FMT35C, parse_FMT3RC, parse_FMT51L]
 
-def parse_instruction(buffer,offset,dex_object):
-	
+# buffer is smali bytecode
+def parse_instruction(buffer, offset, dex_object):
 	n = len(buffer)
 	start = 0
-	
+
 	while start < n:
 		if n == 1736:
-			print "start = %d"%start
+			print "start = %d" % start
 		op = ord(buffer[start])
 		if op == 0:
 			type = ord(buffer[start+1])
 			if type == 1:
-				size,=struct.unpack_from("H",buffer,2+start)
+				size, = struct.unpack_from("H", buffer, 2+start)
 				start += (size * 2 + 4) * 2
-				continue				
+				continue
 			elif type == 2:
-				size,=struct.unpack_from("H",buffer,2+start)
+				size, = struct.unpack_from("H", buffer, 2+start)
 				start += (size * 4 + 2) * 2
 				continue
 			elif type == 3:
-				width, = struct.unpack_from("H",buffer,2+start)
-				size, = struct.unpack_from("I",buffer,4+start)	
+				width, = struct.unpack_from("H", buffer, 2+start)
+				size, = struct.unpack_from("I", buffer, 4+start)
 				#width,size,=struct.unpack_from("HI",buffer,2+start)
-				start+=(8 + ((size*width+1)/2)*2)
+				start += (8 + ((size*width+1)/2)*2)
 				continue
 
-		val = func_point[dex_decode[op][3]](buffer[start:],dex_object,offset+start,start/2)
-		str=""
+		# does this get the initial "function" opcode?
+		fn = dex_decode[op][3] # returns a variable like "FMT10X" which is an int - I think it indicates how it will be parsed
+		val = func_point[fn](buffer[start:], dex_object, offset+start, start/2)
+		str = ""
 		m = 0
 		for x in buffer[start:start+2*val[0]]:
-			str+="%02x"%ord(x)
-			m+=1
-			if m %2 ==0:
-				str+=" "
-		
-		print "%08x: %-36s |%04x:"%(offset+start,str,start/2),
+			str += "%02x" % ord(x)
+			m += 1
+			if m % 2 == 0:
+				str += " "
+
+		print "%08x: %-36s |%04x:" % (offset+start, str, start/2),
 		m = 0
 		for v in val[1:]:
-			if m >1:
+			if m > 1:
 				print ",",
 			print v,
-			m+=1
+			m += 1
 		print ""
 		start += 2*val[0]
 
