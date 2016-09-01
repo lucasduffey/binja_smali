@@ -189,7 +189,8 @@ class method_code:
 		return []
 	def printf(self, dex_object, prefix=""):
 		# FIXME: can do better limiters
-		if self.insns_size < dex_object.data_size:
+		if 0 < self.insns_size < dex_object.data_size:
+			# Example: onCreate was failing this condition, the code_off was also pointing at the wrong location
 			print "%s%-20s:%08x:%10d" % (prefix,"registers_size", self.registers_size, self.registers_size)
 			print "%s%-20s:%08x:%10d" % (prefix,"insns_size", self.insns_size, self.insns_size)
 			print "%s%-20s:%08x:%10d" % (prefix,"debug_info_off", self.debug_info_off, self.debug_info_off)
@@ -549,6 +550,10 @@ class dex_class:
 	def printf(self, dex_object):
 		#if dex_object.get_type_name(self.thisClass) != "Landroid/Manifest$permission;":
 		#	return
+
+		if "com" not in dex_object.get_type_name(self.thisClass) and "com" not in dex_object.get_type_name(self.superClass):
+			return
+
 		print "#"*150
 		print "# dex_class"
 		print "#"*150
@@ -619,7 +624,7 @@ class dex_class:
 
 			if code_off != 0 and code_off < dex_object.binary_blob_length:
 				#print "method_fullname: %s" % dex_object.get_method_fullname(method_idx, True) # I Don't like this
-				print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+				print "direct method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off) # FIXME: DOESN"T SEEM RIGHT
 				method_code(dex_object, code_off).printf(dex_object, "\t\t")
 
 		method_idx = 0
@@ -634,7 +639,7 @@ class dex_class:
 
 			if code_off != 0 and code_off < dex_object.binary_blob_length:
 				#print "method_fullname: %s" % dex_object.get_method_fullname(method_idx,True)  # I Don't like this
-				print "method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)
+				print "virtual method name: %s           codeoff=%x"%(dex_object.get_method_name(method_idx),code_off)  # FIXME: DOESN"T SEEM RIGHT
 				method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
 		print "================================================================================"
