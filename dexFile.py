@@ -307,7 +307,7 @@ class dex_class:
 			print "\t\t"+ dex_object.gettypename(typeid)
 
 		print "%-20s:%08x:%10d"%("staticValuesOff",self.staticValuesOff,self.staticValuesOff)
-		print "%-20s:%08x:%10d  %s"%("sourceFileIdx",self.sourceFileIdx,self.sourceFileIdx,dex_object.getstringbyid(self.sourceFileIdx))
+		print "%-20s:%08x:%10d  %s"%("sourceFileIdx",self.sourceFileIdx,self.sourceFileIdx,dex_object.get_string_by_id(self.sourceFileIdx))
 		offset = self.classDataOff
 		n,tmp = get_uleb128(dex_object.m_content[offset:offset+5])
 		offset += n
@@ -358,9 +358,9 @@ class dex_class:
 				# NOTE
 				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
 				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)
-				fn.name = dex_object.getmethodfullname(method_idx,True)
+				fn.name = dex_object.get_binja_method_fullname(method_idx, True)
 
-				method_code(dex_object,code_off).printf(dex_object,"\t\t")
+				method_code(dex_object, code_off).printf(dex_object,"\t\t")
 
 		method_idx = 0
 		for i in xrange(0,self.numVirtualMethods):
@@ -377,7 +377,7 @@ class dex_class:
 				# NOTE
 				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
 				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)
-				fn.name = dex_object.getmethodfullname(method_idx, True)
+				fn.name = dex_object.get_binja_method_fullname(method_idx, True)
 
 				method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
@@ -500,7 +500,7 @@ def parse_debug_info_method_parameter_list(dex_object,offset):
 	for i in xrange(0,parameters_size):
 		n,string_idx = get_uleb128p1(dex_object.m_content[offset:offset+5])
 		if string_idx!=-1:
-			parameter_list.append(dex_object.getstringbyid(string_idx))
+			parameter_list.append(dex_object.get_string_by_id(string_idx))
 		offset+=n
 	return 	parameter_list
 def parse_debug_info(lex_object,offset):
@@ -512,7 +512,7 @@ def parse_debug_info(lex_object,offset):
 	for i in xrange(0,parameters_size):
 		n,string_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 		if string_idx!=-1:
-			print lex_object.getstringbyid(string_idx)
+			print lex_object.get_string_by_id(string_idx)
 		offset+=n
 	start = offset
 	current_pc = 0
@@ -546,7 +546,7 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			n,type_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 			offset += n
-			print "v%d %s %s  START_LOCAL"%(register_num,lex_object.gettypenamebyid(type_idx),lex_object.getstringbyid(name_idx))
+			print "v%d %s %s  START_LOCAL"%(register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
 		elif bytecode == 4:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
@@ -556,7 +556,7 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			n,sig_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 			offset += n
-			print "v%d %s %s   START_LOCAL_EXTENDED"%(register_num,lex_object.gettypenamebyid(type_idx),lex_object.getstringbyid(name_idx))
+			print "v%d %s %s   START_LOCAL_EXTENDED"%(register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
 		elif bytecode == 5:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
@@ -573,7 +573,7 @@ def parse_debug_info(lex_object,offset):
 			pass
 		elif bytecode == 9:
 			n,name_idx = get_uleb128(lex_object.m_content[offset:offset+5])
-			print "%s"%lex_object.getstringbyid(name_idx)
+			print "%s"%lex_object.get_string_by_id(name_idx)
 			offset += n
 		else:
 			adjusted_opcode = bytecode - 0xa
@@ -814,7 +814,7 @@ def parse_encoded_value(lex_object,content,is_root=False):
 			#sum += ord(content[offset+q])
 		if value_type == 0x17:
 			print "string@%d"%sum,
-			print lex_object.getstringbyid(sum),
+			print lex_object.get_string_by_id(sum),
 		elif value_type == 0x18:
 			print "type@%d"%sum,
 			print lex_object.gettypename(sum),
@@ -870,7 +870,7 @@ def parse_encoded_value1(lex_object,content,is_root=False):
 			#sum += ord(content[offset+q])
 		if value_type == 0x17:
 			str1 += "\""
-			str1 += lex_object.getstringbyid(sum)
+			str1 += lex_object.get_string_by_id(sum)
 			str1 += "\""
 		elif value_type == 0x18:
 			print "type@%d"%sum,
@@ -962,7 +962,7 @@ def parse_encoded_annotation1(lex_object,content,is_root=False):
 	for i in xrange(0,size):
 		n ,name_idx = get_uleb128(content[offset:5+offset])
 		if i == 0 and is_root:
-			str1 += lex_object.getstringbyid(name_idx)
+			str1 += lex_object.get_string_by_id(name_idx)
 		offset += n
 		size,text = parse_encoded_value1(lex_object,content[offset:],is_root)
 		offset += size
@@ -979,7 +979,7 @@ def parse_encoded_annotation(lex_object,content,is_root=False):
 	for i in xrange(0,size):
 		n ,name_idx = get_uleb128(content[offset:5+offset])
 		if i == 0 and is_root:
-			print lex_object.getstringbyid(name_idx),
+			print lex_object.get_string_by_id(name_idx),
 		offset += n
 		offset += parse_encoded_value(lex_object,content[offset:],is_root)
 	return offset
@@ -1093,7 +1093,7 @@ class dex_parser:
 			classid= self.m_class_name_id[classname]
 			field_list = dex_class(self,classid).create_header_file_for_cplusplus(self)
 		pass
-	def getstringbyid(self,stridx):
+	def get_string_by_id(self,stridx):
 		if stridx >= self.m_stringIdsSize:
 			return ""
 		return self.string_table[stridx]
@@ -1111,10 +1111,28 @@ class dex_parser:
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI",self.m_content,offset)
 		classname = self.gettypename(class_idx)
 		classname = shorty_decode(classname)
-		funcname = self.getstringbyid(name_idx)
+		funcname = self.get_string_by_id(name_idx)
 		if not hidden_classname:
 			classname = ""
-		return self.getprotofullname(proto_idx,classname,funcname)
+		return self.get_proto_fullname(proto_idx,classname,funcname)
+
+	def get_binja_method_fullname(self, methodId, hidden_classname=False):
+		if methodId >= self.m_methodIdsSize:
+			return ""
+		offset = self.m_methodIdsOffset + methodId * struct.calcsize("HHI")
+		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
+
+		classname = self.gettypename(class_idx)
+		classname = shorty_decode(classname)
+		funcname = self.get_string_by_id(name_idx)
+		if not hidden_classname:
+			classname = ""
+
+		binja_proto_fullname = self.get_binja_proto_fullname(proto_idx, classname, funcname)
+		log(3, "classname: %s, funcname: %s, proto_fullname: %s" % (classname, funcname, binja_proto_fullname))
+
+		return binja_proto_fullname
+
 	def getmethodfullname1(self,methodid,parameter_list=[],hidden_classname=False):
 		if methodid >= self.m_methodIdsSize:
 			return ""
@@ -1122,10 +1140,10 @@ class dex_parser:
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI",self.m_content,offset)
 		classname = self.gettypename(class_idx)
 		classname = shorty_decode(classname)
-		funcname = self.getstringbyid(name_idx)
+		funcname = self.get_string_by_id(name_idx)
 		if not hidden_classname:
 			classname = ""
-		return self.getprotofullname1(proto_idx,classname,parameter_list,funcname)
+		return self.get_proto_fullname1(proto_idx,classname,parameter_list,funcname)
 	def getfieldname(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
@@ -1140,7 +1158,7 @@ class dex_parser:
 		name = self.gettypename(type_idx)
 		name = shorty_decode(name)
 		index = name.rfind(".")
-		fname = self.getstringbyid(name_idx)
+		fname = self.get_string_by_id(name_idx)
 		return "%s %s"%(name[index+1:],fname)
 	def getfieldfullname2(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
@@ -1149,7 +1167,7 @@ class dex_parser:
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI",self.m_content,offset)
 		typename = self.gettypename(type_idx)
 		typename = shorty_decode(typename)
-		fieldname = self.getstringbyid(name_idx)
+		fieldname = self.get_string_by_id(name_idx)
 		return typename,fieldname
 	def getfieldfullname(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
@@ -1158,7 +1176,7 @@ class dex_parser:
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI",self.m_content,offset)
 		name = self.gettypename(type_idx)
 		name = shorty_decode(name)
-		fname = self.getstringbyid(name_idx)
+		fname = self.get_string_by_id(name_idx)
 		return "%s %s"%(name,fname)
 	def getfieldtypename(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
@@ -1183,7 +1201,7 @@ class dex_parser:
 		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I",self.m_content,offset)
 		return self.string_table[shorty_idx]
-	def getprotofullname(self,protoid,classname,func_name):
+	def get_proto_fullname(self,protoid,classname,func_name):
 		if protoid >= self.m_protoIdsSize:
 			return ""
 		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
@@ -1211,7 +1229,46 @@ class dex_parser:
 				n += 1
 		retstr += ")"
 		return retstr
-	def getprotofullname1(self,protoid,classname,parameter_list,func_name):
+
+	def get_binja_proto_fullname(self, protoid, classname, func_name):
+		if protoid >= self.m_protoIdsSize:
+			return ""
+		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
+		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I",self.m_content,offset)
+
+		 # ignore the return type for now
+		#retname = self.gettypename(return_type_idx)
+		#retname = shorty_decode(retname)
+		#retstr =  retname+" "
+
+		retstr =  ""
+
+		if len(classname)==0:
+			retstr += "%s" % func_name
+		else:
+			retstr += "%s::%s" % (classname,func_name)
+
+		'''
+		# ignore parameters - at least for the function view thingy
+		if parameters_off != 0:
+			offset = parameters_off
+			size, = struct.unpack_from("I",self.m_content,offset)
+			offset += struct.calcsize("I")
+			n = 0
+			for i in xrange(0,size):
+				type_idx, = struct.unpack_from("H",self.m_content,offset)
+				offset += struct.calcsize("H")
+				arg = self.gettypename(type_idx)
+				arg = shorty_decode(arg)
+				if n != 0:
+					retstr += ","
+				retstr+=arg
+				n += 1
+		retstr += ")"
+		'''
+		return retstr
+
+	def get_proto_fullname1(self,protoid,classname,parameter_list,func_name):
 		index = classname.rfind(".")
 		classname = classname[index+1:]
 		if protoid >= self.m_protoIdsSize:
