@@ -11,6 +11,8 @@ import os
 from leb128 import *
 from dex_ints import *
 
+LOGGING = False # if this is False, it won't add the functions..
+
 DEX_MAGIC = "dex\n"
 DEX_OPT_MAGIC = "dey\n"
 #DEX_MAGIC = "dex\x0a035\x00" # WTF, why is this listed twice
@@ -34,6 +36,9 @@ DEX NOTES - design problems
 * they use "size" when "count" for map_item
 '''
 
+# index is the classId??
+dex_classes = {}
+
 # sizes of fields
 # https://docs.python.org/2/library/struct.html
 # https://gist.github.com/ezterry/1239615
@@ -47,11 +52,11 @@ class dex_encode_field:
 		#print "%-20s%08x %s"%("field_idx_diff",self.m_field_idx_diff,name)
 		flags = dex_object.get_access_flags(self.m_access_flags)
 		#print "%-20s%08x %s"%("access_flags",self.m_access_flags,flags)
-		print "%s "%flags,
+		if LOGGING: print "%s "%flags,
 		dex_object.FieldId_list[self.m_field_idx_diff].printf_l(dex_object)
 
 class method_code:
-	def __init__(self,dex_object,offset):
+	def __init__(self, dex_object, offset):
 		format = "H"
 		self.registers_size, = struct.unpack_from(format,dex_object.m_content,offset)
 		offset += struct.calcsize(format)
@@ -76,23 +81,25 @@ class method_code:
 		else:
 			self.tries = offset
 			self.handlers = offset + self.tries_size * struct.calcsize("I2H")
+
 	def get_param_list(self,dex_object):
 		if self.debug_info_off != 0:
 			return parse_debug_info_method_parameter_list(dex_object,self.debug_info_off)
 		return []
 	def printf(self,dex_object,prefix=""):
-		print "%s%-20s:%08x:%10d"%(prefix,"registers_size",self.registers_size,self.registers_size)
-		print "%s%-20s:%08x:%10d"%(prefix,"insns_size",self.insns_size,self.insns_size)
-		print "%s%-20s:%08x:%10d"%(prefix,"debug_info_off",self.debug_info_off,self.debug_info_off)
-		print "%s%-20s:%08x:%10d"%(prefix,"ins_size",self.ins_size,self.ins_size)
-		print "%s%-20s:%08x:%10d"%(prefix,"outs_size",self.outs_size,self.outs_size)
-		print "%s%-20s:%08x:%10d"%(prefix,"tries_size",self.tries_size,self.tries_size)
-		print "%s%-20s:%08x:%10d"%(prefix,"insns",self.insns,self.insns)
-		print "%s%-20s:%08x:%10d"%(prefix,"tries",self.tries,self.tries)
-		print "%s%-20s:%08x:%10d"%(prefix,"handlers",self.handlers,self.handlers)
+		if LOGGING:
+			print "%s%-20s:%08x:%10d"%(prefix,"registers_size",self.registers_size,self.registers_size)
+			print "%s%-20s:%08x:%10d"%(prefix,"insns_size",self.insns_size,self.insns_size)
+			print "%s%-20s:%08x:%10d"%(prefix,"debug_info_off",self.debug_info_off,self.debug_info_off)
+			print "%s%-20s:%08x:%10d"%(prefix,"ins_size",self.ins_size,self.ins_size)
+			print "%s%-20s:%08x:%10d"%(prefix,"outs_size",self.outs_size,self.outs_size)
+			print "%s%-20s:%08x:%10d"%(prefix,"tries_size",self.tries_size,self.tries_size)
+			print "%s%-20s:%08x:%10d"%(prefix,"insns",self.insns,self.insns)
+			print "%s%-20s:%08x:%10d"%(prefix,"tries",self.tries,self.tries)
+			print "%s%-20s:%08x:%10d"%(prefix,"handlers",self.handlers,self.handlers)
 
 		# FIXME: currently not printing "parse_instruction"
-		parse_instruction(dex_object.m_content[self.insns:self.insns+self.insns_size*2], self.insns, dex_object)
+		#parse_instruction(dex_object.m_content[self.insns:self.insns+self.insns_size*2], self.insns, dex_object)
 		#if self.debug_info_off != 0:
 		#	parse_debug_info(dex_object,self.debug_info_off)
 
@@ -106,25 +113,36 @@ class dex_encode_method:
 			self.m_code_item = method_code(dex_object,code_off)#dex_object.m_content[code_off:])
 	def printf(self,dex_object):
 		name = dex_object.gettypenamebyid(self.m_method_idx_diff)
-		print "%-20s%08x %s"%("m_method_idx_diff",self.m_method_idx_diff,name)
+		if LOGGING: print "%-20s%08x %s"%("m_method_idx_diff",self.m_method_idx_diff,name)
 		flags = dex_object.get_access_flags(self.m_access_flags)
-		print "%-20s%08x %s"%("access_flags",self.m_access_flags,flags)
-		print "%-20s%08x %d"%("code_off",self.m_code_off,self.m_code_off)
+		if LOGGING: print "%-20s%08x %s"%("access_flags",self.m_access_flags,flags)
+		if LOGGING: print "%-20s%08x %d"%("code_off",self.m_code_off,self.m_code_off)
 		if self.m_code_off !=0:
 			self.m_code_item.printf(dex_object)
 	def printf_l(self,dex_object,is_virtual):
 		flags = dex_object.get_access_flags(self.m_access_flags)
 		if is_virtual:
 			flags += " virtual"
-		print "%48s"%flags,
+		if LOGGING: print "%48s"%flags,
 		dex_object.MethodId_list[self.m_method_idx_diff].printf(dex_object)
 		if self.m_code_off!=0:
 			self.m_code_item.printf(dex_object)
 
 
 class dex_class:
-	def __init__(self,dex_object,classid):
-		if classid >= dex_object.m_classDefSize:
+	def __init__(self, dex_object, classid):
+		# dex_object is type "instance"???
+		#log(3, "type(dex_object): " + str(type(dex_object)))
+		#print dir(dex_object)
+		#return
+
+		# FIXME: seems wrong...
+		#if classid not in dex_classes:
+		#	dex_classes[classid] = dex_object
+			# dex_classes[classid]["min_addr"] = 0x0
+			# dex_classes[classid]["min_addr"] = 0x0
+
+		if classid >= dex_object.class_def_size:
 			return ""
 		offset = dex_object.m_classDefOffset + classid * struct.calcsize("8I")
 		self.offset = offset
@@ -283,27 +301,28 @@ class dex_class:
 		f.write(str1)
 		f.close()
 		return typelist
-	def printf(self,dex_object):
+	def printf(self, dex_object):
 		#if dex_object.gettypename(self.thisClass)!="Landroid/Manifest$permission;":
 		#	return
-		print "#"*150
-		print "%-20s:%08x:%10d  %s"%("thisClass",self.thisClass,self.thisClass,dex_object.gettypename(self.thisClass))
-		print "%-20s:%08x:%10d  %s"%("superClass",self.superClass,self.superClass,dex_object.gettypename(self.superClass))
-		print "%-20s:%08x:%10d"%("modifiers",self.modifiers,self.modifiers)
-		print "%-20s:%08x:%10d"%("offset",self.offset,self.offset)
-		print "%-20s:%08x:%10d"%("annotationsOff",self.annotationsOff,self.annotationsOff)
-		print "%-20s:%08x:%10d"%("numStaticFields",self.numStaticFields,self.numStaticFields)
-		print "%-20s:%08x:%10d"%("numInstanceFields",self.numInstanceFields,self.numInstanceFields)
-		print "%-20s:%08x:%10d"%("numDirectMethods",self.numDirectMethods,self.numDirectMethods)
-		print "%-20s:%08x:%10d"%("numVirtualMethods",self.numVirtualMethods,self.numVirtualMethods)
-		print "%-20s:%08x:%10d"%("classDataOff",self.classDataOff,self.classDataOff)
-		print "%-20s:%08x:%10d"%("interfacesOff",self.interfacesOff,self.interfacesOff)
-		print "%-20s:%08x:%10d"%("interfacesSize",self.interfacesSize,self.interfacesSize)
+		if LOGGING:
+			print "#"*150
+			print "%-20s:%08x:%10d  %s"%("thisClass",self.thisClass,self.thisClass,dex_object.gettypename(self.thisClass))
+			print "%-20s:%08x:%10d  %s"%("superClass",self.superClass,self.superClass,dex_object.gettypename(self.superClass))
+			print "%-20s:%08x:%10d"%("modifiers",self.modifiers,self.modifiers)
+			print "%-20s:%08x:%10d"%("offset",self.offset,self.offset)
+			print "%-20s:%08x:%10d"%("annotationsOff",self.annotationsOff,self.annotationsOff)
+			print "%-20s:%08x:%10d"%("numStaticFields",self.numStaticFields,self.numStaticFields)
+			print "%-20s:%08x:%10d"%("numInstanceFields",self.numInstanceFields,self.numInstanceFields)
+			print "%-20s:%08x:%10d"%("numDirectMethods",self.numDirectMethods,self.numDirectMethods)
+			print "%-20s:%08x:%10d"%("numVirtualMethods",self.numVirtualMethods,self.numVirtualMethods)
+			print "%-20s:%08x:%10d"%("classDataOff",self.classDataOff,self.classDataOff)
+			print "%-20s:%08x:%10d"%("interfacesOff",self.interfacesOff,self.interfacesOff)
+			print "%-20s:%08x:%10d"%("interfacesSize",self.interfacesSize,self.interfacesSize)
 		offset = self.interfacesOff + struct.calcsize("I")
 		for n in xrange(0,self.interfacesSize):
 			typeid, = struct.unpack_from("H",dex_object.m_content,offset)
 			offset += struct.calcsize("H")
-			print "\t\t"+ dex_object.gettypename(typeid)
+			if LOGGING: print "\t\t"+ dex_object.gettypename(typeid)
 
 		print "%-20s:%08x:%10d"%("staticValuesOff",self.staticValuesOff,self.staticValuesOff)
 		print "%-20s:%08x:%10d  %s"%("sourceFileIdx",self.sourceFileIdx,self.sourceFileIdx,dex_object.get_string_by_id(self.sourceFileIdx))
@@ -359,7 +378,8 @@ class dex_class:
 				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)
 				fn.name = dex_object.get_binja_method_fullname(method_idx, True)
 
-				method_code(dex_object, code_off).printf(dex_object,"\t\t")
+				if LOGGING:
+					method_code(dex_object, code_off).printf(dex_object,"\t\t")
 
 		method_idx = 0
 		for i in xrange(0,self.numVirtualMethods):
@@ -378,7 +398,8 @@ class dex_class:
 				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)
 				fn.name = dex_object.get_binja_method_fullname(method_idx, True)
 
-				method_code(dex_object,code_off).printf(dex_object,"\t\t")
+				if LOGGING:
+					method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
 		print "================================================================================"
 		if self.annotationsOff != 0:
@@ -1076,15 +1097,15 @@ class dex_parser:
 		for i in xrange(0,self.m_protoIdsSize):
 			print self.getprotoname(i)
 		'''
-		for i in xrange(0,self.m_classDefSize):
+		for i in xrange(0,self.class_def_size):
 			str1 = self.getclassname(i)
 			self.m_class_name_id[str1] = i
-		for i in xrange(0,self.m_classDefSize):
+		#for i in xrange(0,self.class_def_size):
 			dex_class(self,i).printf(self)
 			pass
 			#self.getclass(i)
 	def create_all_header(self):
-		for i in xrange(0,self.m_classDefSize):
+		for i in xrange(0,self.class_def_size):
 			str1 = self.getclassname(i)
 			self.create_cpp_header(str1)
 	def create_cpp_header(self,classname="Landroid/app/Activity;"):
@@ -1306,7 +1327,7 @@ class dex_parser:
 		retstr += ")"
 		return retstr
 	def getclassmethod_count(self,classid):
-		if classid >= self.m_classDefSize:
+		if classid >= self.class_def_size:
 			return ""
 		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I",self.m_content,offset)
@@ -1324,7 +1345,7 @@ class dex_parser:
 		return 0
 	def getclassmethod(classid,method_idx):
 		count = 0
-		if classid >= self.m_classDefSize:
+		if classid >= self.class_def_size:
 			return ""
 		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I",self.m_content,offset)
@@ -1358,7 +1379,7 @@ class dex_parser:
 
 
 	def getclassname(self,classid):
-		if classid >= self.m_classDefSize:
+		if classid >= self.class_def_size:
 			return ""
 		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I",self.m_content,offset)
@@ -1434,7 +1455,7 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.m_methodIdsOffset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_classDefSize, = struct.unpack_from(format,content,offset)
+		self.class_def_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_classDefOffset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
@@ -1521,7 +1542,7 @@ class dex_parser:
 		return value+":",flags
 	def getclass(self,classid):
 		'''
-		if classid >= self.m_classDefSize:
+		if classid >= self.class_def_size:
 			return ""
 		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
 		#typeid,superclass,modifiers,numSFields,numIFields,numVMethod,numDMethod,numSMethod,ClassDataOff,interfaceOff,annotationsOff,staticValuesOff,sourceFileIdx,= struct.unpack_from("2I6H5I",self.m_content,offset)

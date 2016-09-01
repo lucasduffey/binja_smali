@@ -35,112 +35,124 @@ list1 = ['fmt10t', 'fmt10x', 'fmt11n', 'fmt11x', 'fmt12x', 'fmt20t', 'fmt21c', '
  'fmt21s', 'fmt21t', 'fmt22b', 'fmt22c', 'fmt22s', 'fmt22t', 'fmt22x', 'fmt23x',
  'fmt30t', 'fmt31c', 'fmt31i', 'fmt31t', 'fmt32x', 'fmt35c', 'fmt3rc', 'fmt51l']
 
-def parse_FMT10X(buffer,dex_object,pc_point,offset):
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1])
+def parse_FMT10X(dex_object, buffer, offset):
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1])
 
-def parse_FMT10T(buffer,dex_object,pc_point,offset):
+def parse_FMT10T(dex_object, buffer, offset):
 	val, = struct.unpack_from("b",buffer,1)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"%04x"%(val+offset))
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%04x"%(val+offset))
 
-def parse_FMT11N(buffer,dex_object,pc_point,offset):
+def parse_FMT11N(dex_object, buffer, offset):
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%(ord(buffer[1])&0xf),"%d"%((ord(buffer[1])>>4)&0xf))
 
+def parse_FMT11X(dex_object, buffer, offset):
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]))
 
-def parse_FMT11X(buffer,dex_object,pc_point,offset):
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]))
+def parse_FMT12X(dex_object, buffer, offset):
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%(ord(buffer[1])&0x0f),"v%d"%((ord(buffer[1])>>4)&0xf))
 
-def parse_FMT12X(buffer,dex_object,pc_point,offset):
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%(ord(buffer[1])&0x0f),"v%d"%((ord(buffer[1])>>4)&0xf))
+def parse_FMT20T(dex_object, buffer, offset):
+	v, = struct.unpack_from("h",buffer,2)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%04x"%(v+offset))
 
-def parse_FMT20T(buffer,dex_object,pc_point,offset):
-	v ,= struct.unpack_from("h",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"%04x"%(v+offset))
-
-def parse_FMT21C(buffer,dex_object,pc_point,offset):
+def parse_FMT21C(dex_object, buffer, offset):
 	val = ord(buffer[0])
 
 	v, = struct.unpack_from("H",buffer,2)
 	arg1 = "@%d"%v
 	if val == 0x1a:
-		arg1 = "\"%s\""%dex_object.get_string_by_id(v)
+		# FIXME: need to figure out how to get dex_object properly
+		arg1 = "unimplemented"
+		#arg1 = "\"%s\""%dex_object.get_string_by_id(v)
 	elif val in [0x1c,0x1f,0x22]:
-		arg1 = "type@%s"%dex_object.gettypename(v)
+		# FIXME: need to figure out how to get dex_object properly
+		#arg1 = "type@%s"%dex_object.gettypename(v) # FIXME: replace with gettypenamebyid?
+		arg1 = "type@unimplemented"
 	else:
-		arg1 = "field@%s  //%s"%(dex_object.getfieldname(v),dex_object.getfieldfullname(v))
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
+		# FIXME: need to figure out how to get dex_object properly
+		arg1 = "field@unimplemented"
+		#arg1 = "field@%s  //%s" % (dex_object.getfieldname(v),dex_object.getfieldfullname(v))
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
 
-def parse_FMT21H(buffer,dex_object,pc_point,offset):
+def parse_FMT21H(dex_object, buffer, offset):
 	v, = struct.unpack_from("H",buffer,2)
 	if ord(buffer[1]) == 0x19:
-		arg1 = "@%d000000000000"%v
+		arg1 = "@%d000000000000" % v
 	else:
-		arg1 = "@%d0000"%v
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
+		arg1 = "@%d0000" % v
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
 
-def parse_FMT21S(buffer,dex_object,pc_point,offset):
+def parse_FMT21S(dex_object, buffer, offset):
 	v, = struct.unpack_from("H",buffer,2)
 	arg1 = "%d"%v
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
 
-def parse_FMT21T(buffer,dex_object,pc_point,offset):
+def parse_FMT21T(dex_object, buffer, offset):
 	v, = struct.unpack_from("h",buffer,2)
 	arg1 = "%04x"%(v+offset)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),arg1)
 
-def parse_FMT22B(buffer,dex_object,pc_point,offset):
+def parse_FMT22B(dex_object, buffer, offset):
 	cc,bb,=struct.unpack_from("Bb",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),"v%d"%bb,"%d"%cc)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),"v%d"%bb,"%d"%cc)
 
-def parse_FMT22C(buffer,dex_object,pc_point,offset):
+def parse_FMT22C(dex_object, buffer, offset):
 	cccc,=struct.unpack_from("H",buffer,2)
+
 	if ord(buffer[0]) == 0x20 or ord(buffer[0]) == 0x23:
-		prefix="type@%s"%(dex_object.gettypename(cccc))
+		# FIXME: need to figure out how to get dex_object properly
+		#prefix="type@%s"%(dex_object.gettypename(cccc))
+		prefix="type@unimplemented"
+		pass
 	else:
-		prefix="field@%s  //%s"%(dex_object.getfieldname(cccc),dex_object.getfieldfullname(cccc))
+		# FIXME: need to figure out how to get dex_object properly
+		#prefix="field@%s  //%s"%(dex_object.getfieldname(cccc),dex_object.getfieldfullname(cccc))
+		prefix="field@unimplemented"
+		pass
 
-	bb = ord(buffer[1])>>4
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%s"%prefix)
+	bb = ord(buffer[1]) >> 4
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%s"%prefix)
 
-def parse_FMT22S(buffer,dex_object,pc_point,offset):
-	bb = ord(buffer[1])>>4
-	cccc,=struct.unpack_from("h",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%d"%cccc)
-
-def parse_FMT22T(buffer,dex_object,pc_point,offset):
+def parse_FMT22S(dex_object, buffer, offset):
 	bb = ord(buffer[1])>>4
 	cccc,=struct.unpack_from("h",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%04x"%(cccc+offset))
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%d"%cccc)
 
-def parse_FMT22X(buffer,dex_object,pc_point,offset):
+def parse_FMT22T(dex_object, buffer, offset):
+	bb = ord(buffer[1])>>4
+	cccc,=struct.unpack_from("h",buffer,2)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%(ord(buffer[1])&0xf),"v%d"%((ord(buffer[1])>>4)&0xf),"%04x"%(cccc+offset))
+
+def parse_FMT22X(dex_object, buffer, offset):
 	v, = struct.unpack_from("h",buffer,2)
 	arg1 = "v%d"%v
-	return ( dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),arg1)
+	return ( dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),arg1)
 
-def parse_FMT23X(buffer,dex_object,pc_point,offset):
+def parse_FMT23X(dex_object, buffer, offset):
 	cc,bb,=struct.unpack_from("Bb",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"v%d"%bb,"v%d"%cc)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"v%d"%bb,"v%d"%cc)
 
-def parse_FMT30T(buffer,dex_object,pc_point,offset):
+def parse_FMT30T(dex_object, buffer, offset):
 	aaaaaaaa,=struct.unpack_from("i",buffer,2)
-	return dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "+%x"%(aaaaaaaa+offset)
+	return dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "+%x"%(aaaaaaaa+offset)
 
-def parse_FMT31C(buffer,dex_object,pc_point,offset):
+def parse_FMT31C(dex_object, buffer, offset):
 	bbbbbbbb,=struct.unpack_from("I",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"+%d"%bbbbbbbb)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"+%d"%bbbbbbbb)
 
-def parse_FMT31I(buffer,dex_object,pc_point,offset):
+def parse_FMT31I(dex_object, buffer, offset):
 	bbbbbbbb,=struct.unpack_from("I",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"%d" % bbbbbbbb)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"%d" % bbbbbbbb)
 
-def parse_FMT31T(buffer,dex_object,pc_point,offset):
+def parse_FMT31T(dex_object, buffer, offset):
 	bbbbbbbb,=struct.unpack_from("i",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"string@%d" % bbbbbbbb)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"string@%d" % bbbbbbbb)
 
-def parse_FMT32X(buffer,dex_object,pc_point,offset):
+def parse_FMT32X(dex_object, buffer, offset):
 	aaaa,bbbb,=struct.unpack_from("hh",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1], "v%d" % aaaa, "v%d" % bbbb)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d" % aaaa, "v%d" % bbbb)
 
-def parse_FMT35C(buffer,dex_object,pc_point,offset):
+def parse_FMT35C(dex_object, buffer, offset):
 	A = ord(buffer[1])>>4
 	G = ord(buffer[1])&0xf
 	D = ord(buffer[4])>>4
@@ -148,35 +160,39 @@ def parse_FMT35C(buffer,dex_object,pc_point,offset):
 	F = ord(buffer[5])>>4
 	E = ord(buffer[5])&0xf
 	bbbb,=struct.unpack_from("H",buffer,2)
+
+	# FIXME: figure out how to pass "dex_object"
 	if ord(buffer[0]) == 0x24:
-		prefix="type@%s"%(dex_object.get_string_by_id(bbbb))
+		#prefix="type@%s"%(dex_object.get_string_by_id(bbbb))
+		prefix="type@unimplemented"
 	else:
-		prefix="meth@%s  //%s"%(dex_object.getmethodname(bbbb),dex_object.getmethodfullname(bbbb,True))
-		pass
+		#prefix="meth@%s  //%s"%(dex_object.getmethodname(bbbb), dex_object.getmethodfullname(bbbb,True)) # FIXME: getmethodfullname isn't inheirited by dexView stuff
+		prefix="meth@unimplemented"
+
 	if A == 5:
-		return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"v%d"%F,"v%d"%G,"%s"%(prefix))
+		return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"v%d"%F,"v%d"%G,"%s"%(prefix))
 	elif A == 4:
-		return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"v%d"%F,"%s"%(prefix))
+		return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"v%d"%F,"%s"%(prefix))
 	elif A == 3:
-		return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"%s"%(prefix))
+		return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"%s"%(prefix))
 	elif A == 2:
-		return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"%s"%(prefix))
+		return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"%s"%(prefix))
 	elif A == 1:
-		return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%C,"%s"%(prefix))
+		return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%C,"%s"%(prefix))
 	elif A == 0:
-		return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"%s"%(prefix))
+		return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%s"%(prefix))
 	else:
 		return (dex_decode[ord(buffer[0])][4],"error .......")
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"v%d"%F,"v%d"%G,"%s"%(prefix))
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%C,"v%d"%D,"v%d"%E,"v%d"%F,"v%d"%G,"%s"%(prefix))
 
-def parse_FMT3RC(buffer,dex_object,pc_point,offset):
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1])
+def parse_FMT3RC(dex_object, buffer, offset):
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1])
 
-def parse_FMT51L(buffer,dex_object,pc_point,offset):
+def parse_FMT51L(dex_object, buffer, offset):
 	if len(buffer) <10:
 		return (1,"")
-	bb=struct.unpack_from("q",buffer,2)
-	return (dex_decode[ord(buffer[0])][4],dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),"%d"%bb)
+	bb = struct.unpack_from("q", buffer, 2)
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]),"%d"%bb)
 
 func_point = [parse_FMT10T, parse_FMT10X, parse_FMT11N, parse_FMT11X, parse_FMT12X, parse_FMT20T, parse_FMT21C, parse_FMT21H, parse_FMT21S, parse_FMT21T, parse_FMT22B, parse_FMT22C, parse_FMT22S, parse_FMT22T, parse_FMT22X, parse_FMT23X, parse_FMT30T, parse_FMT31C, parse_FMT31I, parse_FMT31T, parse_FMT32X, parse_FMT35C, parse_FMT3RC, parse_FMT51L]
 
@@ -216,7 +232,7 @@ def parse_instruction(buffer, offset, dex_object):
 
 		# does this get the initial "function" opcode?
 		fn = dex_decode[op][3] # returns a variable like "FMT10X" which is an int - I think it indicates how it will be parsed
-		val = func_point[fn](buffer[start:], dex_object, offset+start, start/2)  # ONLY TIME dex_object is used
+		val = func_point[fn](dex_object, buffer[start:], start/2)  # ONLY TIME dex_object is used
 		str = ""
 		m = 0
 		for x in buffer[start:start+2*val[0]]:

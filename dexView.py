@@ -845,20 +845,34 @@ class DEX(Architecture):
 		op = ord(data[0]) # is this really the op (opcode)? the first byte that indicates the "function" to be performed?
 
 		fn = dex_decode[op][3]
-		val = func_point[fn](data, dex_object, offset+start, start/2) # TODO: how can I pass the dex_object...
-		# val = func_point[fn](data, dex_object, offset+start, start/2) # removed "offset+start"
-		# 1st arg is either data, or data[2:]
-		log(3, val)
+		start = len(data) # I'm not sure why this isn't just passed as "dex_length"
+
+		# FIXME: dex_object is not defined
+		val = func_point[fn](global_dex, data, start/2) # FIXME TODO: how can I pass the dex_object...
+
+		results = []
+		val = val[2:] # the 2nd arg we're skipping is the opcode one which my code already does
+
+		for idx, item in enumerate(val):
+			if item in RegisterNames:
+				results += [InstructionTextToken(RegisterToken, item)]
+			else:
+				results += [InstructionTextToken(TextToken, item)]
+
+			if idx < len(val) - 1:
+				results += [InstructionTextToken(TextToken, ", ")]
+
 
 		# FIXME: current crash
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
 
 		tokens = []
 		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr)) # FIXME: error? this is "move" for example??
-		tokens += OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
+		tokens += results #OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
 
 		return tokens, length
 
+global_dex = ""
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers
@@ -879,7 +893,10 @@ class DEXView(BinaryView):
 		#log(4, type(raw_binary))
 
 		#log(3, raw_binary[0:4])
-		dex = dex_parser(self, raw_binary)
+
+		self.dex = dex_parser(self, raw_binary)
+		#global_dex = self.dex
+
 		#dex.printf(dex)
 		#dex.create_all_header()
 
