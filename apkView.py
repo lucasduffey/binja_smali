@@ -6,9 +6,8 @@ import zipfile
 import tempfile
 import shutil
 
-import dexView # TODO: remove this line?
-from dexView import *
-from dexFile import DexFile
+#import dexView # TODO: remove this line?
+#from dexView import *
 
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames

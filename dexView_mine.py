@@ -1,5 +1,5 @@
 from binaryninja import *
-from dexFile import dex_parser
+from dexFile import DexFile, four_byte_align, dex_class
 import struct
 import traceback
 import hashlib # to validate SHA1 signature
@@ -865,21 +865,127 @@ class DEXView(BinaryView):
 
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
-		#log(4, type(raw_binary))
 
-		#log(3, raw_binary[0:4])
-		dex = dex_parser(self, raw_binary)
-		#dex.printf(dex)
-		#dex.create_all_header()
+		self.m_class_name_id = {} # I don't like this name
 
-		#self.m_class_name_id = {} # I don't like this name
-
-		#self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
-		#self.dex_file.header_item() # for some reason this is getting regisered with "raw" view??
-		#self.dex_file.class_defs() # instantiate self.class_defs_size
+		self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
+		self.dex_file.header_item() # for some reason this is getting regisered with "raw" view??
+		self.dex_file.class_defs() # instantiate self.class_defs_size
 
 
-		#	data.create_user_function(Architecture['dex'].standalone_platform, code_offset)
+		for i in xrange(self.dex_file.class_defs_size): # was class_def_size
+			str1 = self.dex_file.get_class_name(i)
+			self.dex_file.m_class_name_id[str] = i
+			dex_class(self.dex_file, i).printf(self.dex_file) # WHAT....
+
+
+		# map_off
+		map_list = self.dex_file.map_list() # this contains everything - but still need to finish map_list function...
+
+		strings = map_list["strings"]
+
+		codes = map_list["codes"] # now a dict, key is offset to
+		class_data_items = map_list["class_data_items"]
+		method_id_items = map_list["method_id_items"] # I'm not sure how these are used..
+		method_list = self.dex_file.method_ids() # FIXME: check the function. this will be used to get the method names :) TODO # FIXME: method_list also provides class_idx, proto_idx
+		string_list = self.dex_file.string_ids() # FIXME: check the function
+
+		# map_list - is literally the best way to do stuff...
+		# self.dex_file.map_list() # it's called in dex_file init routine
+		#print self.dex_file.strings # WORKING YAY
+
+
+		# add all the methods
+		log(3, "len(self.dex_file.codes): %i" % len(codes))
+
+		# SEEMS OK
+		#'''
+		for code_offset, code_item in codes.iteritems():
+			# might be useful
+			# 	* code_item["registers_size"] - the number of registers used by this code
+			# 	* code_item["ins_size"] - the number of words of incoming arguments to the method that this code is for
+			data.create_user_function(Architecture['dex'].standalone_platform, code_offset)
+
+			#fn = data.get_function_at(Architecture['dex'].standalone_platform, code_offset) # or "code_off"
+			#if fn != None:
+				# THIS IS AN ASSUMPTION
+				# FIXME: PRETTY SURE THIS DOESN'T MAP THIS SIMPLY
+				#fn.name = method_id_items[idx]["name"]
+			#	pass
+			#elif fn == None:
+			#	log(3, "failed getting address of suspected code")
+		#'''
+
+		'''
+		for idx, method_id_item in enumerate(method_id_items):
+			name_idx = method_id_item["name_idx"]
+
+			method_id_items[idx]["name"] = strings[name_idx]
+		'''
+
+		'''
+		# time
+		for class_data_item in class_data_items:
+			encoded_methods = class_data_item["direct_methods"] + class_data_item["virtual_methods"]
+
+			# FIXME: everything hereafter may be wrong...
+			for encoded_method in encoded_methods:
+				method_idx_diff = encoded_method["method_idx_diff"] # use this to get (class_idx, proto_idx, name_idx) - FIXME: this may be wrong...
+
+				log(3, "%s: TODO offset" % self.dex_file.get_method_name(method_idx_diff))
+
+				code_off = encoded_method["code_off"]
+				if code_off == 0:
+					# method is either abstract or native
+					continue
+
+				code_item = self.dex_file.read_code_item(code_off) #
+				instructions_off = code_item["insns_off"]
+
+				name_idx = method_list[method_idx_diff]["name_idx"]
+				# method_list[method_idx_diff]["class_idx"] # TODO
+				# method_list[method_idx_diff]["proto_idx"] # TODO
+
+
+				print "="*100
+				log(3, "%s: %x" % (strings[name_idx], instructions_off))
+
+				# need to determine if this function has been added
+				fn = data.get_function_at(Architecture['dex'].standalone_platform, instructions_off)
+				#log(4, "===================================")
+				#log(4, fn)
+				#log(4, "===================================")
+				if fn != None:
+					#direct_method["method_idx_diff"] # need to determine if this function has been added
+					fn.name = strings[name_idx]
+				else:
+					data.create_user_function(Architecture['dex'].standalone_platform, instructions_off)
+					log(3, "code_off is not currently listed as a function...")
+
+				pass
+		'''
+		'''
+		method_id_item
+			class_idx - index into type_ids list for definer of method - must be class or aray type
+			proto_idx - index into proto_ids list for proto of this method
+			name_ids - index ito string_ids list for name of method
+
+		class_data_item
+			static_fields_size
+			instance_fields_size
+			direct_methods_size
+			virtual_methods_size
+			static_fields	encoded_field[static_fields_size]
+			instance_fields	encoded_field[instance_fields_size]
+			direct_methods	encoded_method[direct_methods_size]
+				method_idx_diff **
+				access_flags
+				code_off **
+			virtual_methods	encoded_method[virtual_methods_size]
+				method_idx_diff **
+				access_flags
+				code_off **
+		'''
 
 
 	@classmethod
