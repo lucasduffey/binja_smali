@@ -55,7 +55,7 @@ def parse_FMT21C(buffer,dex_object,pc_point,offset):
 	v, = struct.unpack_from("H",buffer,2)
 	arg1 = "@%d"%v
 	if val == 0x1a:
-		arg1 = "\"%s\""%dex_object.getstringbyid(v)
+		arg1 = "\"%s\""%dex_object.get_string_by_id(v)
 	elif val in [0x1c,0x1f,0x22]:
 		arg1 = "type@%s"%dex_object.gettypename(v)
 	else:
@@ -132,7 +132,7 @@ def parse_FMT35C(buffer,dex_object,pc_point,offset):
 	E = ord(buffer[5])&0xf
 	bbbb,=struct.unpack_from("H",buffer,2)
 	if ord(buffer[0]) == 0x24:
-		prefix="type@%s"%(dex_object.getstringbyid(bbbb))
+		prefix="type@%s"%(dex_object.get_string_by_id(bbbb))
 	else:
 		prefix="meth@%s  //%s"%(dex_object.getmethodname(bbbb),dex_object.getmethodfullname(bbbb,True))
 		pass
