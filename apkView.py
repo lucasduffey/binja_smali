@@ -7,7 +7,7 @@ import tempfile
 import shutil
 
 #import dexView # TODO: remove this line?
-#from dexView import *
+from dexView import DEXViewBank, DEX # need to provide dexView
 
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames
@@ -18,6 +18,7 @@ class APKViewUpdateNotification(BinaryDataNotification):
 		self.view = view
 
 	# FIXME: don't trust - pulled from NES.py
+	'''
 	def data_written(self, view, offset, length):
 		addr = offset - self.view.rom_offset
 		while length > 0:
@@ -42,7 +43,7 @@ class APKViewUpdateNotification(BinaryDataNotification):
 	# FIXME: don't trust - pulled from NES.py
 		def data_removed(self, view, offset, length):
 			self.view.notify_data_written(0x8000, 0x8000)
-
+			'''
 # TODO: this will be used to carve out useful stuff
 class APK():
 	def __init__(self):
@@ -85,7 +86,7 @@ class APKView(BinaryView):
 
 			# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
 
-		dex_file = "classes.dex"
+		dex_file = "classes.dex" # there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
 
 
@@ -108,18 +109,12 @@ class APKView(BinaryView):
 		data.write(0, dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
 		data.remove(len(dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 
-
 		# FIXME
 		# FIXME: "write" will want to overwrite the ACTUAL FILE, when in "hex view" it really should show the file..
 		# FIXME
 
 		# FIXME: we don't want to overwrite the hex view - or do we? the real goal is to have "dalvik executable" mode point to something useful like OnCreate
 		# FIXME: obviously this ^^ isn't correct
-
-
-		#
-		# TODO: now I have to operate on the classes.dex
-		#
 
 		return True
 
@@ -134,33 +129,32 @@ class APKView(BinaryView):
 			return False
 
 		# FIXME
-		def perform_is_valid_offset(self, addr):
-			if (addr >= 0x8000) and (addr < 0x10000):
-				return True
-			return False
+		#def perform_is_valid_offset(self, addr):
+		#	if (addr >= 0x8000) and (addr < 0x10000):
+		#		return True
+		#	return False
 
 		# FIXME
 		def perform_read(self, addr, length):
-			return "" # FIXME
+			return self.data.read(addr, length)
 
 		# FIXME
-		def perform_write(self, addr, value):
-			pass
+		#def perform_write(self, addr, value):
+		#	pass
 
 		# FIXME
-		def perform_get_start(self):
-			return 0
-
-
-		# FIXME
-		def perform_get_length(self):
-			return 0x10000
-
-		def perform_is_executable(self):
-			return True
+		#def perform_get_start(self):
+		#	return 0
 
 		# FIXME
-		def perform_get_entry_point(self):
+		#def perform_get_length(self):
+		#	return 0x10000
+
+		#def perform_is_executable(self):
+		#	return True
+
+		# FIXME
+		#def perform_get_entry_point(self):
 			#return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
 			#return struct.unpack("<H", "APPLE")[0] # FIXME: being triggered - might crash it...
 
@@ -168,11 +162,10 @@ class APKView(BinaryView):
 			#print "apkBinja::perform_get_entry_point: ", global_DexFile.dataOff()
 			#return global_DexFile.dataOff() # unsure if correct
 
-			return 0 # currently this value will never be used, dexBinja will be used instead
+		#	return 0 # currently this value will never be used, dexBinja will be used instead
 
 # TODO: how do you get apk - to run APK(blah) against it?
 
-print("apkView")
 class APKViewBank(APKView):
 	name = "APK"
 	long_name = "android APK"
@@ -195,7 +188,9 @@ class APKViewBank(APKView):
 			res/
 			resources.arsc
 		'''
-
 APKViewBank.register()
 
-# Architecture.register
+
+# also register DEX - but how do
+#DEXViewBank.register()
+#DEX.register()

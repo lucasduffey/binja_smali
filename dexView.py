@@ -867,7 +867,7 @@ class DEX(Architecture):
 		#log(2, "perform_get_instruction_text is about to mess with tokens")
 
 		tokens = []
-		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr)) # FIXME: error? this is "move" for example??
+		tokens.append(InstructionTextToken(TextToken, "%-20s " % instr)) # FIXME: error? this is "move" for example??
 		tokens += results #OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
 
 		return tokens, length
@@ -890,21 +890,9 @@ class DEXView(BinaryView):
 
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
-		#log(4, type(raw_binary))
-
-		#log(3, raw_binary[0:4])
 
 		self.dex = dex_parser(self, raw_binary)
-		#global_dex = self.dex
 
-		#dex.printf(dex)
-		#dex.create_all_header()
-
-		#self.m_class_name_id = {} # I don't like this name
-
-		#self.dex_file = DexFile(raw_binary, raw_binary_length) # how do I make sure this has access to BinaryView... (to read from it)
-		#self.dex_file.header_item() # for some reason this is getting regisered with "raw" view??
-		#self.dex_file.class_defs() # instantiate self.class_defs_size
 
 
 		#	data.create_user_function(Architecture['dex'].standalone_platform, code_offset)
@@ -954,7 +942,7 @@ class DEXView(BinaryView):
 
 	# FIXME
 	def perform_get_length(self):
-		return 0x10000
+		return 0x10000 # FIXME: wrong
 
 	def perform_is_executable(self):
 		return True
