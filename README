@@ -1,9 +1,9 @@
 # installation - create a dexBinja_wrapper.py script in ~/.binaryninja/plugins/
 
-# dexBinja_wrapper.py
-from dexBinja.apkView import *
-from dexBinja.dexView import *
-from dexBinja.dexFile import *
+# smaliBinja_wrapper.py
+from smaliBinja.apkView import *
+from smaliBinja.dexView import *
+from smaliBinja.dexFile import *
 
 # about
 * apkView.py - carves out the dex file, then overwrites the view with it
