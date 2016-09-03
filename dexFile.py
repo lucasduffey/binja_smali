@@ -149,28 +149,28 @@ class dex_class:
 		offset = dex_object.m_classDefOffset + classid * struct.calcsize("8I")
 		self.offset = offset
 		format = "I"
-		self.thisClass,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.thisClass,=struct.unpack_from(format, dex_object.m_content, offset) # class_idx
 		offset += struct.calcsize(format)
-		self.modifiers,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.modifiers,=struct.unpack_from(format, dex_object.m_content, offset) # access_flags
 		offset += struct.calcsize(format)
-		self.superClass,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.superClass,=struct.unpack_from(format, dex_object.m_content, offset) # superclass_idx
 		offset += struct.calcsize(format)
-		self.interfacesOff,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.interfaces_off,=struct.unpack_from(format, dex_object.m_content, offset)
 		offset += struct.calcsize(format)
-		self.sourceFileIdx,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.source_file_idx,=struct.unpack_from(format, dex_object.m_content, offset)
 		offset += struct.calcsize(format)
-		self.annotationsOff,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.annotations_off,=struct.unpack_from(format, dex_object.m_content, offset)
 		offset += struct.calcsize(format)
-		self.classDataOff,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.class_data_off,=struct.unpack_from(format, dex_object.m_content, offset)
 		offset += struct.calcsize(format)
-		self.staticValuesOff,=struct.unpack_from(format, dex_object.m_content, offset)
+		self.static_values_off,=struct.unpack_from(format, dex_object.m_content, offset)
 		offset += struct.calcsize(format)
 		self.index = classid
 		self.interfacesSize = 0
-		if self.interfacesOff != 0:
-			self.interfacesSize, = struct.unpack_from("I", dex_object.m_content, self.interfacesOff)
-		if self.classDataOff != 0:
-			offset = self.classDataOff
+		if self.interfaces_off != 0:
+			self.interfacesSize, = struct.unpack_from("I", dex_object.m_content, self.interfaces_off)
+		if self.class_data_off != 0:
+			offset = self.class_data_off
 			count, self.numStaticFields = get_uleb128(dex_object.m_content[offset:])
 			offset += count
 			count, self.numInstanceFields = get_uleb128(dex_object.m_content[offset:])
@@ -201,7 +201,7 @@ class dex_class:
 			supername = dex_object.get_type_name(self.superClass)
 			str1 += self.format_classname(supername)
 		str1 += "\n{\n"
-		offset = self.classDataOff
+		offset = self.class_data_off
 		n,tmp = get_uleb128(dex_object.m_content[offset:offset+5])
 		offset += n
 		n,tmp = get_uleb128(dex_object.m_content[offset:offset+5])
@@ -229,13 +229,13 @@ class dex_class:
 			if field_idx not in typelist:
 				typelist.append(field_idx)
 			offset += n
-			if self.staticValuesOff:
+			if self.static_values_off:
 				str1 += " = "
-				staticoffset=get_static_offset(dex_object.m_content[self.staticValuesOff:],i)
+				staticoffset=get_static_offset(dex_object.m_content[self.static_values_off:],i)
 				if staticoffset == -1:
 					str1 += "0;\n"
 					continue
-				size,str2 = parse_encoded_value1(dex_object, dex_object.m_content[self.staticValuesOff+staticoffset:])
+				size,str2 = parse_encoded_value1(dex_object, dex_object.m_content[self.static_values_off+staticoffset:])
 				str1 += str2
 			str1 += ";\n"
 		field_idx=0
@@ -315,23 +315,23 @@ class dex_class:
 			print "%-20s:%08x:%10d  %s"% ("superClass", self.superClass, self.superClass, dex_object.get_type_name(self.superClass))
 			print "%-20s:%08x:%10d"% ("modifiers", self.modifiers, self.modifiers)
 			print "%-20s:%08x:%10d"% ("offset", self.offset, self.offset)
-			print "%-20s:%08x:%10d"% ("annotationsOff", self.annotationsOff, self.annotationsOff)
+			print "%-20s:%08x:%10d"% ("annotations_off", self.annotations_off, self.annotations_off)
 			print "%-20s:%08x:%10d"% ("numStaticFields", self.numStaticFields, self.numStaticFields)
 			print "%-20s:%08x:%10d"% ("numInstanceFields", self.numInstanceFields, self.numInstanceFields)
 			print "%-20s:%08x:%10d"% ("numDirectMethods", self.numDirectMethods, self.numDirectMethods)
 			print "%-20s:%08x:%10d"% ("numVirtualMethods", self.numVirtualMethods, self.numVirtualMethods)
-			print "%-20s:%08x:%10d"% ("classDataOff", self.classDataOff, self.classDataOff)
-			print "%-20s:%08x:%10d"% ("interfacesOff", self.interfacesOff, self.interfacesOff)
+			print "%-20s:%08x:%10d"% ("class_data_off", self.class_data_off, self.class_data_off)
+			print "%-20s:%08x:%10d"% ("interfaces_off", self.interfaces_off, self.interfaces_off)
 			print "%-20s:%08x:%10d"% ("interfacesSize", self.interfacesSize, self.interfacesSize)
-		offset = self.interfacesOff + struct.calcsize("I")
+		offset = self.interfaces_off + struct.calcsize("I")
 		for n in xrange(0, self.interfacesSize):
 			typeid, = struct.unpack_from("H", dex_object.m_content, offset)
 			offset += struct.calcsize("H")
 			if LOGGING: print "\t\t"+ dex_object.get_type_name(typeid)
 
-		if LOGGING: print "%-20s:%08x:%10d"% ("staticValuesOff", self.staticValuesOff, self.staticValuesOff)
-		if LOGGING: print "%-20s:%08x:%10d  %s"% ("sourceFileIdx", self.sourceFileIdx, self.sourceFileIdx, dex_object.get_string_by_id(self.sourceFileIdx))
-		offset = self.classDataOff
+		if LOGGING: print "%-20s:%08x:%10d"% ("static_values_off", self.static_values_off, self.static_values_off)
+		if LOGGING: print "%-20s:%08x:%10d  %s"% ("source_file_idx", self.source_file_idx, self.source_file_idx, dex_object.get_string_by_id(self.source_file_idx))
+		offset = self.class_data_off
 		n,tmp = get_uleb128(dex_object.m_content[offset:offset+5])
 		offset += n
 		n,tmp = get_uleb128(dex_object.m_content[offset:offset+5])
@@ -348,12 +348,12 @@ class dex_class:
 			if LOGGING: print dex_object.getfieldfullname(field_idx),
 			n,modifiers = get_uleb128(dex_object.m_content[offset:offset+5])
 			offset += n
-			if self.staticValuesOff:
-				staticoffset=get_static_offset(dex_object.m_content[self.staticValuesOff:],i)
+			if self.static_values_off:
+				staticoffset=get_static_offset(dex_object.m_content[self.static_values_off:],i)
 				if staticoffset == -1:
 					print "0;"
 					continue
-				parse_encoded_value(dex_object, dex_object.m_content[self.staticValuesOff+staticoffset:])
+				parse_encoded_value(dex_object, dex_object.m_content[self.static_values_off+staticoffset:])
 			print ""
 
 		field_idx=0
@@ -407,14 +407,14 @@ class dex_class:
 					method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
 		if LOGGING: print "================================================================================"
-		if self.annotationsOff != 0:
-			offset = self.annotationsOff
+		if self.annotations_off != 0:
+			offset = self.annotations_off
 			self.class_annotations_off, self.fields_size, self.annotated_methods_size, self.annotated_parameters_size,=struct.unpack_from("4I", dex_object.m_content, offset)
 			#print "%-30s:%08x:%09d"% ("class_annotations_off", self.class_annotations_off, self.class_annotations_off)
 			#print "%-30s:%08x:%09d"% ("fields_size", self.fields_size, self.fields_size)
 			#print "%-30s:%08x:%09d"% ("annotated_methods_size", self.annotated_methods_size, self.annotated_methods_size)
 			#print "%-30s:%08x:%09d"% ("annotated_parameters_size", self.annotated_parameters_size, self.annotated_parameters_size)
-			offset =  self.annotationsOff + struct.calcsize("4I")
+			offset =  self.annotations_off + struct.calcsize("4I")
 
 			if self.fields_size:
 				for  i in xrange(0, self.fields_size):
@@ -1079,8 +1079,8 @@ class dex_parser:
 			log(3, "error: magic not detected")
 
 		bOffset = self.m_stringIdsOff
-		if self.m_stringIdsSize > 0:
-			for i in xrange(0, self.m_stringIdsSize):
+		if self.string_ids_size > 0:
+			for i in xrange(0, self.string_ids_size):
 				offset, = struct.unpack_from("I", self.m_content, bOffset + i * 4)
 				if i == 0:
 					start = offset
@@ -1101,7 +1101,7 @@ class dex_parser:
 
 
 		'''2013/3/19
-		for i in xrange(0, self.m_methodIdsSize):
+		for i in xrange(0, self.method_ids_size):
 			print self.get_method_name(i)
 		for i in xrange(0, self.m_fieldIdsSize):
 			print self.get_field_name(i)
@@ -1129,19 +1129,19 @@ class dex_parser:
 		pass
 
 	def get_string_by_id(self,stridx):
-		if stridx >= self.m_stringIdsSize:
+		if stridx >= self.string_ids_size:
 			return ""
 		return self.string_table[stridx]
 
 	def get_method_name(self,methodid):
-		if methodid >= self.m_methodIdsSize:
+		if methodid >= self.method_ids_size:
 			return ""
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
-		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
+		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		return self.string_table[name_idx]
 
 	def get_method_name_fullname(self,methodid,hidden_classname=False):
-		if methodid >= self.m_methodIdsSize:
+		if methodid >= self.method_ids_size:
 			return ""
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
@@ -1153,7 +1153,7 @@ class dex_parser:
 		return self.get_proto_fullname(proto_idx,classname,funcname)
 
 	def get_binja_method_fullname(self, methodId, hidden_classname=False):
-		if methodId >= self.m_methodIdsSize:
+		if methodId >= self.method_ids_size:
 			return ""
 		offset = self.m_methodIdsOffset + methodId * struct.calcsize("HHI")
 		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
@@ -1170,7 +1170,7 @@ class dex_parser:
 		return binja_proto_fullname
 
 	def get_method_name_fullname1(self,methodid,parameter_list=[],hidden_classname=False):
-		if methodid >= self.m_methodIdsSize:
+		if methodid >= self.method_ids_size:
 			return ""
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
@@ -1458,7 +1458,7 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.m_mapOffset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_stringIdsSize, = struct.unpack_from(format,content,offset)
+		self.string_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_stringIdsOff, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
@@ -1474,7 +1474,7 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.m_fieldIdsOffset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_methodIdsSize, = struct.unpack_from(format,content,offset)
+		self.method_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_methodIdsOffset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
@@ -1572,7 +1572,7 @@ class dex_parser:
 		if classid >= self.class_def_size:
 			return ""
 		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
-		#typeid,superclass,modifiers,numSFields,numIFields,numVMethod,numDMethod,numSMethod,ClassDataOff,interfaceOff,annotationsOff,staticValuesOff,sourceFileIdx,= struct.unpack_from("2I6H5I", self.m_content, offset)
+		#typeid,superclass,modifiers,numSFields,numIFields,numVMethod,numDMethod,numSMethod,class_data_off,interfaceOff,annotations_off,static_values_off,source_file_idx,= struct.unpack_from("2I6H5I", self.m_content, offset)
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.m_content, offset)
 		if class_data_off:
 			offset = class_data_off
