@@ -188,6 +188,7 @@ class APKViewBank(APKView):
 			res/
 			resources.arsc
 		'''
+
 APKViewBank.register()
 
 

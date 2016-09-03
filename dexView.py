@@ -876,7 +876,7 @@ global_dex = ""
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers
-class DEXView(BinaryView):
+class DEXView(BinaryView, dex_parser):
 	name = "DEX"
 	long_name = "Dalvik Executable"
 

@@ -152,6 +152,7 @@ def parse_FMT32X(dex_object, buffer, offset):
 	aaaa,bbbb,=struct.unpack_from("hh",buffer,2)
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d" % aaaa, "v%d" % bbbb)
 
+# in the "func_point" function list, directly called by "parse_instruction"
 def parse_FMT35C(dex_object, buffer, offset):
 	A = ord(buffer[1])>>4
 	G = ord(buffer[1])&0xf
