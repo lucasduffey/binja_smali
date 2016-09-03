@@ -1256,7 +1256,7 @@ class dex_parser:
 			#self.getclass(i)
 			#'''
 
-		log(3, "starting %i threads" % len(threads))
+		log(1, "starting %i threads" % len(threads))
 		for thread in threads:
 			thread.start()
 

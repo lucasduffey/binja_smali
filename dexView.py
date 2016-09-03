@@ -30,7 +30,6 @@ DEX_MAGIC = "dex\x0a035\x00"
 
 codes = {
 	# "offset": "length",
-
 }
 
 '''
@@ -42,15 +41,16 @@ for line in open("data").readlines():
 
 # FIXME:
 Instruction = {
+# lenths excludes opcode length?
 	0x0: {"name": "nop", "length": 0},
 	0x1: {"name": "move", "length": 1},
 	0x2: {"name": "move/from16", "length": 2},
-	0x3: {"name": "move/16", "length": 3}, # FIXME: is this right?
+	0x3: {"name": "move/16", "length": 5}, # 3 => 5
 	0x4: {"name": "move-wide", "length": 2},
-	0x5: {"name": "move-wide/from16", "length": 2},
-	0x6: {"name": "move-wide/16", "length": 3}, # FIXME: is this right?
+	0x5: {"name": "move-wide/from16", "length": 3}, # 2 => 3
+	0x6: {"name": "move-wide/16", "length": 4}, # 3 => 4
 	0x7: {"name": "move-object", "length": 1},
-	0x8: {"name": "move-object/from16", "length": 2},
+	0x8: {"name": "move-object/from16", "length": 3}, # 2 => 3
 	0x9: {"name": "move-object/16", "length": 3}, # FIXME: is this right?
 	0xa: {"name": "move-result", "length": 1},
 	0xb: {"name": "move-result-wide", "length": 1},
@@ -69,7 +69,7 @@ Instruction = {
 	0x18: {"name": "const-wide", "length": 7},
 	0x19: {"name": "const-wide/high16", "length": 3},
 	0x1a: {"name": "const-string", "length": 3},
-	0x1b: {"name": "const-string-jumbo", "length": 3},
+	0x1b: {"name": "const-string-jumbo", "length": 5}, # 31C - it's the only 31C
 	0x1c: {"name": "const-class", "length": 3},
 	0x1d: {"name": "monitor-enter", "length": 1},
 	0x1e: {"name": "monitor-exit", "length": 1},
@@ -84,7 +84,7 @@ Instruction = {
 	0x27: {"name": "throw", "length": 1},
 	0x28: {"name": "goto", "length": 1},
 	0x29: {"name": "goto/16", "length": 3},
-	0x2a: {"name": "goto/32", "length": 3},
+	0x2a: {"name": "goto/32", "length": 5}, # 3 => 5
 	0x2b: {"name": "packed-switch", "length": 5},
 	0x2c: {"name": "sparse-switch", "length": 5},
 	0x2d: {"name": "cmpl-float", "length": 3},
@@ -327,370 +327,9 @@ RegisterNames = [
 	"v23",
 	"v24",
 	"v25",
-
 ]
 
-# used for perform_get_instruction_text
-OperandTokens = [
-	lambda value: [], # NOP
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(RegisterToken, RegisterNames[value >> 4])], # MOVE
-
-	lambda value: [], # TODO: implement MOVE_FROM16
-
-	# MOVE_16
-	lambda value: [
-		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(RegisterToken, RegisterNames[value >> 8])
-		], # TODO: implement
-
-	lambda value: [], # TODO: implement MOVE_WIDE
-	lambda value: [], # TODO: implement MOVE_WIDE_FROM_16
-	lambda value: [], # TODO: implement MOVE_WIDE_16
-	lambda value: [], # TODO: implement MOVE_OBJECT
-	lambda value: [], # TODO: MOVE_OBJECT_FROM_16
-
-	# MOVE_OBJECT_16
-	lambda value: [], # NONE
-
-	# MOVE_RESULT
-	lambda value: [], # NONE
-
-	# MOVE_RESULT_WIDE
-	lambda value: [], # NONE
-
-	# MOVE_RESULT_OBJECT
-	lambda value: [], # NONE
-
-	# MOVE_EXCEPTION
-	lambda value: [], # NONE
-
-	# RETURN_VOID
-	lambda value: [], # NONE
-
-	# RETURN
-	lambda value: [], # NONE
-
-	# RETURN_WIDE
-	lambda value: [], # NONE
-
-	# RETURN_OBJECT
-	lambda value: [], # NONE
-
-	# CONST_4
-	lambda value: [], # NONE
-
-	# CONST_16 - OK AFAIK
-	# [00 0A][00] => const/16 v0, 10   - I believe this is true
-	lambda value: [
-		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xFF]), # maybe?  - FAIL: (value >> 8), (value >> 16)
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(PossibleAddressToken, "%i" % (value >> 8), value)
-		], # 16 bit constant
-
-	lambda value: [], # CONST
-	lambda value: [], # CONST_HIGH16
-	lambda value: [], # CONST_WIDE16
-	lambda value: [], # CONST_WIDE32
-	lambda value: [], # CONST_WIDE
-	lambda value: [], # CONST_WIDE_HIGH16
-	lambda value: [], # CONST_STRING
-	lambda value: [], # CONST_STRING_JUMBO
-	lambda value: [], # CONST_CLASS
-	lambda value: [], # MONITOR_ENTER
-	lambda value: [], # MONITOR_EXIT
-	lambda value: [], # CHECK_CAST
-	lambda value: [], # INSTANCE_OF
-	lambda value: [], # ARRAY_LENGTH
-	lambda value: [], # NEW_INSTANCE
-
-	# NEW_ARRAY
-	# https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats
-	lambda value: [
-		#InstructionTextToken(RegisterToken, RegisterNames[(value >> 16) & 0xF]),
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(RegisterToken, RegisterNames[value >> 20]),
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(TextToken, "unimplemented") # https://source.android.com/devices/tech/dalvik/dex-format.html # look at Value formats, AFAIK this is relevant
-														# example "0x19", this may be pulling it from the "field_ids" section
-		],
-
-	lambda value: [], # FILLED_NEW_ARRAY
-	lambda value: [], # FILLED_NEW_ARRAY_RANGE
-	lambda value: [
-		InstructionTextToken(RegisterToken, RegisterNames[(value >> 32)]),
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(TextToken, "unimplemented") # array_data_offset
-		], # FILL_ARRAY_DATA - seems working
-
-	lambda value: [], # THROW
-
-	lambda value: [], # GOTO
-	lambda value: [], # GOTO_16
-	lambda value: [], # GOTO_32
-
-	lambda value: [], # PACKED_SWITCH
-	lambda value: [], # SPARSE_SWITCH
-
-	lambda value: [], # 0x2D CMPL_FLOAT
-	lambda value: [], # CMPG_FLOAT
-	lambda value: [], # CMPL_DOUBLE
-	lambda value: [], # CMPG_DOUBLE
-	lambda value: [], # CMP_LONG
-
-	lambda value: [], # 0x32 IF_EQ
-	lambda value: [], # IF_NE
-	lambda value: [], # IF_LT
-	lambda value: [], # IF_GE
-	lambda value: [], # IF_GT
-	lambda value: [], # IF_LE
-	lambda value: [], # IF_EQZ
-	lambda value: [], # IF_NEZ
-	lambda value: [], # IF_LTZ
-	lambda value: [], # IF_GEZ
-	lambda value: [], # IF_GTZ
-	lambda value: [], # IF_LEZ
-
-	lambda value: [], # 0x3E UNUSED_3E
-	lambda value: [], # UNUSED_3F
-	lambda value: [], # UNUSED_40
-	lambda value: [], # UNUSED_41
-	lambda value: [], # UNUSED_42
-	lambda value: [], # UNUSED_43
-
-	lambda value: [], # 0x44 AGET
-	lambda value: [], # AGET_WIDE
-	lambda value: [], # AGET_OBJECT
-	lambda value: [], # AGET_BOOLEAN
-	lambda value: [], # AGET_BYTE
-	lambda value: [], # AGET_CHAR
-	lambda value: [], # AGET_SHORT
-
-	lambda value: [], # 0x4B APUT
-	lambda value: [], # APUT_WIDE
-	lambda value: [], # APUT_OBJECT
-	lambda value: [], # APUT_BOOLEAN
-	lambda value: [], # APUT_BYTE
-	lambda value: [], # APUT_CHAR
-	lambda value: [], # APUT_SHORT
-
-	lambda value: [], # 0x52 IGET
-	lambda value: [], # IGET_WIDE
-	lambda value: [], # IGET_OBJECT
-	lambda value: [], # IGET_BOOLEAN
-	lambda value: [], # IGET_BYTE
-	lambda value: [], # IGET_CHAR
-	lambda value: [], # IGET_SHORT
-
-	lambda value: [], # 0x5A IPUT
-	lambda value: [], # IPUT_WIDE
-	lambda value: [], # IPUT_OBJECT
-	lambda value: [], # IPUT_BOOLEAN
-	lambda value: [], # IPUT_BYTE
-	lambda value: [], # IPUT_CHAR
-	lambda value: [], # IPUT_SHORT
-
-	lambda value: [], # 0x60 SGET
-	lambda value: [], # SGET_WIDE
-	lambda value: [], # SGET_OBJECT
-	lambda value: [], # SGET_BOOLEAN
-	lambda value: [], # SGET_BYTE
-	lambda value: [], # SGET_CHAR
-	lambda value: [], # SGET_SHORT
-
-	lambda value: [], # 0x67 SPUT
-
-	# FIXME: not working - not right index?
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 16)]), # not sure if it's 16 or 20
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(TextToken, "unimplemented") #  field_id - this specifies the entry number in the field id table
-		], # SPUT_WIDE
-
-	lambda value: [], # SPUT_OBJECT
-
-	# FIXME: this is not working - this must not be the right index in OperandTokens
-	lambda value: [InstructionTextToken(RegisterToken, RegisterNames[(value >> 16)]), # not sure if it's 16 or 20
-		InstructionTextToken(TextToken, ", "),
-		InstructionTextToken(TextToken, "unimplemented") #  field_id - this specifies the entry number in the field id table
-		], # 0x6A SPUT_BOOLEAN
-
-	lambda value: [], # SPUT_BYTE
-	lambda value: [], # SPUT_CHAR
-	lambda value: [], # SPUT_SHORT
-	lambda value: [], # INVOKE_VIRTUAL
-	lambda value: [], # INVOKE_SUPER
-	lambda value: [], # INVOKE_DIRECT
-	lambda value: [], # INVOKE_STATIC
-
-	# FIXME: I DO NOT TRUST THIS....
-	lambda value: [
-		# The invocation parameter list encoding is somewhat weird.
-		# Starting if parameter number > 4 and parameter number % 4 == 1, the 5th (9th, etc.) parameter is encoded on the 4 lowest bit of the byte immediately following the instruction.
-		# Curiously, this encoding is not used in case of 1 parameter, in this case an entire 16 bit word is added after the method index of which only 4 bit is used to encode
- 		# the single parameter while the lowest 4 bit of the byte following the instruction byte is left unused.
-
-		#InstructionTextToken(TextToken, "{"),
-		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF00]), # FIXME: ERROR HERE
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF000]),
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF]),
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(RegisterToken, RegisterNames[value & 0xF0]),
-		#InstructionTextToken(TextToken, "}"),
-		#InstructionTextToken(TextToken, ", "),
-		#InstructionTextToken(TextToken, "unimplemented"), # methodtocall - it's probably an offset to a method list
-
-		], # INVOKE_INTERFACE
-
-	lambda value: [], # UNUSED_73
-	lambda value: [], # INVOKE_VIRTUAL_RANGE
-	lambda value: [], # INVOKE_SUPER_RANGE
-	lambda value: [], # INVOKE_DIRECT_RANGE
-	lambda value: [], # INVOKE_STATIC_RANGE
-	lambda value: [], # INVOKE_INTERFACE_RANGE
-	lambda value: [], # UNUSED_79
-	lambda value: [], # UNUSED_7A
-	lambda value: [], # NEG_INT
-	lambda value: [], # NOT_INT
-	lambda value: [], # NEG_LONG
-	lambda value: [], # NOT_LONG
-	lambda value: [], # NEG_FLOAT
-	lambda value: [], # NEG_DOUBLE
-	lambda value: [], # INT_TO_LONG
-	lambda value: [], # INT_TO_FLOAT
-	lambda value: [], # INT_TO_DOUBLE
-	lambda value: [], # LONG_TO_INT
-	lambda value: [], # LONG_TO_FLOAT
-	lambda value: [], # LONG_TO_DOUBLE
-	lambda value: [], # FLOAT_TO_INT
-	lambda value: [], # FLOAT_TO_LONG
-	lambda value: [], # FLOAT_TO_DOUBLE
-	lambda value: [], # DOUBLE_TO_INT
-	lambda value: [], # DOUBLE_TO_LONG
-	lambda value: [], # DOUBLE_TO_FLOAT
-	lambda value: [], # INT_TO_BYTE
-	lambda value: [], # INT_TO_CHAR
-	lambda value: [], # INT_TO_SHORT
-	lambda value: [], # ADD_INT
-	lambda value: [], # SUB_INT
-	lambda value: [], # MUL_INT
-	lambda value: [], # DIV_INT
-	lambda value: [], # REM_INT
-	lambda value: [], # AND_INT
-	lambda value: [], # OR_INT
-	lambda value: [], # XOR_INT
-	lambda value: [], # SHL_INT
-	lambda value: [], # SHR_INT
-	lambda value: [], # USHR_INT
-	lambda value: [], # ADD_LONG
-	lambda value: [], # SUB_LONG
-	lambda value: [], # MUL_LONG
-	lambda value: [], # DIV_LONG
-	lambda value: [], # REM_LONG
-	lambda value: [], # AND_LONG
-	lambda value: [], # OR_LONG
-	lambda value: [], # XOR_LONG
-	lambda value: [], # SHL_LONG
-	lambda value: [], # SHR_LONG
-	lambda value: [], # USHR_LONG
-	lambda value: [], # ADD_FLOAT
-	lambda value: [], # SUB_FLOAT
-	lambda value: [], # MUL_FLOAT
-	lambda value: [], # DIV_FLOAT
-	lambda value: [], # REM_FLOAT
-	lambda value: [], # ADD_DOUBLE
-	lambda value: [], # SUB_DOUBLE
-	lambda value: [], # MUL_DOUBLE
-	lambda value: [], # DIV_DOUBLE
-	lambda value: [], # REM_DOUBLE
-	lambda value: [], # ADD_INT_2ADDR
-	lambda value: [], # SUB_INT_2ADDR
-	lambda value: [], # MUL_INT_2ADDR
-	lambda value: [], # DIV_INT_2ADDR
-	lambda value: [], # REM_INT_2ADDR
-	lambda value: [], # AND_INT_2ADDR
-	lambda value: [], # OR_INT_2ADDR
-	lambda value: [], # XOR_INT_2ADDR
-	lambda value: [], # SHL_INT_2ADDR
-	lambda value: [], # SHR_INT_2ADDR
-	lambda value: [], # USHR_INT_2ADDR
-	lambda value: [], # ADD_LONG_2ADDR
-	lambda value: [], # SUB_LONG_2ADDR
-	lambda value: [], # MUL_LONG_2ADDR
-	lambda value: [], # DIV_LONG_2ADDR
-	lambda value: [], # REM_LONG_2ADDR
-	lambda value: [], # AND_LONG_2ADDR
-	lambda value: [], # OR_LONG_2ADDR
-	lambda value: [], # XOR_LONG_2ADDR
-	lambda value: [], # SHL_LONG_2ADDR
-	lambda value: [], # SHR_LONG_2ADDR
-	lambda value: [], # USHR_LONG_2ADDR
-	lambda value: [], # ADD_FLOAT_2ADDR
-	lambda value: [], # SUB_FLOAT_2ADDR
-	lambda value: [], # MUL_FLOAT_2ADDR
-	lambda value: [], # DIV_FLOAT_2ADDR
-	lambda value: [], # REM_FLOAT_2ADDR
-	lambda value: [], # ADD_DOUBLE_2ADDR
-	lambda value: [], # SUB_DOUBLE_2ADDR
-	lambda value: [], # MUL_DOUBLE_2ADDR
-	lambda value: [], # DIV_DOUBLE_2ADDR
-	lambda value: [], # REM_DOUBLE_2ADDR
-	lambda value: [], # ADD_INT_LIT16
-	lambda value: [], # SUB_INT_LIT16
-	lambda value: [], # MUL_INT_LIT16
-	lambda value: [], # DIV_INT_LIT16
-	lambda value: [], # REM_INT_LIT16
-	lambda value: [], # AND_INT_LIT16
-	lambda value: [], # OR_INT_LIT16
-	lambda value: [], # XOR_INT_LIT16
-	lambda value: [], # ADD_INT_LIT8
-	lambda value: [], # SUB_INT_LIT8
-	lambda value: [], # MUL_INT_LIT8
-	lambda value: [], # DIV_INT_LIT8
-	lambda value: [], # REM_INT_LIT8
-	lambda value: [], # AND_INT_LIT8
-	lambda value: [], # OR_INT_LIT8
-	lambda value: [], # XOR_INT_LIT8
-	lambda value: [], # SHL_INT_LIT8
-	lambda value: [], # SHR_INT_LIT8
-	lambda value: [], # USHR_INT_LIT8
-	lambda value: [], # UNUSED_E3
-	lambda value: [], # UNUSED_E4
-	lambda value: [], # UNUSED_E5
-	lambda value: [], # UNUSED_E6
-	lambda value: [], # UNUSED_E7
-	lambda value: [], # UNUSED_E8
-	lambda value: [], # UNUSED_E9
-	lambda value: [], # UNUSED_EA
-	lambda value: [], # UNUSED_EB
-	lambda value: [], # UNUSED_EC
-	lambda value: [], # UNUSED_ED
-	lambda value: [], # EXECUTE_INLINE
-	lambda value: [], # UNUSED_EF
-	lambda value: [], # INVOKE_DIRECT_EMPTY
-	lambda value: [], # UNUSED_F1
-	lambda value: [], # IGET_QUICK
-	lambda value: [], # IGET_WIDE_QUICK
-	lambda value: [], # IGET_OBJECT_QUICK
-	lambda value: [], # IPUT_QUICK
-	lambda value: [], # IPUT_WIDE_QUICK
-	lambda value: [], # IPUT_OBJECT_QUICK
-	lambda value: [], # INVOKE_VIRTUAL_QUICK
-	lambda value: [], # INVOKE_VIRTUAL_QUICK_RANGE
-	lambda value: [], # INVOKE_SUPER_QUICK
-	lambda value: [], # INVOKE_SUPER_QUICK_RANGE
-	lambda value: [], # UNUSED_FC
-	lambda value: [], # UNUSED_FD
-	lambda value: [], # UNUSED_FE
-	lambda value: [] # UNUSED_FF
-
-]
-
-InstructionIL = {
-}
+InstructionIL = {}
 
 class DEXViewUpdateNotification(BinaryDataNotification):
 	def __init__(self, view):
@@ -802,6 +441,8 @@ class DEX(Architecture):
 		if instr is None:
 			return None
 
+		op = ord(data[0])
+
 		result = InstructionInfo()
 		result.length = length
 
@@ -809,24 +450,21 @@ class DEX(Architecture):
 		if instr in ["return-void", "return", "return-wide", "return-object"]:
 			result.add_branch(FunctionReturn)
 
-		# TODO: implement unconditional jumps
-		#elif instr in ["goto", "goto/16", "goto/32"]:
-			# how is data handled?
-			#d = struct.unpack("<h", data[1:3])[0]
+		elif instr in ["goto", "goto/16", "goto/32"]:
+			# "goto" 10T - parse_FMT10T
+			# "goto/16" 20T
+			# "goto/32" 30T
 
-			# Examples:
-			# 	28F0 - goto 0005 // -0010    # how do they go from 0xF0 to 5? it's signed...
-			#			Jumps to current position-16 words (hex 10). 0005 is the label of the target instruction.
-			#	2900 0FFE - goto/16 002f // -01f1
-			#			Jumps to the current position-1F1H words. 002F is the label of the target instruction.
-			#if instr == "goto/16":
-				# FIXME: verify...
-			#	offset = struct.unpack("<h", data[1:3])[0]# AFAIK....
+			fn = dex_decode[op][3]
+			val = func_point[fn](self, data[1:], addr)[2] # this might be the thing to jump to.. index out of range???
 
-			#	target_addr = addr + offset # AFAIK....
+			val = int(val, 16)
+			val = int(val)
+			#log(2, "val: %x" % val)
+			#log(2, data.encode("hex"))
+			#log(2, data[1].encode("hex"))
 
-			#	result.add_branch(UnconditionalBranch, target_addr)
-
+			result.add_branch(UnconditionalBranch, val) # addr + offset
 
 		# TODO: implement conditional jumps
 		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
@@ -877,7 +515,6 @@ class DEX(Architecture):
 				if idx < len(val) - 1:
 					results += [InstructionTextToken(TextToken, ", ")]
 
-
 			# FIXME: current crash
 			#log(2, "perform_get_instruction_text is about to mess with tokens")
 
@@ -892,7 +529,6 @@ class DEX(Architecture):
 			log(3, "len(data): %i" % len(data))
 			log(3, "op: %s, len: %i, data: %s" % (hex(op), len(data), data.encode("hex"))) # what is "data" type
 
-			pass
 
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
