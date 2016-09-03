@@ -1081,15 +1081,15 @@ class dex_parser:
 		bOffset = self.m_stringIdsOff
 		if self.m_stringIdsSize > 0:
 			for i in xrange(0, self.m_stringIdsSize):
-				offset, = struct.unpack_from("I", self.m_content,bOffset + i * 4)
+				offset, = struct.unpack_from("I", self.m_content, bOffset + i * 4)
 				if i == 0:
 					start = offset
 				else:
 					skip, length = get_uleb128(self.m_content[start:start+5])
 					self.string_table.append(self.m_content[start+skip:offset-1])
 					start = offset
-			for i in xrange(start,len(self.m_content)):
-				if self.m_content[i]==chr(0):
+			for i in xrange(start, len(self.m_content)):
+				if self.m_content[i] == chr(0):
 					self.string_table.append(self.m_content[start+1:i])
 					break
 

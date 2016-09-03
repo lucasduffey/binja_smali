@@ -39,17 +39,19 @@ for line in open("data").readlines():
 	opcode, instructionName, operandLength = line.rstrip().split("\t")
 	print  "%s: {\"name\": \"%s\", \"length\": \"%s\"}," % (opcode, instructionName, operandLength)
 '''
+
+# FIXME:
 Instruction = {
 	0x0: {"name": "nop", "length": 0},
 	0x1: {"name": "move", "length": 1},
 	0x2: {"name": "move/from16", "length": 2},
-	0x3: {"name": "move/16", "length": 2},
+	0x3: {"name": "move/16", "length": 3}, # FIXME: is this right?
 	0x4: {"name": "move-wide", "length": 2},
 	0x5: {"name": "move-wide/from16", "length": 2},
-	0x6: {"name": "move-wide/16", "length": 2},
+	0x6: {"name": "move-wide/16", "length": 3}, # FIXME: is this right?
 	0x7: {"name": "move-object", "length": 1},
 	0x8: {"name": "move-object/from16", "length": 2},
-	0x9: {"name": "move-object/16", "length": 2},
+	0x9: {"name": "move-object/16", "length": 3}, # FIXME: is this right?
 	0xa: {"name": "move-result", "length": 1},
 	0xb: {"name": "move-result-wide", "length": 1},
 	0xc: {"name": "move-result-object", "length": 1},
@@ -801,7 +803,7 @@ class DEX(Architecture):
 			result.add_branch(FunctionReturn)
 
 		# TODO: implement unconditional jumps
-		elif instr in ["goto", "goto/16", "goto/32"]:
+		#elif instr in ["goto", "goto/16", "goto/32"]:
 			# how is data handled?
 			#d = struct.unpack("<h", data[1:3])[0]
 
@@ -810,13 +812,13 @@ class DEX(Architecture):
 			#			Jumps to current position-16 words (hex 10). 0005 is the label of the target instruction.
 			#	2900 0FFE - goto/16 002f // -01f1
 			#			Jumps to the current position-1F1H words. 002F is the label of the target instruction.
-			if instr == "goto/16":
+			#if instr == "goto/16":
 				# FIXME: verify...
-				offset = struct.unpack("<h", data[1:3])[0]# AFAIK....
+			#	offset = struct.unpack("<h", data[1:3])[0]# AFAIK....
 
-				target_addr = addr + offset # AFAIK....
+			#	target_addr = addr + offset # AFAIK....
 
-				result.add_branch(UnconditionalBranch, target_addr)
+			#	result.add_branch(UnconditionalBranch, target_addr)
 
 
 		# TODO: implement conditional jumps
@@ -843,39 +845,47 @@ class DEX(Architecture):
 		if instr is None:
 			return None
 
+		# FIXME: data may be too short - how is data gotten?
+		# FIXME: it's returning too small a chunk of "data
+
 		#try:
 		op = ord(data[0]) # is this really the op (opcode)? the first byte that indicates the "function" to be performed?
 
 		fn = dex_decode[op][3]
 		start = len(data) # I'm not sure why this isn't just passed as "dex_length"
 
-		# FIXME: dex_object is not defined
-		val = func_point[fn](self, data, start/2) # FIXME TODO: how can I pass the dex_object...
-													# this "self" needs to contain: get_string_by_id, getmethodname, etc..
-		results = []
-		val = val[2:] # the 2nd arg we're skipping is the opcode one which my code already does
+		try:
+			# FIXME: dex_object is not defined
+			val = func_point[fn](self, data, start/2) # FIXME TODO: how can I pass the dex_object...
+														# this "self" needs to contain: get_string_by_id, getmethodname, etc..
+			results = []
+			val = val[2:] # the 2nd arg we're skipping is the opcode one which my code already does
 
-		for idx, item in enumerate(val):
-			if item in RegisterNames:
-				results += [InstructionTextToken(RegisterToken, item)]
-			else:
-				results += [InstructionTextToken(TextToken, item)]
+			for idx, item in enumerate(val):
+				if item in RegisterNames:
+					results += [InstructionTextToken(RegisterToken, item)]
+				else:
+					results += [InstructionTextToken(TextToken, item)]
 
-			if idx < len(val) - 1:
-				results += [InstructionTextToken(TextToken, ", ")]
+				if idx < len(val) - 1:
+					results += [InstructionTextToken(TextToken, ", ")]
 
 
-		# FIXME: current crash
-		#log(2, "perform_get_instruction_text is about to mess with tokens")
+			# FIXME: current crash
+			#log(2, "perform_get_instruction_text is about to mess with tokens")
 
-		tokens = []
-		tokens.append(InstructionTextToken(TextToken, "%-20s " % instr)) # FIXME: error? this is "move" for example??
-		tokens += results #OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
+			tokens = []
+			tokens.append(InstructionTextToken(TextToken, "%-20s " % instr)) # FIXME: error? this is "move" for example??
+			tokens += results #OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
+			return tokens, length
 
-		return tokens, length
-		#except:
-		#	log_error(traceback.format_exc())
-		#	pass
+		except:
+			log_error(traceback.format_exc())
+			log(3, "addr: %x" % addr) # are we out of bounds?
+			log(3, "len(data): %i" % len(data))
+			log(3, "op: %s, len: %i, data: %s" % (hex(op), len(data), data.encode("hex"))) # what is "data" type
+
+			pass
 
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
@@ -898,8 +908,6 @@ class DEXView(BinaryView, dex_parser):
 
 		self.dex = dex_parser(self, raw_binary)
 		#self.dex = dex_parser.__init__(self, self, raw_binary)
-
-
 
 	@classmethod
 	def is_valid_for_data(self, data):

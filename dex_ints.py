@@ -146,9 +146,13 @@ def parse_FMT31T(dex_object, buffer, offset):
 	bbbbbbbb,=struct.unpack_from("i",buffer,2)
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"string@%d" % bbbbbbbb)
 
-def parse_FMT32X(dex_object, buffer, offset):
-	aaaa,bbbb, = struct.unpack_from("hh",buffer,2)
-	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d" % aaaa, "v%d" % bbbb)
+# requires buffer of at least 4 bytes
+# GREPME - seems to be the only function with problems..
+def parse_FMT32X(dex_object, buf, offset):
+	print "len(buf): %i" % len(buf)
+
+	aaaa,bbbb, = struct.unpack_from("hh", buf, 2) # I'm missing a single byte of data..
+	return (dex_decode[ord(buf[0])][4], dex_decode[ord(buf[0])][1], "v%d" % aaaa, "v%d" % bbbb)
 
 # in the "func_point" function list, directly called by "perform_get_instruction_text(self, blah..)"
 def parse_FMT35C(dex_object, buffer, offset):
@@ -158,7 +162,7 @@ def parse_FMT35C(dex_object, buffer, offset):
 	C = ord(buffer[4]) & 0xf
 	F = ord(buffer[5]) >> 4
 	E = ord(buffer[5]) & 0xf
-	bbbb, = struct.unpack_from("H",buffer,2)
+	bbbb, = struct.unpack_from("H", buffer, 2)
 
 	# FIXME: figure out how to pass "dex_object"
 	if ord(buffer[0]) == 0x24:
@@ -235,7 +239,7 @@ def parse_instruction(buffer, offset, dex_object):
 		val = func_point[fn](dex_object, buffer[start:], start/2)  # ONLY TIME dex_object is used
 		str = ""
 		m = 0
-		for x in buffer[start:start+2*val[0]]:
+		for x in buffer[start:start+2*val[0]]: # index 0 is the number of instructions AFAIK?
 			str += "%02x" % ord(x)
 			m += 1
 			if m % 2 == 0:
@@ -251,17 +255,20 @@ def parse_instruction(buffer, offset, dex_object):
 		if LOGGING: print ""
 		start += 2*val[0]
 
+# https://source.android.com/devices/tech/dalvik/instruction-formats.html
+# ^ information about FMT 10x, etc..
 dex_decode = {
+# the last field is the total number of instructions
 	0:(0x00,'nop','fmt10x',FMT10X,1),
 	1:(0x01,'move','fmt12x',FMT12X,1),
 	2:(0x02,'move/from16','fmt22x',FMT22X,2),
-	3:(0x03,'move/16','fmt32x',FMT32X,3),
+	3:(0x03,'move/16','fmt32x',FMT32X, 3), # FIXME: is "3" the correct number? I changed this to "4"
 	4:(0x04,'move-wide','fmt12x',FMT12X,1),
 	5:(0x05,'move-wide/from16','fmt22x',FMT22X,2),
-	6:(0x06,'move-wide/16','fmt32x',FMT32X,3),
+	6:(0x06,'move-wide/16','fmt32x',FMT32X, 3), # FIXME: is "3" the correct number?  I changed this to "4"
 	7:(0x07,'move-object','fmt12x',FMT12X,1),
 	8:(0x08,'move-object/from16','fmt22x',FMT22X,2),
-	9:(0x09,'move-object/16','fmt32x',FMT32X,3),
+	9:(0x09,'move-object/16','fmt32x',FMT32X,3), # FIXME: is "3" the correct number?  I changed this to "4"
 	10:(0x0a,'move-result','fmt11x',FMT11X,1),
 	11:(0x0b,'move-result-wide','fmt11x',FMT11X,1),
 	12:(0x0c,'move-result-object','fmt11x',FMT11X,1),
