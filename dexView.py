@@ -877,7 +877,6 @@ class DEX(Architecture):
 		#	log_error(traceback.format_exc())
 		#	pass
 
-global_dex = ""
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers

@@ -183,10 +183,12 @@ class dex_class:
 			self.numInstanceFields = 0
 			self.numDirectMethods = 0
 			self.numVirtualMethods = 0
+
 	def format_classname(self,name):
 		name = name[1:-1].replace("/","_")
 		name = name.replace("$","_")
 		return name
+
 	def create_header_file_for_cplusplus(self, dex_object):
 		typelist = []
 		name = self.format_classname(dex_object.gettypename(self.thisClass))
@@ -303,6 +305,7 @@ class dex_class:
 		f.write(str1)
 		f.close()
 		return typelist
+
 	def printf(self, dex_object):
 		#if dex_object.gettypename(self.thisClass)!="Landroid/Manifest$permission;":
 		#	return
@@ -525,6 +528,7 @@ def parse_debug_info_method_parameter_list(dex_object,offset):
 			parameter_list.append(dex_object.get_string_by_id(string_idx))
 		offset+=n
 	return 	parameter_list
+
 def parse_debug_info(lex_object,offset):
 	print "===parse_debug_info====offset = %08x"%offset
 	n ,current_line = get_uleb128(lex_object.m_content[offset:offset+5])
@@ -604,8 +608,8 @@ def parse_debug_info(lex_object,offset):
 			#offset += 1
 			print "line=%d  pc=%x  adjusted_opcode=%d  pc+ %d  line+%d"% (current_line,current_pc,adjusted_opcode,(adjusted_opcode/15),(adjusted_opcode%15)-4)
 	print "===parse_debug_info====offset = %08x$"%offset
-def get_encoded_value(content):
 
+def get_encoded_value(content):
 	VALUE_SHORT = 0x2
 	VALUE_CHAR = 0x3
 	VALUE_INT = 0x4
@@ -821,6 +825,7 @@ def get_encoded_annotation_size(content):
 		offset += n
 		offset += get_encoded_value_size(content[offset:])
 	return offset
+
 def parse_encoded_value(lex_object,content,is_root=False):
 	offset = 0
 	arg_type, = struct.unpack_from("B",content,offset)
@@ -972,6 +977,7 @@ def parse_encoded_value4441(lex_object,content,is_root=False):
 	else:
 		print "***************error parse encode_value**************"
 	return offset
+
 def parse_encoded_annotation1(lex_object,content,is_root=False):
 	str1 = ""
 	offset = 0
@@ -990,6 +996,7 @@ def parse_encoded_annotation1(lex_object,content,is_root=False):
 		offset += size
 		str1 += text
 	return offset, str1
+
 def parse_encoded_annotation(lex_object,content,is_root=False):
 	offset = 0
 	n ,type_idx = get_uleb128(content[offset:5+offset])
@@ -1007,7 +1014,6 @@ def parse_encoded_annotation(lex_object,content,is_root=False):
 	return offset
 
 def parse_annotation_set_item(lex_object,offset,is_root=False):
-
 	size, = struct.unpack_from("I",lex_object.m_content, offset)
 	offset += struct.calcsize("I")
 	for i in xrange(0,size):
@@ -1104,6 +1110,7 @@ class dex_parser:
 		#for i in xrange(0, self.class_def_size):
 			dex_class(self,i).printf(self)
 			#self.getclass(i)
+
 	def create_all_header(self):
 		for i in xrange(0, self.class_def_size):
 			str1 = self.getclassname(i)
