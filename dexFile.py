@@ -1066,7 +1066,7 @@ class dex_parser:
 
 		self.m_dex_optheader = None
 		self.m_class_name_id = {}
-		self.string_table = []
+		self.string_table = {} # used to be a list, dict allows caching
 
 		if self.m_content[0:4] == DEX_OPT_MAGIC:
 			self.init_optheader(self.m_content)
@@ -1078,10 +1078,10 @@ class dex_parser:
 		else:
 			log(3, "error: magic not detected")
 
-		bOffset = self.string_ids_off
+		'''
 		if self.string_ids_size > 0:
 			for i in xrange(0, self.string_ids_size):
-				offset, = struct.unpack_from("I", self.m_content, bOffset + i * 4)
+				offset, = struct.unpack_from("I", self.m_content, self.string_ids_off + i * 4)
 				if i == 0:
 					start = offset
 				else:
@@ -1094,11 +1094,14 @@ class dex_parser:
 			#	if self.m_content[i] == chr(0):
 			#		self.string_table.append(self.m_content[start+1:i])
 			#		break
+		'''
+		# END OF BLOCK
 
 		# set the globals
-		global string_table
+		#global string_table
+		#string_table = self.string_table
 
-		string_table = self.string_table
+
 
 		'''2013/3/19
 		for i in xrange(0, self.method_ids_size):
@@ -1128,17 +1131,67 @@ class dex_parser:
 			field_list = dex_class(self,classid).create_header_file_for_cplusplus(self)
 		pass
 
-	def get_string_by_id(self,stridx):
-		if stridx >= self.string_ids_size:
+	def read_string(self, offset):
+		#if offset > self.binary_blob_length: # FIXME: TODO
+		#	assert False
+
+		string_result = [""]
+
+		# lets just find the string...
+		while self.m_content[offset] != "\x00":
+			string_result.append(self.m_content[offset])
+			offset += 1
+
+		return "".join(string_result)
+
+
+	def get_string_by_id(self, stringIdx):
+		if stringIdx >= self.string_ids_size:
 			return ""
-		return self.string_table[stridx]
+
+		# I don't think caching provides any benefits
+		#if stringIdx not in self.string_table:
+
+		#'''
+		# TODO: need to implement caching
+		string_offset, = struct.unpack_from("I", self.m_content, self.string_ids_off + stringIdx * 4) # FIXME: is this line right? seems right
+
+		# utf16_size	uleb128
+		# data	ubyte[]
+		skip, length = get_uleb128(self.m_content[string_offset:string_offset+5])
+		string_offset += skip
+
+		return self.read_string(string_offset)
+
+		# this may be more efficient - currently doesn't work
+		#return self.m_content[string_offset:string_offset+length-1] # TODO: cache it
+		#'''
+
+		'''
+		# fixme: I need to account for the skip...
+		for i in xrange(0, self.string_ids_size):
+			string_offset, = struct.unpack_from("I", self.m_content, self.string_ids_off + i * 4)
+			if i == 0:
+				start = string_offset
+			else:
+				skip, length = get_uleb128(self.m_content[start:start+5])
+				self.string_table.append(self.m_content[start+skip:string_offset-1])
+				start = string_offset
+		'''
+
+		# this is true...
+		# assert string == self.string_table[stringIdx]:
+
+		#return self.string_table[stringIdx]
 
 	def get_method_name(self,methodid):
 		if methodid >= self.method_ids_size:
 			return ""
 		offset = self.method_ids_off + methodid * struct.calcsize("HHI")
 		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		return self.string_table[name_idx]
+
+		return self.get_string_by_id(name_idx)
+		#return self.string_table[name_idx]
 
 	def get_method_name_fullname(self,methodid,hidden_classname=False):
 		if methodid >= self.method_ids_size:
@@ -1186,7 +1239,9 @@ class dex_parser:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		return self.string_table[name_idx]
+
+		return self.get_string_by_id(name_idx)
+		#return self.string_table[name_idx]
 
 	def getfieldfullname1(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
@@ -1234,14 +1289,18 @@ class dex_parser:
 			return ""
 		offset = self.type_ids_offset + typeid * struct.calcsize("I")
 		descriptor_idx, = struct.unpack_from("I", self.m_content, offset)
-		return self.string_table[descriptor_idx]
+
+		return self.get_string_by_id(descriptor_idx)
+		#return self.string_table[descriptor_idx] # FIXME: not implemented
 
 	def get_proto_name(self, protoid):
 		if protoid >= self.proto_ids_size:
 			return ""
 		offset = self.proto_ids_off + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
-		return self.string_table[shorty_idx]
+
+		return self.get_string_by_id(shorty_idx)
+		#return self.string_table[shorty_idx]
 
 	def get_proto_fullname(self, protoid, classname, func_name):
 		if protoid >= self.proto_ids_size:
@@ -1491,7 +1550,9 @@ class dex_parser:
 			return ""
 		offset = self.type_ids_offset + type_id * struct.calcsize("I")
 		descriptor_idx, = struct.unpack_from("I", self.m_content, offset)
-		return self.string_table[descriptor_idx]
+
+		return self.get_string_by_id(descriptor_idx)
+		#return self.string_table[descriptor_idx]
 	'''
 	def getclassnamebyid(self,classidx):
 		if classidx < len(self.classDef_list):
