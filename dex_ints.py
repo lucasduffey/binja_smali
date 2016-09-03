@@ -211,7 +211,7 @@ def parse_instruction(buffer, offset, dex_object):
 
 	while start < n:
 		if n == 1736:
-			print "start = %d" % start
+			if LOGGING: print "start = %d" % start
 		op = ord(buffer[start])
 		if op == 0:
 			type = ord(buffer[start+1])
@@ -241,14 +241,14 @@ def parse_instruction(buffer, offset, dex_object):
 			if m % 2 == 0:
 				str += " "
 
-		print "%08x: %-36s |%04x:" % (offset+start, str, start/2),
+		if LOGGING: print "%08x: %-36s |%04x:" % (offset+start, str, start/2),
 		m = 0
 		for v in val[1:]:
 			if m > 1:
-				print ",",
-			print v,
+				if LOGGING: print ",",
+			if LOGGING: print v,
 			m += 1
-		print ""
+		if LOGGING: print ""
 		start += 2*val[0]
 
 dex_decode = {
@@ -513,4 +513,4 @@ dex_decode = {
 
 if __name__ == "__main__":
 	buffer="\x12\x01\x6a\x01\xc3\x00\x22\x00\x23\x00\x54\x31\x45\x00\x00\x00\x00\x00"
-	print parse_instruction(buffer)
+	if LOGGING: print parse_instruction(buffer)

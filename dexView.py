@@ -886,7 +886,7 @@ class DEXView(BinaryView, dex_parser):
 
 	# data == BinaryView datatype
 	def __init__(self, data):
-		print "DEXView::__init__"
+		# print "DEXView::__init__"
 
 		BinaryView.__init__(self, data.file) # FIXME: is len(data.file.raw) right?
 		self.data = data # FIXME: is this what we can do DexFile() on?
@@ -903,7 +903,7 @@ class DEXView(BinaryView, dex_parser):
 
 	@classmethod
 	def is_valid_for_data(self, data):
-		print "DEXView::is_valid_for_data"
+		#print "DEXView::is_valid_for_data"
 
 		hdr = data.read(0, 16)
 		if len(hdr) < 16:
@@ -955,8 +955,6 @@ class DEXView(BinaryView, dex_parser):
 		# complicated because this is called without self really existing
 		#   * not really sure what self provides...
 
-print("dexView - for real")
-print("test against classes2.dex - because there is actually dex code..")
 class DEXViewBank(DEXView):
 	name = "DEX"
 	long_name = "Dalvik Executable"
