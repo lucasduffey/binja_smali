@@ -89,10 +89,9 @@ class APKView(BinaryView):
 		dex_file = "classes.dex" # there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
 
-
-		print "=================="
-		print dex_path
-		print "=================="
+		#print "=================="
+		#print dex_path
+		#print "=================="
 
 		# read dex blob into memory
 		dex_blob = open(dex_path).read()
@@ -101,7 +100,7 @@ class APKView(BinaryView):
 		# write(addr, data) # start at 0, and write everything?
 		fluff_size = apk_size - len(dex_blob)
 
-		print "about to overwrite everything with dex_blob"
+		#print "about to overwrite everything with dex_blob"
 
 		# NOTE: this will switch control over to "DEXViewBank"
 

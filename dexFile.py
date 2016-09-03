@@ -406,7 +406,7 @@ class dex_class:
 				if LOGGING:
 					method_code(dex_object,code_off).printf(dex_object,"\t\t")
 
-		print "================================================================================"
+		if LOGGING: print "================================================================================"
 		if self.annotationsOff != 0:
 			offset = self.annotationsOff
 			self.class_annotations_off, self.fields_size, self.annotated_methods_size, self.annotated_parameters_size,=struct.unpack_from("4I", dex_object.m_content, offset)
@@ -424,7 +424,7 @@ class dex_class:
 					parse_annotation_set_item(dex_object,annotations_off)
 
 			if self.annotated_methods_size:
-				print "=====annotated_methods_size=====    offset=[%x]===="%offset
+				if LOGGING: print "=====annotated_methods_size=====    offset=[%x]===="%offset
 				for  i in xrange(0, self.annotated_methods_size):
 					method_idx,annotations_off,=struct.unpack_from("2I", dex_object.m_content, offset)
 					offset += struct.calcsize("2I")
@@ -530,7 +530,7 @@ def parse_debug_info_method_parameter_list(dex_object,offset):
 	return 	parameter_list
 
 def parse_debug_info(lex_object,offset):
-	print "===parse_debug_info====offset = %08x"%offset
+	if LOGGING: print "===parse_debug_info====offset = %08x"%offset
 	n ,current_line = get_uleb128(lex_object.m_content[offset:offset+5])
 	offset += n
 	n,parameters_size = get_uleb128(lex_object.m_content[offset:offset+5])
@@ -542,7 +542,7 @@ def parse_debug_info(lex_object,offset):
 		offset+=n
 	start = offset
 	current_pc = 0
-	print "===opcode====offset = %08x  line=%d pc=%d"% (offset,current_line,current_pc)
+	if LOGGING: print "===opcode====offset = %08x  line=%d pc=%d"% (offset,current_line,current_pc)
 
 
 	totalsize = len(lex_object.m_content)
@@ -550,7 +550,7 @@ def parse_debug_info(lex_object,offset):
 		#bytecode = struct.unpack_from("B",lex_object.m_content, offset)
 		bytecode = ord(lex_object.m_content[offset])
 		offset += 1
-		print "opcode[%02x]"%bytecode,
+		if LOGGING: print "opcode[%02x]"%bytecode,
 		if bytecode == 0:
 			print ""
 			break
@@ -558,13 +558,13 @@ def parse_debug_info(lex_object,offset):
 			n,val = get_uleb128(lex_object.m_content[offset:offset+5])
 			current_pc += val;
 			offset += n
-			print "line=%d  pc=%x"% (current_line,current_pc)
+			if LOGGING: print "line=%d  pc=%x"% (current_line,current_pc)
 		elif bytecode == 2:
 			n,val = get_leb128(lex_object.m_content[offset:offset+5])
 
 			current_line += val
 			offset += n
-			print "line=%d  pc=%x   val=%08x(%d)"% (current_line,current_pc,val,val)
+			if LOGGING: print "line=%d  pc=%x   val=%08x(%d)"% (current_line,current_pc,val,val)
 		elif bytecode == 3:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
@@ -572,7 +572,7 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			n,type_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 			offset += n
-			print "v%d %s %s  START_LOCAL"% (register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
+			if LOGGING: print "v%d %s %s  START_LOCAL"% (register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
 		elif bytecode == 4:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
@@ -582,32 +582,32 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			n,sig_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 			offset += n
-			print "v%d %s %s   START_LOCAL_EXTENDED"% (register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
+			if LOGGING: print "v%d %s %s   START_LOCAL_EXTENDED"% (register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
 		elif bytecode == 5:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
-			print "v%d  END_LOCAL"%register_num
+			if LOGGING: print "v%d  END_LOCAL"%register_num
 		elif bytecode == 6:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
-			print "v%d   register to restart"%register_num
+			if LOGGING: print "v%d   register to restart"%register_num
 		elif bytecode == 7:
-			print "SET_PROLOGUE_END"
+			if LOGGING: print "SET_PROLOGUE_END"
 			pass
 		elif bytecode == 8:
-			print "SET_EPILOGUE_BEGIN"
+			if LOGGING: print "SET_EPILOGUE_BEGIN"
 			pass
 		elif bytecode == 9:
 			n,name_idx = get_uleb128(lex_object.m_content[offset:offset+5])
-			print "%s"%lex_object.get_string_by_id(name_idx)
+			if LOGGING: print "%s"%lex_object.get_string_by_id(name_idx)
 			offset += n
 		else:
 			adjusted_opcode = bytecode - 0xa
 			current_line +=  (adjusted_opcode % 15)-4
 			current_pc += (adjusted_opcode / 15)
 			#offset += 1
-			print "line=%d  pc=%x  adjusted_opcode=%d  pc+ %d  line+%d"% (current_line,current_pc,adjusted_opcode,(adjusted_opcode/15),(adjusted_opcode%15)-4)
-	print "===parse_debug_info====offset = %08x$"%offset
+			if LOGGING: print "line=%d  pc=%x  adjusted_opcode=%d  pc+ %d  line+%d"% (current_line,current_pc,adjusted_opcode,(adjusted_opcode/15),(adjusted_opcode%15)-4)
+	if LOGGING: print "===parse_debug_info====offset = %08x$"%offset
 
 def get_encoded_value(content):
 	VALUE_SHORT = 0x2
