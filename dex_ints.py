@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 # original author: yanfeng.wyf (wuyanfeng@yeah.net)
+from binaryninja import *
 
 import struct
 FMT10T = 0
@@ -61,10 +62,12 @@ def parse_FMT21C(dex_object, buffer, offset):
 	if val == 0x1a:
 		# FIXME: need to figure out how to get dex_object properly
 		arg1 = "unimplemented"
-		#arg1 = "\"%s\""%dex_object.get_string_by_id(v)
+		if "string_table" in globals():
+			arg1 = "\"%s\"" % string_table[v] # was dex_object.get_string_by_id(v)
+
 	elif val in [0x1c,0x1f,0x22]:
 		# FIXME: need to figure out how to get dex_object properly
-		#arg1 = "type@%s"%dex_object.gettypename(v) # FIXME: replace with gettypenamebyid?
+		#arg1 = "type@%s"%dex_object.get_type_name(v) # FIXME: replace with get_type_name_by_id?
 		arg1 = "type@unimplemented"
 	else:
 		# FIXME: need to figure out how to get dex_object properly
@@ -99,7 +102,7 @@ def parse_FMT22C(dex_object, buffer, offset):
 
 	if ord(buffer[0]) == 0x20 or ord(buffer[0]) == 0x23:
 		# FIXME: need to figure out how to get dex_object properly
-		#prefix="type@%s"%(dex_object.gettypename(cccc))
+		#prefix="type@%s"%(dex_object.get_type_name(cccc))
 		prefix="type@unimplemented"
 		pass
 	else:
@@ -156,6 +159,9 @@ def parse_FMT32X(dex_object, buf, offset):
 
 # in the "func_point" function list, directly called by "perform_get_instruction_text(self, blah..)"
 def parse_FMT35C(dex_object, buffer, offset):
+	#BinaryViewType["DEX"].my_test2()
+	#DEXView.my_test2()
+
 	A = ord(buffer[1]) >> 4
 	G = ord(buffer[1]) & 0xf
 	D = ord(buffer[4]) >> 4
@@ -168,8 +174,12 @@ def parse_FMT35C(dex_object, buffer, offset):
 	if ord(buffer[0]) == 0x24:
 		#prefix="type@%s"%(dex_object.get_string_by_id(bbbb))
 		prefix="type@unimplemented"
+
+		if "string_table" in globals():
+			prefix = "type@%s" % string_table[bbbb] # was dex_object.get_string_by_id(bbbb)
+
 	else:
-		#prefix="meth@%s  //%s"%(dex_object.getmethodname(bbbb), dex_object.getmethodfullname(bbbb,True)) # FIXME: getmethodfullname isn't inheirited by dexView stuff
+		#prefix="meth@%s  //%s"%(dex_object.get_method_name(bbbb), dex_object.getmethodfullname(bbbb,True)) # FIXME: getmethodfullname isn't inheirited by dexView stuff
 		prefix="meth@unimplemented"
 
 	if A == 5:

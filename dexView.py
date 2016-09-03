@@ -747,13 +747,20 @@ class DEX(Architecture):
 	flags = ["c", "z", "i", "d", "b", "v", "s"] # TODO
 	flag_write_types = ["*", "czs", "zvs", "zs"] # TODO
 
+	#def __init__(self):
+		#bv.my_test2() # "bv" not defined..
+		#BinaryViewType["DEX"].my_test2()
+		#print dir(self) # just for debug
+
+
 	def decode_instruction(self, data, addr):
 		if len(data) < 1:
 			return None, None, None, None
 		opcode = ord(data[0])
 		fn = dex_decode[opcode][3]
 
-
+		#BinaryViewType["DEX"].my_test2()
+		#bv.my_test2()
 		# shouldn't be required?
 		#if opcode >= len(InstructionNames): # was "InstructionNames"
 		#	return None, None, None, None
@@ -906,7 +913,9 @@ class DEXView(BinaryView, dex_parser):
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
 
-		self.dex = dex_parser(self, raw_binary)
+		# TLDR: need to save the dex_parser object globally
+		self.dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
+		BinaryViewType["DEX"].dex_obj = self.dex
 		#self.dex = dex_parser.__init__(self, self, raw_binary)
 
 	@classmethod
@@ -958,6 +967,14 @@ class DEXView(BinaryView, dex_parser):
 	def perform_is_executable(self):
 		return True
 
+	#
+	def my_test(self):
+		print "yay worked"
+
+	@classmethod
+	def my_test2(self):
+		log(3, "yay worked")
+
 	# FIXME
 	#def perform_get_entry_point(self):
 		# complicated because this is called without self really existing
@@ -975,3 +992,9 @@ DEX.register()
 
 
 # Architecture.register
+
+'''
+from pprint import pprint
+pprint(dir(binaryninja.BinaryViewType["DEX"]))
+
+'''

@@ -48,7 +48,7 @@ class dex_encode_field:
 		self.m_field_idx_diff = idx
 		self.m_access_flags = flags
 	def printf(self, dex_object):
-		name = dex_object.gettypenamebyid(self.m_field_idx_diff)
+		name = dex_object.get_type_name_by_id(self.m_field_idx_diff)
 		#print "%-20s%08x %s"% ("field_idx_diff", self.m_field_idx_diff,name)
 		flags = dex_object.get_access_flags(self.m_access_flags)
 		#print "%-20s%08x %s"% ("access_flags", self.m_access_flags,flags)
@@ -114,7 +114,7 @@ class dex_encode_method:
 		if code_off:
 			self.m_code_item = method_code(dex_object,code_off)#dex_object.m_content[code_off:])
 	def printf(self, dex_object):
-		name = dex_object.gettypenamebyid(self.m_method_idx_diff)
+		name = dex_object.get_type_name_by_id(self.m_method_idx_diff)
 		if LOGGING: print "%-20s%08x %s"% ("m_method_idx_diff", self.m_method_idx_diff,name)
 		flags = dex_object.get_access_flags(self.m_access_flags)
 		if LOGGING: print "%-20s%08x %s"% ("access_flags", self.m_access_flags,flags)
@@ -191,14 +191,14 @@ class dex_class:
 
 	def create_header_file_for_cplusplus(self, dex_object):
 		typelist = []
-		name = self.format_classname(dex_object.gettypename(self.thisClass))
+		name = self.format_classname(dex_object.get_type_name(self.thisClass))
 		f = open(name+".h","w")
 		str1 =  "class %s"%name
-		supername = dex_object.gettypename(self.superClass)
+		supername = dex_object.get_type_name(self.superClass)
 
 		if dex_object.m_class_name_id.has_key(supername) :
 			str1 += " : "
-			supername = dex_object.gettypename(self.superClass)
+			supername = dex_object.get_type_name(self.superClass)
 			str1 += self.format_classname(supername)
 		str1 += "\n{\n"
 		offset = self.classDataOff
@@ -276,8 +276,8 @@ class dex_class:
 			parameter_list=[]
 			if code_off != 0:
 				parameter_list = method_code(dex_object,code_off).get_param_list(dex_object)
-			str1 += dex_object.getmethodfullname1(method_idx,parameter_list,True)
-			#print "%s           codeoff=%x"% (dex_object.getmethodname(method_idx),code_off)
+			str1 += dex_object.get_method_name_fullname1(method_idx,parameter_list,True)
+			#print "%s           codeoff=%x"% (dex_object.get_method_name(method_idx),code_off)
 			str1 += ";\n"
 		method_idx = 0
 		str1+="//////////////////////virtual method//////////////////////////////////\n"
@@ -298,7 +298,7 @@ class dex_class:
 			parameter_list=[]
 			if code_off != 0:
 				parameter_list = method_code(dex_object,code_off).get_param_list(dex_object)
-			str1 += dex_object.getmethodfullname1(method_idx,parameter_list,True)
+			str1 += dex_object.get_method_name_fullname1(method_idx,parameter_list,True)
 			str1 += ";\n"
 		str1 += "}"
 		#print str1
@@ -307,12 +307,12 @@ class dex_class:
 		return typelist
 
 	def printf(self, dex_object):
-		#if dex_object.gettypename(self.thisClass)!="Landroid/Manifest$permission;":
+		#if dex_object.get_type_name(self.thisClass)!="Landroid/Manifest$permission;":
 		#	return
 		if LOGGING:
 			print "#"*150
-			print "%-20s:%08x:%10d  %s"% ("thisClass", self.thisClass, self.thisClass, dex_object.gettypename(self.thisClass))
-			print "%-20s:%08x:%10d  %s"% ("superClass", self.superClass, self.superClass, dex_object.gettypename(self.superClass))
+			print "%-20s:%08x:%10d  %s"% ("thisClass", self.thisClass, self.thisClass, dex_object.get_type_name(self.thisClass))
+			print "%-20s:%08x:%10d  %s"% ("superClass", self.superClass, self.superClass, dex_object.get_type_name(self.superClass))
 			print "%-20s:%08x:%10d"% ("modifiers", self.modifiers, self.modifiers)
 			print "%-20s:%08x:%10d"% ("offset", self.offset, self.offset)
 			print "%-20s:%08x:%10d"% ("annotationsOff", self.annotationsOff, self.annotationsOff)
@@ -327,7 +327,7 @@ class dex_class:
 		for n in xrange(0, self.interfacesSize):
 			typeid, = struct.unpack_from("H", dex_object.m_content, offset)
 			offset += struct.calcsize("H")
-			if LOGGING: print "\t\t"+ dex_object.gettypename(typeid)
+			if LOGGING: print "\t\t"+ dex_object.get_type_name(typeid)
 
 		if LOGGING: print "%-20s:%08x:%10d"% ("staticValuesOff", self.staticValuesOff, self.staticValuesOff)
 		if LOGGING: print "%-20s:%08x:%10d  %s"% ("sourceFileIdx", self.sourceFileIdx, self.sourceFileIdx, dex_object.get_string_by_id(self.sourceFileIdx))
@@ -375,8 +375,8 @@ class dex_class:
 			n,code_off = get_uleb128(dex_object.m_content[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			if LOGGING: print "methodfullname: " + dex_object.getmethodfullname(method_idx,True)
-			if LOGGING: print "%s           codeoff=%x"% (dex_object.getmethodname(method_idx),code_off)
+			if LOGGING: print "methodfullname: " + dex_object.get_method_name_fullname(method_idx,True)
+			if LOGGING: print "%s           codeoff=%x"% (dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
 				# NOTE
 				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
@@ -395,8 +395,8 @@ class dex_class:
 			n,code_off = get_uleb128(dex_object.m_content[offset:offset+5])
 			offset += n
 			method_idx += method_idx_diff
-			if LOGGING: print dex_object.getmethodfullname(method_idx,True)
-			if LOGGING: print "%s           codeoff=%x"% (dex_object.getmethodname(method_idx),code_off)
+			if LOGGING: print dex_object.get_method_name_fullname(method_idx,True)
+			if LOGGING: print "%s           codeoff=%x"% (dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
 				# NOTE
 				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
@@ -420,7 +420,7 @@ class dex_class:
 				for  i in xrange(0, self.fields_size):
 					field_idx,annotations_off,=struct.unpack_from("2I", dex_object.m_content, offset)
 					offset += struct.calcsize("2I")
-					print dex_object.getfieldname(field_idx),
+					print dex_object.get_field_name(field_idx),
 					parse_annotation_set_item(dex_object,annotations_off)
 
 			if self.annotated_methods_size:
@@ -428,13 +428,13 @@ class dex_class:
 				for  i in xrange(0, self.annotated_methods_size):
 					method_idx,annotations_off,=struct.unpack_from("2I", dex_object.m_content, offset)
 					offset += struct.calcsize("2I")
-					print dex_object.getmethodname(method_idx),
+					print dex_object.get_method_name(method_idx),
 					parse_annotation_set_item(dex_object,annotations_off)
 			if self.annotated_parameters_size:
 				for  i in xrange(0, self.annotated_parameters_size):
 					method_idx,annotations_off,=struct.unpack_from("2I", dex_object.m_content, offset)
 					offset+=struct.calcsize("2I")
-					print dex_object.getmethodname(method_idx),
+					print dex_object.get_method_name(method_idx),
 					parse_annotation_set_ref_list(dex_object,annotations_off)
 			if self.class_annotations_off == 0:
 				return
@@ -572,7 +572,7 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			n,type_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 			offset += n
-			if LOGGING: print "v%d %s %s  START_LOCAL"% (register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
+			if LOGGING: print "v%d %s %s  START_LOCAL"% (register_num,lex_object.get_type_name_by_id(type_idx),lex_object.get_string_by_id(name_idx))
 		elif bytecode == 4:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
@@ -582,7 +582,7 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			n,sig_idx = get_uleb128p1(lex_object.m_content[offset:offset+5])
 			offset += n
-			if LOGGING: print "v%d %s %s   START_LOCAL_EXTENDED"% (register_num,lex_object.gettypenamebyid(type_idx),lex_object.get_string_by_id(name_idx))
+			if LOGGING: print "v%d %s %s   START_LOCAL_EXTENDED"% (register_num,lex_object.get_type_name_by_id(type_idx),lex_object.get_string_by_id(name_idx))
 		elif bytecode == 5:
 			n,register_num = get_uleb128(lex_object.m_content[offset:offset+5])
 			offset += n
@@ -844,13 +844,13 @@ def parse_encoded_value(lex_object,content,is_root=False):
 			print lex_object.get_string_by_id(sum),
 		elif value_type == 0x18:
 			print "type@%d"%sum,
-			print lex_object.gettypename(sum),
+			print lex_object.get_type_name(sum),
 		elif value_type == 0x19:
 			print "field@%d"%sum,
-			print lex_object.getfieldname(sum),
+			print lex_object.get_field_name(sum),
 		elif value_type == 0x1a:
 			print "method@%d"%sum,
-			print lex_object.getmethodname(sum),
+			print lex_object.get_method_name(sum),
 		else:
 			str = ""
 			for q in xrange(0,value_arg+1):
@@ -901,13 +901,13 @@ def parse_encoded_value1(lex_object,content,is_root=False):
 			str1 += "\""
 		elif value_type == 0x18:
 			print "type@%d"%sum,
-			str1 += lex_object.gettypename(sum),
+			str1 += lex_object.get_type_name(sum),
 		elif value_type == 0x19:
 			print "field@%d"%sum,
-			str1 += lex_object.getfieldname(sum),
+			str1 += lex_object.get_field_name(sum),
 		elif value_type == 0x1a:
 			print "method@%d"%sum,
-			str1 += lex_object.getmethodname(sum),
+			str1 += lex_object.get_method_name(sum),
 		else:
 			str2 = ""
 			for q in xrange(0,value_arg+1):
@@ -986,7 +986,7 @@ def parse_encoded_annotation1(lex_object,content,is_root=False):
 	n ,size = get_uleb128(content[offset:5+offset])
 	offset += n
 	if is_root:
-		str1 += lex_object.gettypenamebyid(type_idx)
+		str1 += lex_object.get_type_name_by_id(type_idx)
 	for i in xrange(0,size):
 		n ,name_idx = get_uleb128(content[offset:5+offset])
 		if i == 0 and is_root:
@@ -1004,7 +1004,7 @@ def parse_encoded_annotation(lex_object,content,is_root=False):
 	n ,size = get_uleb128(content[offset:5+offset])
 	offset += n
 	if is_root:
-		print lex_object.gettypenamebyid(type_idx),
+		print lex_object.get_type_name_by_id(type_idx),
 	for i in xrange(0,size):
 		n ,name_idx = get_uleb128(content[offset:5+offset])
 		if i == 0 and is_root:
@@ -1088,21 +1088,27 @@ class dex_parser:
 					skip, length = get_uleb128(self.m_content[start:start+5])
 					self.string_table.append(self.m_content[start+skip:offset-1])
 					start = offset
+
 			for i in xrange(start, len(self.m_content)):
 				if self.m_content[i] == chr(0):
 					self.string_table.append(self.m_content[start+1:i])
 					break
 
+		# set the globals
+		global string_table
+
+		string_table = self.string_table
+
 
 		'''2013/3/19
 		for i in xrange(0, self.m_methodIdsSize):
-			print self.getmethodname(i)
+			print self.get_method_name(i)
 		for i in xrange(0, self.m_fieldIdsSize):
-			print self.getfieldname(i)
-		for i in xrange(0, self.m_typeIdsSize):
-			print self.gettypename(i)
+			print self.get_field_name(i)
+		for i in xrange(0, self.type_ids_size):
+			print self.get_type_name(i)
 		for i in xrange(0, self.m_protoIdsSize):
-			print self.getprotoname(i)
+			print self.get_proto_name(i)
 		'''
 		for i in xrange(0, self.class_def_size):
 			str1 = self.getclassname(i)
@@ -1127,19 +1133,19 @@ class dex_parser:
 			return ""
 		return self.string_table[stridx]
 
-	def getmethodname(self,methodid):
+	def get_method_name(self,methodid):
 		if methodid >= self.m_methodIdsSize:
 			return ""
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		return self.string_table[name_idx]
 
-	def getmethodfullname(self,methodid,hidden_classname=False):
+	def get_method_name_fullname(self,methodid,hidden_classname=False):
 		if methodid >= self.m_methodIdsSize:
 			return ""
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		classname = self.gettypename(class_idx)
+		classname = self.get_type_name(class_idx)
 		classname = shorty_decode(classname)
 		funcname = self.get_string_by_id(name_idx)
 		if not hidden_classname:
@@ -1152,7 +1158,7 @@ class dex_parser:
 		offset = self.m_methodIdsOffset + methodId * struct.calcsize("HHI")
 		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 
-		classname = self.gettypename(class_idx)
+		classname = self.get_type_name(class_idx)
 		classname = shorty_decode(classname)
 		funcname = self.get_string_by_id(name_idx)
 		if not hidden_classname:
@@ -1163,19 +1169,19 @@ class dex_parser:
 
 		return binja_proto_fullname
 
-	def getmethodfullname1(self,methodid,parameter_list=[],hidden_classname=False):
+	def get_method_name_fullname1(self,methodid,parameter_list=[],hidden_classname=False):
 		if methodid >= self.m_methodIdsSize:
 			return ""
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		classname = self.gettypename(class_idx)
+		classname = self.get_type_name(class_idx)
 		classname = shorty_decode(classname)
 		funcname = self.get_string_by_id(name_idx)
 		if not hidden_classname:
 			classname = ""
 		return self.get_proto_fullname1(proto_idx,classname,parameter_list,funcname)
 
-	def getfieldname(self,fieldid):
+	def get_field_name(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
@@ -1187,7 +1193,7 @@ class dex_parser:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		name = self.gettypename(type_idx)
+		name = self.get_type_name(type_idx)
 		name = shorty_decode(name)
 		index = name.rfind(".")
 		fname = self.get_string_by_id(name_idx)
@@ -1198,7 +1204,7 @@ class dex_parser:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		typename = self.gettypename(type_idx)
+		typename = self.get_type_name(type_idx)
 		typename = shorty_decode(typename)
 		fieldname = self.get_string_by_id(name_idx)
 		return typename,fieldname
@@ -1208,7 +1214,7 @@ class dex_parser:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		name = self.gettypename(type_idx)
+		name = self.get_type_name(type_idx)
 		name = shorty_decode(name)
 		fname = self.get_string_by_id(name_idx)
 		return "%s %s"% (name,fname)
@@ -1218,31 +1224,31 @@ class dex_parser:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
-		name = self.gettypename(type_idx)
+		name = self.get_type_name(type_idx)
 		if name[-1] != ";":
 			name = shorty_decode(name)
 		return name
 
-	def gettypename(self,typeid):
-		if typeid >= self.m_typeIdsSize:
+	def get_type_name(self, typeid):
+		if typeid >= self.type_ids_size:
 			return ""
-		offset = self.m_typeIdsOffset + typeid * struct.calcsize("I")
+		offset = self.type_ids_offset + typeid * struct.calcsize("I")
 		descriptor_idx, = struct.unpack_from("I", self.m_content, offset)
 		return self.string_table[descriptor_idx]
 
-	def getprotoname(self,protoid):
+	def get_proto_name(self, protoid):
 		if protoid >= self.m_protoIdsSize:
 			return ""
 		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 		return self.string_table[shorty_idx]
 
-	def get_proto_fullname(self,protoid,classname,func_name):
+	def get_proto_fullname(self, protoid,classname,func_name):
 		if protoid >= self.m_protoIdsSize:
 			return ""
 		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
-		retname = self.gettypename(return_type_idx)
+		retname = self.get_type_name(return_type_idx)
 		retname = shorty_decode(retname)
 		retstr =  retname+" "
 		if len(classname)==0:
@@ -1257,7 +1263,7 @@ class dex_parser:
 			for i in xrange(0,size):
 				type_idx, = struct.unpack_from("H", self.m_content, offset)
 				offset += struct.calcsize("H")
-				arg = self.gettypename(type_idx)
+				arg = self.get_type_name(type_idx)
 				arg = shorty_decode(arg)
 				if n != 0:
 					retstr += ","
@@ -1273,7 +1279,7 @@ class dex_parser:
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 
 		 # ignore the return type for now
-		#retname = self.gettypename(return_type_idx)
+		#retname = self.get_type_name(return_type_idx)
 		#retname = shorty_decode(retname)
 		#retstr =  retname+" "
 
@@ -1294,7 +1300,7 @@ class dex_parser:
 			for i in xrange(0,size):
 				type_idx, = struct.unpack_from("H", self.m_content, offset)
 				offset += struct.calcsize("H")
-				arg = self.gettypename(type_idx)
+				arg = self.get_type_name(type_idx)
 				arg = shorty_decode(arg)
 				if n != 0:
 					retstr += ","
@@ -1304,14 +1310,14 @@ class dex_parser:
 		'''
 		return retstr
 
-	def get_proto_fullname1(self,protoid,classname,parameter_list,func_name):
+	def get_proto_fullname1(self, protoid,classname,parameter_list,func_name):
 		index = classname.rfind(".")
 		classname = classname[index+1:]
 		if protoid >= self.m_protoIdsSize:
 			return ""
 		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
-		retname = self.gettypename(return_type_idx)
+		retname = self.get_type_name(return_type_idx)
 		retname = shorty_decode(retname)
 		index = retname.rfind(".")
 		retname = retname[index+1:]
@@ -1329,7 +1335,7 @@ class dex_parser:
 			for i in xrange(0,size):
 				type_idx, = struct.unpack_from("H", self.m_content, offset)
 				offset += struct.calcsize("H")
-				arg = self.gettypename(type_idx)
+				arg = self.get_type_name(type_idx)
 				arg = shorty_decode(arg)
 				if n != 0:
 					retstr += ","
@@ -1401,7 +1407,7 @@ class dex_parser:
 			return ""
 		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.m_content, offset)
-		return self.gettypename(class_idx)
+		return self.get_type_name(class_idx)
 
 	def init_optheader(self,content):
 		offset = 0
@@ -1456,9 +1462,9 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.m_stringIdsOff, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_typeIdsSize, = struct.unpack_from(format,content,offset)
+		self.type_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_typeIdsOffset, = struct.unpack_from(format,content,offset)
+		self.type_ids_offset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_protoIdsSize, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
@@ -1480,20 +1486,20 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.m_dataOff, = struct.unpack_from(format,content,offset)
 
-	def gettypenamebyid(self,typeid):
-		if typeid >= self.m_typeIdsSize:
+	def get_type_name_by_id(self, type_id):
+		if type_id >= self.type_ids_size:
 			return ""
-		offset = self.m_typeIdsOffset + typeid * struct.calcsize("I")
+		offset = self.type_ids_offset + type_id * struct.calcsize("I")
 		descriptor_idx, = struct.unpack_from("I", self.m_content, offset)
 		return self.string_table[descriptor_idx]
 	'''
 	def getclassnamebyid(self,classidx):
 		if classidx < len(self.classDef_list):
-			return gettypenamebyid(self.classDef_list[classidx].class_idx)
+			return get_type_name_by_id(self.classDef_list[classidx].class_idx)
 		return ""
 	def getfieldnamebyfieldid(self,fieldid):
 		if fieldid < len(self.FieldId_list):
-			return self.FieldId_list[fieldid].getfieldname(self)
+			return self.FieldId_list[fieldid].get_field_name(self)
 		return ""
 	def getfieldfullnamebyfieldid(self,fieldid):
 		if fieldid < len(self.FieldId_list):
@@ -1501,7 +1507,7 @@ class dex_parser:
 		return ""
 	def getmethodnamebyid(self,methodid):
 		if methodid < len(self.MethodId_list):
-			return self.MethodId_list[methodid].getmethodname(self)
+			return self.MethodId_list[methodid].get_method_name(self)
 		return ""
 	def getmethodfullnamebyid(self,methodid,show_class_name=False):
 		if methodid < len(self.MethodId_list):
@@ -1579,8 +1585,8 @@ class dex_parser:
 			n,virtual_methods_size = get_uleb128(self.m_content[offset:])
 			offset += n
 			count = direct_methods_size + virtual_methods_size
-		classname = self.gettypename(class_idx)
-		supername = self.gettypename(superclass_idx)
+		classname = self.get_type_name(class_idx)
+		supername = self.get_type_name(superclass_idx)
 		interfacestr = ""
 
 		if interfaces_off:
@@ -1588,7 +1594,7 @@ class dex_parser:
 			print "interfaces_off=%d %s%s %d   count=%d [%x]"% (interfaces_off,classname,supername,len(self.m_content),count,count)
 			for i in xrange(0,count):
 				idx = struct.unpack_from("H", self.m_content,interfaces_off+struct.calcsize("I")+i*struct.calcsize("H"))
-				iname = self.gettypename(idx)
+				iname = self.get_type_name(idx)
 				if i != 0:
 					interfacestr += ", "
 				interfacestr += iname
@@ -1614,17 +1620,17 @@ class dex_parser:
 
 		for i in xrange(0,numVMethod):
 			methodIdx, modifiers, codeOff, = struct.unpack_from("2HI", self.m_content, offset)
-			print prefix + self.getmethodfullname(methodIdx,True)
+			print prefix + self.get_method_name_fullname(methodIdx,True)
 			offset += struct.calcsize("2HI")
 
 		for i in xrange(0,numDMethod):
 			methodIdx, modifiers, codeOff, = struct.unpack_from("2HI", self.m_content, offset)
-			print prefix + self.getmethodfullname(methodIdx,True)
+			print prefix + self.get_method_name_fullname(methodIdx,True)
 			offset += struct.calcsize("2HI")
 
 		for i in xrange(0,numSMethod):
 			methodIdx, modifiers, codeOff, = struct.unpack_from("2HI", self.m_content, offset)
-			print prefix + self.getmethodfullname(methodIdx,True)
+			print prefix + self.get_method_name_fullname(methodIdx,True)
 			offset += struct.calcsize("2HI")
 		print "}\n"
 		'''
