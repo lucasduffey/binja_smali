@@ -371,10 +371,13 @@ class dex_class:
 			method_idx += method_idx_diff
 			#if LOGGING: print "methodfullname: " + dex_object.get_method_name_fullname(method_idx,True)
 			#if LOGGING: print "%s           codeoff=%x"% (dex_object.get_method_name(method_idx),code_off)
+
+			# "insns" is 16 bytes away from code_off
 			if code_off != 0:
+				instructions_off = code_off + 16 # AFAIK
 				# NOTE
-				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
-				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)
+				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, instructions_off)
+				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, instructions_off)
 				fn.name = dex_object.get_binja_method_fullname(method_idx, True) # FIXME: what?? this doesn't make sense..
 
 				#if LOGGING:
@@ -392,9 +395,10 @@ class dex_class:
 			#if LOGGING: print dex_object.get_method_name_fullname(method_idx,True)
 			#if LOGGING: print "%s           codeoff=%x"% (dex_object.get_method_name(method_idx),code_off)
 			if code_off != 0:
+				instructions_off = code_off + 16 # AFAIK
 				# NOTE
-				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
-				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)
+				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, instructions_off)
+				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, instructions_off)
 				fn.name = dex_object.get_binja_method_fullname(method_idx, True)
 
 				#if LOGGING:
@@ -507,7 +511,10 @@ class dex_class:
 			method_idx += method_idx_diff
 			if LOGGING: print "methodfullname: " + dex_object.get_method_name_fullname(method_idx,True)
 			if LOGGING: print "%s           codeoff=%x"% (dex_object.get_method_name(method_idx),code_off)
+
+			# code_item
 			if code_off != 0:
+
 				# NOTE
 				dex_object.bv.create_user_function(Architecture['dex'].standalone_platform, code_off)
 				fn = dex_object.bv.get_function_at(Architecture['dex'].standalone_platform, code_off)

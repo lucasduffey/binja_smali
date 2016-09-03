@@ -464,7 +464,7 @@ class DEX(Architecture):
 			#log(2, data.encode("hex"))
 			#log(2, data[1].encode("hex"))
 
-			result.add_branch(UnconditionalBranch, val) # addr + offset
+			result.add_branch(UnconditionalBranch, val)
 
 		# TODO: implement conditional jumps
 		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
