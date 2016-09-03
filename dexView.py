@@ -911,12 +911,12 @@ class DEXView(BinaryView, dex_parser):
 		self.data.register_notification(self.notification)
 
 		raw_binary_length = len(data.file.raw)
-		raw_binary = data.read(0, raw_binary_length)
+		raw_binary = data.read(0, raw_binary_length) # TODO: eliminate this step...
 
 		# TODO: check if this works
-		global dex_file
-		dex_file = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
-		self.dex = dex_file
+		#global dex_file
+		self.dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
+		 #= dex_file
 
 		# BinaryViewType["DEX"].dex_obj = self.dex # does nothing
 		#self.dex = dex_parser.__init__(self, self, raw_binary)
@@ -927,10 +927,10 @@ class DEXView(BinaryView, dex_parser):
 
 		hdr = data.read(0, 16)
 		if len(hdr) < 16:
-				return False
+			return False
 		# magic - https://en.wikipedia.org/wiki/List_of_file_signatures
 		if hdr[0:8] != DEX_MAGIC: # dex file format
-				return False
+			return False
 
 		return True
 

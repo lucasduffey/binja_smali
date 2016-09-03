@@ -153,7 +153,7 @@ def parse_FMT31T(dex_object, buffer, offset):
 # requires buffer of at least 4 bytes
 # GREPME - seems to be the only function with problems..
 def parse_FMT32X(dex_object, buf, offset):
-	print "len(buf): %i" % len(buf)
+	#print "len(buf): %i" % len(buf)
 
 	aaaa,bbbb, = struct.unpack_from("hh", buf, 2) # I'm missing a single byte of data..
 	return (dex_decode[ord(buf[0])][4], dex_decode[ord(buf[0])][1], "v%d" % aaaa, "v%d" % bbbb)
