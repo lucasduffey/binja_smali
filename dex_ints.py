@@ -206,6 +206,7 @@ func_point = [parse_FMT10T, parse_FMT10X, parse_FMT11N, parse_FMT11X, parse_FMT1
 #	)
 #
 # buffer is the dex function code - the entire dex code for a specific function
+# should only be called when running from command line
 def parse_instruction(buffer, offset, dex_object):
 	n = len(buffer)
 	start = 0

@@ -104,8 +104,10 @@ class method_code:
 		#	parse_debug_info(dex_object, self.debug_info_off)
 
 
+# unused?
+'''
 class dex_encode_method:
-	def __init__(self,idx,flags,code_off, dex_object):
+	def __init__(self, idx, flags, code_off, dex_object):
 		self.m_method_idx_diff = idx
 		self.m_access_flags = flags
 		self.m_code_off = code_off
@@ -127,7 +129,7 @@ class dex_encode_method:
 		dex_object.MethodId_list[self.m_method_idx_diff].printf(dex_object)
 		if self.m_code_off!=0:
 			self.m_code_item.printf(dex_object)
-
+'''
 
 class dex_class:
 	def __init__(self, dex_object, classid):
@@ -1051,23 +1053,22 @@ class dex_parser:
 
 		self.bv = bv
 
-		#self.m_filename = filename
-		#self.m_fd = open(filename,"rb")
 		self.m_content = binary_blob # self.m_fd.read()
-		#self.m_fd.close()
 
-		print "self.m_content[0:4]: ", self.m_content[0:4].encode("hex")
-		print "DEX_MAGIC: ", DEX_MAGIC.encode("hex")
+		if LOGGING: print "self.m_content[0:4]: ", self.m_content[0:4].encode("hex")
+		if LOGGING: print "DEX_MAGIC: ", DEX_MAGIC.encode("hex")
 
-		#self.m_stringIdsOff = 0 # make interpreter happy
 		self.m_dex_optheader = None
 		self.m_class_name_id = {}
 		self.string_table = []
+
 		if self.m_content[0:4] == DEX_OPT_MAGIC:
 			self.init_optheader(self.m_content)
 			self.init_header(self.m_content, 0x40)
+
 		elif self.m_content[0:4] == DEX_MAGIC:
 			self.init_header(self.m_content,0)
+
 		else:
 			log(3, "error: magic not detected")
 
@@ -1102,17 +1103,18 @@ class dex_parser:
 			self.m_class_name_id[str1] = i
 		#for i in xrange(0, self.class_def_size):
 			dex_class(self,i).printf(self)
-			pass
 			#self.getclass(i)
 	def create_all_header(self):
 		for i in xrange(0, self.class_def_size):
 			str1 = self.getclassname(i)
 			self.create_cpp_header(str1)
+
 	def create_cpp_header(self,classname="Landroid/app/Activity;"):
 		if self.m_class_name_id.has_key(classname):
 			classid= self.m_class_name_id[classname]
 			field_list = dex_class(self,classid).create_header_file_for_cplusplus(self)
 		pass
+
 	def get_string_by_id(self,stridx):
 		if stridx >= self.m_stringIdsSize:
 			return ""
@@ -1124,6 +1126,7 @@ class dex_parser:
 		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		return self.string_table[name_idx]
+
 	def getmethodfullname(self,methodid,hidden_classname=False):
 		if methodid >= self.m_methodIdsSize:
 			return ""
@@ -1164,12 +1167,14 @@ class dex_parser:
 		if not hidden_classname:
 			classname = ""
 		return self.get_proto_fullname1(proto_idx,classname,parameter_list,funcname)
+
 	def getfieldname(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
 		offset = self.m_fieldIdsOffset + fieldid * struct.calcsize("HHI")
 		class_idx,type_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		return self.string_table[name_idx]
+
 	def getfieldfullname1(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
@@ -1180,6 +1185,7 @@ class dex_parser:
 		index = name.rfind(".")
 		fname = self.get_string_by_id(name_idx)
 		return "%s %s"% (name[index+1:],fname)
+
 	def getfieldfullname2(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
@@ -1189,6 +1195,7 @@ class dex_parser:
 		typename = shorty_decode(typename)
 		fieldname = self.get_string_by_id(name_idx)
 		return typename,fieldname
+
 	def getfieldfullname(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
@@ -1198,6 +1205,7 @@ class dex_parser:
 		name = shorty_decode(name)
 		fname = self.get_string_by_id(name_idx)
 		return "%s %s"% (name,fname)
+
 	def getfieldtypename(self,fieldid):
 		if fieldid >= self.m_fieldIdsSize:
 			return ""
@@ -1221,6 +1229,7 @@ class dex_parser:
 		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 		return self.string_table[shorty_idx]
+
 	def get_proto_fullname(self,protoid,classname,func_name):
 		if protoid >= self.m_protoIdsSize:
 			return ""
@@ -1326,6 +1335,7 @@ class dex_parser:
 				n += 1
 		retstr += ")"
 		return retstr
+
 	def getclassmethod_count(self,classid):
 		if classid >= self.class_def_size:
 			return ""
@@ -1343,6 +1353,7 @@ class dex_parser:
 			offset += n
 			return static_fields_size + instance_fields_size
 		return 0
+
 	def getclassmethod(classid,method_idx):
 		count = 0
 		if classid >= self.class_def_size:
@@ -1410,7 +1421,6 @@ class dex_parser:
 		self.m_checksum, = struct.unpack_from(format,content,offset)
 
 	def init_header(self,content,offset):
-
 		format = "4s"
 		self.m_magic, = struct.unpack_from(format,content,offset)
 		format = "I"
@@ -1462,6 +1472,7 @@ class dex_parser:
 		self.m_dataSize, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_dataOff, = struct.unpack_from(format,content,offset)
+
 	def gettypenamebyid(self,typeid):
 		if typeid >= self.m_typeIdsSize:
 			return ""
@@ -1490,6 +1501,7 @@ class dex_parser:
 			return self.MethodId_list[methodid].getfullname(self,show_class_name)
 		return ""
 	'''
+
 	def get_access_flags(self,flags):
 		val = {1:"public",
 			2:"private",
@@ -1522,6 +1534,7 @@ class dex_parser:
 			value += "public "
 
 		return value
+
 	def get_access_flags1(self,flags):
 		val = {1:"public",
 			2:"private",
@@ -1540,6 +1553,7 @@ class dex_parser:
 			flags = 1
 
 		return value+":",flags
+
 	def getclass(self,classid):
 		'''
 		if classid >= self.class_def_size:
@@ -1607,6 +1621,7 @@ class dex_parser:
 			offset += struct.calcsize("2HI")
 		print "}\n"
 		'''
+
 def main(dexPath):
 	#if len(sys.argv) < 2:
 	#	print "Usages: %s dex_file"%sys.argv[0]

@@ -894,10 +894,6 @@ class DEXView(BinaryView, dex_parser):
 		self.dex = dex_parser(self, raw_binary)
 
 
-
-		#	data.create_user_function(Architecture['dex'].standalone_platform, code_offset)
-
-
 	@classmethod
 	def is_valid_for_data(self, data):
 		print "DEXView::is_valid_for_data"
