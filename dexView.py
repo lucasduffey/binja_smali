@@ -913,9 +913,12 @@ class DEXView(BinaryView, dex_parser):
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
 
-		# TLDR: need to save the dex_parser object globally
-		self.dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
-		BinaryViewType["DEX"].dex_obj = self.dex
+		# TODO: check if this works
+		global dex_file
+		dex_file = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
+		self.dex = dex_file
+
+		# BinaryViewType["DEX"].dex_obj = self.dex # does nothing
 		#self.dex = dex_parser.__init__(self, self, raw_binary)
 
 	@classmethod
@@ -967,7 +970,6 @@ class DEXView(BinaryView, dex_parser):
 	def perform_is_executable(self):
 		return True
 
-	#
 	def my_test(self):
 		print "yay worked"
 

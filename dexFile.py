@@ -146,7 +146,7 @@ class dex_class:
 
 		if classid >= dex_object.class_def_size:
 			return ""
-		offset = dex_object.m_classDefOffset + classid * struct.calcsize("8I")
+		offset = dex_object.class_defs_off + classid * struct.calcsize("8I")
 		self.offset = offset
 		format = "I"
 		self.thisClass,=struct.unpack_from(format, dex_object.m_content, offset) # class_idx
@@ -1078,7 +1078,7 @@ class dex_parser:
 		else:
 			log(3, "error: magic not detected")
 
-		bOffset = self.m_stringIdsOff
+		bOffset = self.string_ids_off
 		if self.string_ids_size > 0:
 			for i in xrange(0, self.string_ids_size):
 				offset, = struct.unpack_from("I", self.m_content, bOffset + i * 4)
@@ -1089,16 +1089,16 @@ class dex_parser:
 					self.string_table.append(self.m_content[start+skip:offset-1])
 					start = offset
 
-			for i in xrange(start, len(self.m_content)):
-				if self.m_content[i] == chr(0):
-					self.string_table.append(self.m_content[start+1:i])
-					break
+			# FIXME: is this useful? I commented it out
+			#for i in xrange(start, len(self.m_content)):
+			#	if self.m_content[i] == chr(0):
+			#		self.string_table.append(self.m_content[start+1:i])
+			#		break
 
 		# set the globals
 		global string_table
 
 		string_table = self.string_table
-
 
 		'''2013/3/19
 		for i in xrange(0, self.method_ids_size):
@@ -1107,7 +1107,7 @@ class dex_parser:
 			print self.get_field_name(i)
 		for i in xrange(0, self.type_ids_size):
 			print self.get_type_name(i)
-		for i in xrange(0, self.m_protoIdsSize):
+		for i in xrange(0, self.proto_ids_size):
 			print self.get_proto_name(i)
 		'''
 		for i in xrange(0, self.class_def_size):
@@ -1136,14 +1136,14 @@ class dex_parser:
 	def get_method_name(self,methodid):
 		if methodid >= self.method_ids_size:
 			return ""
-		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
+		offset = self.method_ids_off + methodid * struct.calcsize("HHI")
 		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		return self.string_table[name_idx]
 
 	def get_method_name_fullname(self,methodid,hidden_classname=False):
 		if methodid >= self.method_ids_size:
 			return ""
-		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
+		offset = self.method_ids_off + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		classname = self.get_type_name(class_idx)
 		classname = shorty_decode(classname)
@@ -1155,7 +1155,7 @@ class dex_parser:
 	def get_binja_method_fullname(self, methodId, hidden_classname=False):
 		if methodId >= self.method_ids_size:
 			return ""
-		offset = self.m_methodIdsOffset + methodId * struct.calcsize("HHI")
+		offset = self.method_ids_off + methodId * struct.calcsize("HHI")
 		class_idx, proto_idx, name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 
 		classname = self.get_type_name(class_idx)
@@ -1172,7 +1172,7 @@ class dex_parser:
 	def get_method_name_fullname1(self,methodid,parameter_list=[],hidden_classname=False):
 		if methodid >= self.method_ids_size:
 			return ""
-		offset = self.m_methodIdsOffset + methodid * struct.calcsize("HHI")
+		offset = self.method_ids_off + methodid * struct.calcsize("HHI")
 		class_idx,proto_idx,name_idx, = struct.unpack_from("HHI", self.m_content, offset)
 		classname = self.get_type_name(class_idx)
 		classname = shorty_decode(classname)
@@ -1237,24 +1237,24 @@ class dex_parser:
 		return self.string_table[descriptor_idx]
 
 	def get_proto_name(self, protoid):
-		if protoid >= self.m_protoIdsSize:
+		if protoid >= self.proto_ids_size:
 			return ""
-		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
+		offset = self.proto_ids_off + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 		return self.string_table[shorty_idx]
 
-	def get_proto_fullname(self, protoid,classname,func_name):
-		if protoid >= self.m_protoIdsSize:
+	def get_proto_fullname(self, protoid, classname, func_name):
+		if protoid >= self.proto_ids_size:
 			return ""
-		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
-		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
+		offset = self.proto_ids_off + protoid * struct.calcsize("3I")
+		shorty_idx, return_type_idx, parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 		retname = self.get_type_name(return_type_idx)
 		retname = shorty_decode(retname)
-		retstr =  retname+" "
-		if len(classname)==0:
-			retstr += "%s("%func_name
+		retstr =  retname + " "
+		if len(classname) == 0:
+			retstr += "%s(" % func_name
 		else:
-			retstr +=  "%s::%s("% (classname,func_name)
+			retstr +=  "%s::%s(" % (classname,func_name)
 		if parameters_off != 0:
 			offset = parameters_off
 			size, = struct.unpack_from("I", self.m_content, offset)
@@ -1273,9 +1273,9 @@ class dex_parser:
 		return retstr
 
 	def get_binja_proto_fullname(self, protoid, classname, func_name):
-		if protoid >= self.m_protoIdsSize:
+		if protoid >= self.proto_ids_size:
 			return ""
-		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
+		offset = self.proto_ids_off + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 
 		 # ignore the return type for now
@@ -1313,9 +1313,9 @@ class dex_parser:
 	def get_proto_fullname1(self, protoid,classname,parameter_list,func_name):
 		index = classname.rfind(".")
 		classname = classname[index+1:]
-		if protoid >= self.m_protoIdsSize:
+		if protoid >= self.proto_ids_size:
 			return ""
-		offset = self.m_protoIdsOffset + protoid * struct.calcsize("3I")
+		offset = self.proto_ids_off + protoid * struct.calcsize("3I")
 		shorty_idx,return_type_idx,parameters_off, = struct.unpack_from("3I", self.m_content, offset)
 		retname = self.get_type_name(return_type_idx)
 		retname = shorty_decode(retname)
@@ -1352,7 +1352,7 @@ class dex_parser:
 	def getclassmethod_count(self,classid):
 		if classid >= self.class_def_size:
 			return ""
-		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
+		offset = self.class_defs_off + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.m_content, offset)
 		if class_data_off:
 			offset = class_data_off
@@ -1371,7 +1371,7 @@ class dex_parser:
 		count = 0
 		if classid >= self.class_def_size:
 			return ""
-		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
+		offset = self.class_defs_off + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.m_content, offset)
 		if class_data_off:
 			offset = class_data_off
@@ -1405,7 +1405,7 @@ class dex_parser:
 	def getclassname(self,classid):
 		if classid >= self.class_def_size:
 			return ""
-		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
+		offset = self.class_defs_off + classid * struct.calcsize("8I")
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.m_content, offset)
 		return self.get_type_name(class_idx)
 
@@ -1456,19 +1456,19 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.m_linkOff, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_mapOffset, = struct.unpack_from(format,content,offset)
+		self.map_off, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.string_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_stringIdsOff, = struct.unpack_from(format,content,offset)
+		self.string_ids_off, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.type_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.type_ids_offset, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_protoIdsSize, = struct.unpack_from(format,content,offset)
+		self.proto_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_protoIdsOffset, = struct.unpack_from(format,content,offset)
+		self.proto_ids_off, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_fieldIdsSize, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
@@ -1476,11 +1476,11 @@ class dex_parser:
 		offset += struct.calcsize(format)
 		self.method_ids_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_methodIdsOffset, = struct.unpack_from(format,content,offset)
+		self.method_ids_off, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.class_def_size, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
-		self.m_classDefOffset, = struct.unpack_from(format,content,offset)
+		self.class_defs_off, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
 		self.m_dataSize, = struct.unpack_from(format,content,offset)
 		offset += struct.calcsize(format)
@@ -1571,7 +1571,7 @@ class dex_parser:
 		'''
 		if classid >= self.class_def_size:
 			return ""
-		offset = self.m_classDefOffset + classid * struct.calcsize("8I")
+		offset = self.class_defs_off + classid * struct.calcsize("8I")
 		#typeid,superclass,modifiers,numSFields,numIFields,numVMethod,numDMethod,numSMethod,class_data_off,interfaceOff,annotations_off,static_values_off,source_file_idx,= struct.unpack_from("2I6H5I", self.m_content, offset)
 		class_idx,access_flags,superclass_idx,interfaces_off,source_file_idx,annotations_off,class_data_off,static_values_off,= struct.unpack_from("8I", self.m_content, offset)
 		if class_data_off:

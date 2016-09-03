@@ -64,6 +64,7 @@ def parse_FMT21C(dex_object, buffer, offset):
 		arg1 = "unimplemented"
 		if "string_table" in globals():
 			arg1 = "\"%s\"" % string_table[v] # was dex_object.get_string_by_id(v)
+		#arg1 = "\"%s\"" % dex_file.get_string_by_id(v) # can't get this working
 
 	elif val in [0x1c,0x1f,0x22]:
 		# FIXME: need to figure out how to get dex_object properly
@@ -172,7 +173,6 @@ def parse_FMT35C(dex_object, buffer, offset):
 
 	# FIXME: figure out how to pass "dex_object"
 	if ord(buffer[0]) == 0x24:
-		#prefix="type@%s"%(dex_object.get_string_by_id(bbbb))
 		prefix="type@unimplemented"
 
 		if "string_table" in globals():
