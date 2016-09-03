@@ -813,7 +813,8 @@ class DEX(Architecture):
 			if instr == "goto/16":
 				# FIXME: verify...
 				offset = struct.unpack("<h", data[1:3])[0]# AFAIK....
-				target_addr = data.addr + offset # AFAIK....
+
+				target_addr = addr + offset # AFAIK....
 
 				result.add_branch(UnconditionalBranch, target_addr)
 
@@ -842,14 +843,15 @@ class DEX(Architecture):
 		if instr is None:
 			return None
 
+		#try:
 		op = ord(data[0]) # is this really the op (opcode)? the first byte that indicates the "function" to be performed?
 
 		fn = dex_decode[op][3]
 		start = len(data) # I'm not sure why this isn't just passed as "dex_length"
 
 		# FIXME: dex_object is not defined
-		val = func_point[fn](global_dex, data, start/2) # FIXME TODO: how can I pass the dex_object...
-
+		val = func_point[fn](self, data, start/2) # FIXME TODO: how can I pass the dex_object...
+													# this "self" needs to contain: get_string_by_id, getmethodname, etc..
 		results = []
 		val = val[2:] # the 2nd arg we're skipping is the opcode one which my code already does
 
@@ -871,6 +873,9 @@ class DEX(Architecture):
 		tokens += results #OperandTokens[operand](value) # FIXME error: the "value" is returned from decode_instructions
 
 		return tokens, length
+		#except:
+		#	log_error(traceback.format_exc())
+		#	pass
 
 global_dex = ""
 # see NESView Example
@@ -883,6 +888,7 @@ class DEXView(BinaryView, dex_parser):
 	# data == BinaryView datatype
 	def __init__(self, data):
 		print "DEXView::__init__"
+
 		BinaryView.__init__(self, data.file) # FIXME: is len(data.file.raw) right?
 		self.data = data # FIXME: is this what we can do DexFile() on?
 		self.notification = DEXViewUpdateNotification(self)
@@ -892,6 +898,8 @@ class DEXView(BinaryView, dex_parser):
 		raw_binary = data.read(0, raw_binary_length)
 
 		self.dex = dex_parser(self, raw_binary)
+		#self.dex = dex_parser.__init__(self, self, raw_binary)
+
 
 
 	@classmethod

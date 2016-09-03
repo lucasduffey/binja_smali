@@ -1,9 +1,7 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-# author: yanfeng.wyf
-# personal email: wuyanfeng@yeah.net
-
+# original author: yanfeng.wyf (wuyanfeng@yeah.net)
 
 import struct
 FMT10T = 0
@@ -149,18 +147,18 @@ def parse_FMT31T(dex_object, buffer, offset):
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d"%ord(buffer[1]),"string@%d" % bbbbbbbb)
 
 def parse_FMT32X(dex_object, buffer, offset):
-	aaaa,bbbb,=struct.unpack_from("hh",buffer,2)
+	aaaa,bbbb, = struct.unpack_from("hh",buffer,2)
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "v%d" % aaaa, "v%d" % bbbb)
 
-# in the "func_point" function list, directly called by "parse_instruction"
+# in the "func_point" function list, directly called by "perform_get_instruction_text(self, blah..)"
 def parse_FMT35C(dex_object, buffer, offset):
-	A = ord(buffer[1])>>4
-	G = ord(buffer[1])&0xf
-	D = ord(buffer[4])>>4
-	C = ord(buffer[4])&0xf
-	F = ord(buffer[5])>>4
-	E = ord(buffer[5])&0xf
-	bbbb,=struct.unpack_from("H",buffer,2)
+	A = ord(buffer[1]) >> 4
+	G = ord(buffer[1]) & 0xf
+	D = ord(buffer[4]) >> 4
+	C = ord(buffer[4]) & 0xf
+	F = ord(buffer[5]) >> 4
+	E = ord(buffer[5]) & 0xf
+	bbbb, = struct.unpack_from("H",buffer,2)
 
 	# FIXME: figure out how to pass "dex_object"
 	if ord(buffer[0]) == 0x24:
@@ -253,7 +251,7 @@ def parse_instruction(buffer, offset, dex_object):
 		print ""
 		start += 2*val[0]
 
-dex_decode={
+dex_decode = {
 	0:(0x00,'nop','fmt10x',FMT10X,1),
 	1:(0x01,'move','fmt12x',FMT12X,1),
 	2:(0x02,'move/from16','fmt22x',FMT22X,2),

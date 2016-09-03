@@ -1046,12 +1046,12 @@ def get_encoded_method(content):
 	return n + n1 + n2, val1, val2, val3
 
 class dex_parser:
-	def __init__(self, bv, binary_blob):
+	def __init__(self, bv, binary_blob): # was (self, bv, binary_blob)
 		#global DEX_MAGIC
 		#global DEX_OPT_MAGIC
 		self.m_javaobject_id = 0
 
-		self.bv = bv
+		self.bv = bv # was self.bv = bv
 
 		self.m_content = binary_blob # self.m_fd.read()
 
