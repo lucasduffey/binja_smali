@@ -44,14 +44,14 @@ Instruction = {
 # lenths excludes opcode length?
 	0x0: {"name": "nop", "length": 0},
 	0x1: {"name": "move", "length": 1},
-	0x2: {"name": "move/from16", "length": 2},
+	0x2: {"name": "move/from16", "length": 3}, # 2 => 3
 	0x3: {"name": "move/16", "length": 5}, # 3 => 5
 	0x4: {"name": "move-wide", "length": 2},
 	0x5: {"name": "move-wide/from16", "length": 3}, # 2 => 3
-	0x6: {"name": "move-wide/16", "length": 4}, # 3 => 4
+	0x6: {"name": "move-wide/16", "length": 5}, # 3 => 5
 	0x7: {"name": "move-object", "length": 1},
 	0x8: {"name": "move-object/from16", "length": 3}, # 2 => 3
-	0x9: {"name": "move-object/16", "length": 3}, # FIXME: is this right?
+	0x9: {"name": "move-object/16", "length": 5}, # 3 => 5
 	0xa: {"name": "move-result", "length": 1},
 	0xb: {"name": "move-result-wide", "length": 1},
 	0xc: {"name": "move-result-object", "length": 1},
@@ -62,9 +62,9 @@ Instruction = {
 	0x11: {"name": "return-object", "length": 1},
 	0x12: {"name": "const/4", "length": 1},
 	0x13: {"name": "const/16", "length": 3},
-	0x14: {"name": "const", "length": 3}, # FIXME - look at the lambda
+	0x14: {"name": "const", "length": 5}, # 3 => 5
 	0x15: {"name": "const/high16", "length": 2},
-	0x16: {"name": "const-wide/16", "length": 2},
+	0x16: {"name": "const-wide/16", "length": 3}, # 2 => 3
 	0x17: {"name": "const-wide/32", "length": 5},
 	0x18: {"name": "const-wide", "length": 7},
 	0x19: {"name": "const-wide/high16", "length": 3},
@@ -457,19 +457,39 @@ class DEX(Architecture):
 			# "goto/32" 30T
 
 			fn = dex_decode[op][3]
-			val = func_point[fn](self, data, addr)[2] # this might be the thing to jump to.. index out of range???
-
-			dest_addr = int(val)
-
-			# debugging
-			if 0x1de00 < addr < 0x1dfff:
-				log(2, "addr: %x, dest_addr %x, diff: %x" % (addr, dest_addr, dest_addr-addr))
+			dest_addr = func_point[fn](self, data, addr)[2] # this might be the thing to jump to.. index out of range???
+			dest_addr = int(dest_addr)
 
 			result.add_branch(UnconditionalBranch, dest_addr)
 
 		# TODO: implement conditional jumps
-		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
-			pass
+
+		# fmt22t: "if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le"  # returns tuple of 5 items
+		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le"]:
+			fn = dex_decode[op][3]
+			results = func_point[fn](self, data, addr) # FIXME: "dest_addr" is not correct
+
+			reg1 = results[2] # this is register... not a string....
+			reg2 = results[3] # this is register... not a string....
+			dest_addr = int(results[4])
+
+			# if reg1 == reg2: branch
+			result.add_branch(TrueBranch, dest_addr)
+			result.add_branch(FalseBranch, addr + 4) # +4 AFAIK??
+
+
+
+		# fmt21t: "if-eqz", "if-ltz", "if-gez", "if-gtz", "if-lez  # returns tuple of 3 items
+		elif instr in ["if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
+			fn = dex_decode[op][3]
+			results = func_point[fn](self, data, addr) # FIXME: "dest_addr" is not correct
+
+			reg1 = results[2]
+			dest_addr = int(results[3])
+
+			# if reg1 is 0: branch to addr
+			result.add_branch(TrueBranch, dest_addr)
+			result.add_branch(FalseBranch, addr + 4) # +4 AFAIK??
 
 		# TODO: implement calls
 		elif instr in ["invoke-virtual", "invoke-super", "invoke-direct", "invoke-static", "invoke-interface",
