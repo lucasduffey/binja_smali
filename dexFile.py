@@ -45,6 +45,23 @@ dex_classes = {}
 # https://docs.python.org/2/library/struct.html
 # https://gist.github.com/ezterry/1239615
 
+import time
+
+class Timer(object):
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.time()
+        self.secs = self.end - self.start
+        self.msecs = self.secs * 1000  # millisecs
+        if self.verbose:
+            print 'elapsed time: %f ms' % self.msecs
+
 class dex_encode_field:
 	def __init__(self,idx,flags):
 		self.m_field_idx_diff = idx
@@ -148,25 +165,27 @@ class dex_class:
 
 		if classid >= dex_object.class_def_size:
 			return ""
-		offset = dex_object.class_defs_off + classid * struct.calcsize("8I")
+		offset = dex_object.class_defs_off + classid * 32 # struct.calcsize("8I") == 32
 		self.offset = offset
-		format = "I"
-		self.thisClass,=struct.unpack_from(format, dex_object.m_content, offset) # class_idx
-		offset += struct.calcsize(format)
-		self.modifiers,=struct.unpack_from(format, dex_object.m_content, offset) # access_flags
-		offset += struct.calcsize(format)
-		self.superClass,=struct.unpack_from(format, dex_object.m_content, offset) # superclass_idx
-		offset += struct.calcsize(format)
-		self.interfaces_off,=struct.unpack_from(format, dex_object.m_content, offset)
-		offset += struct.calcsize(format)
-		self.source_file_idx,=struct.unpack_from(format, dex_object.m_content, offset)
-		offset += struct.calcsize(format)
-		self.annotations_off,=struct.unpack_from(format, dex_object.m_content, offset)
-		offset += struct.calcsize(format)
-		self.class_data_off,=struct.unpack_from(format, dex_object.m_content, offset)
-		offset += struct.calcsize(format)
-		self.static_values_off,=struct.unpack_from(format, dex_object.m_content, offset)
-		offset += struct.calcsize(format)
+		fmt = "I"
+		#int_size = struct.calcsize(format) # 4 AFAIK
+
+		self.thisClass, = struct.unpack_from(fmt, dex_object.m_content, offset) # class_idx
+		offset += 4
+		self.modifiers, = struct.unpack_from(fmt, dex_object.m_content, offset) # access_flags
+		offset += 4
+		self.superClass, = struct.unpack_from(fmt, dex_object.m_content, offset) # superclass_idx
+		offset += 4
+		self.interfaces_off, = struct.unpack_from(fmt, dex_object.m_content, offset)
+		offset += 4
+		self.source_file_idx, = struct.unpack_from(fmt, dex_object.m_content, offset)
+		offset += 4
+		self.annotations_off, = struct.unpack_from(fmt, dex_object.m_content, offset)
+		offset += 4
+		self.class_data_off, = struct.unpack_from(fmt, dex_object.m_content, offset)
+		offset += 4
+		self.static_values_off, = struct.unpack_from(fmt, dex_object.m_content, offset)
+		offset += 4
 
 		self.index = classid
 		self.interfacesSize = 0
@@ -189,6 +208,7 @@ class dex_class:
 			self.numInstanceFields = 0
 			self.numDirectMethods = 0
 			self.numVirtualMethods = 0
+
 
 	def format_classname(self,name):
 		name = name[1:-1].replace("/","_")
@@ -313,8 +333,8 @@ class dex_class:
 		return typelist
 
 	def update_binja(self, dex_object):
-		offset = self.interfaces_off + struct.calcsize("I")
-		offset += self.interfacesSize * struct.calcsize("H") # replace the next 4 lines
+		offset = self.interfaces_off + 4 # struct.calcsize("I") == 4
+		offset += self.interfacesSize * 2 # struct.calcsize("H") == 2 # replace the next 4 lines
 		#for n in xrange(0, self.interfacesSize):
 		#	typeid, = struct.unpack_from("H", dex_object.m_content, offset)
 		#	offset += struct.calcsize("H")
@@ -329,14 +349,15 @@ class dex_class:
 		offset += n
 		n,tmp = get_uleb128(dex_object.m_content[offset:offset+5])
 		offset += n
-		field_idx=0
+
+		field_idx = 0
 
 		# uleb128 items.....
 		for i in xrange(0, self.numStaticFields):
-			n,field_idx_diff = get_uleb128(dex_object.m_content[offset:offset+5])
+			n, field_idx_diff = get_uleb128(dex_object.m_content[offset:offset+5])
 			offset += n
 			# field_idx += field_idx_diff # irrelevant for our purposes ATM
-			n,modifiers = get_uleb128(dex_object.m_content[offset:offset+5])
+			n, modifiers = get_uleb128(dex_object.m_content[offset:offset+5])
 			offset += n
 
 			# do we need this?
@@ -348,7 +369,7 @@ class dex_class:
 
 		#field_idx=0
 		for i in xrange(0, self.numInstanceFields):
-			n,field_idx_diff = get_uleb128(dex_object.m_content[offset:offset+5])
+			n, field_idx_diff = get_uleb128(dex_object.m_content[offset:offset+5])
 			offset += n
 
 			#field_idx+=field_idx_diff
@@ -1196,6 +1217,7 @@ class dex_parser:
 		self.bv = bv # was self.bv = bv
 		self.m_content = binary_blob # self.m_fd.read()
 
+		# 0.003 seconds START
 		if LOGGING: print "self.m_content[0:4]: ", self.m_content[0:4].encode("hex")
 		if LOGGING: print "DEX_MAGIC: ", DEX_MAGIC.encode("hex")
 
@@ -1231,6 +1253,7 @@ class dex_parser:
 			#		break
 		#'''
 		# END OF BLOCK
+		# 0.003 seconds END
 
 
 		'''2013/3/19
@@ -1246,11 +1269,24 @@ class dex_parser:
 
 		# FIXME: this is where to thread...
 		# threading doesn't seem to help much...
-		threads = []
-		for i in xrange(0, self.class_def_size):
-			# FIXME: this might be creating too many threads..
-			t = threading.Thread(target=self.create_all_dex_classes, args=(i,))
-			threads.append(t)
+
+
+		# TODO: split into groups of 25
+		#threads = []
+		chunks = [range(x, x+25) for x in xrange(0, self.class_def_size, 25)]
+		log(2, chunks)
+
+		for array in chunks:
+			t = threading.Thread(target=self.create_all_dex_classes, args=(array,))
+			#threads.append(t)
+			t.start()
+
+		#for i in xrange(0, self.class_def_size):
+			# each thread is actually wicked slow... If I can break it into chunks it might be better
+			#t = threading.Thread(target=self.create_all_dex_classes, args=(i,))
+			#threads.append(t)
+
+			#self.create_all_dex_classes(i)
 
 			# how can you block until they're all complete??
 
@@ -1263,21 +1299,24 @@ class dex_parser:
 			#self.getclass(i)
 			#'''
 
-		log(1, "starting %i threads" % len(threads))
-		for thread in threads:
-			thread.start()
+		#log(1, "starting %i threads" % len(threads))
+		#for thread in threads:
+		#	thread.start()
 
-		# wait for all to finish
-		for thread in threads:
-			thread.join()
+		# wait for all to finish - not really necessary AFAIK?
+		#for thread in threads:
+		#	thread.join()
 
-	def create_all_dex_classes(self, classId):
-		str1 = self.getclassname(classId)
-		self.m_class_name_id[str1] = classId # will this be saved for everyone?
+	def create_all_dex_classes(self, classIds):
+		for classId in classIds:
+			str1 = self.getclassname(classId) # NOTE: very small performance hit (1.5 seconds for 123 iterations), TODO: caching
+			self.m_class_name_id[str1] = classId # will this be saved for everyone?
 
-		# FIXME: eliminate
-		dex_classes[classId] = dex_class(self, classId)
-		dex_classes[classId].update_binja(self)
+			# FIXME: eliminate
+
+			dex_classes[classId] = dex_class(self, classId) # NOTE: big performance hit here, it complains it doesn't return None
+			dex_classes[classId].update_binja(self)
+
 
 	def create_all_header(self):
 		for i in xrange(0, self.class_def_size):
@@ -1866,7 +1905,6 @@ def main(dexPath):
 	dex = open(dexPath).read()
 	#dex_length = len(dex)
 
-	#filename = "D:\\classes.dex"
 	dex = dex_parser(dex)
 	#dex.printf(dex)
 	#dex.create_all_header()
