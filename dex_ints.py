@@ -39,7 +39,11 @@ def parse_FMT10X(dex_object, buffer, offset):
 
 def parse_FMT10T(dex_object, buffer, offset):
 	val, = struct.unpack_from("b", buffer, 1)
-	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%04x"%(val+offset))
+	val = int(val)
+
+	# FIXME: is offset correct?
+
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%i"%(val+offset)) # used to be %04x, FIXME: maybe do "%i" instead
 
 def parse_FMT11N(dex_object, buffer, offset):
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%(ord(buffer[1])&0xf),"%d"%((ord(buffer[1])>>4)&0xf))
@@ -52,7 +56,9 @@ def parse_FMT12X(dex_object, buffer, offset):
 
 def parse_FMT20T(dex_object, buffer, offset):
 	v, = struct.unpack_from("h",buffer,2)
-	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%04x"%(v+offset))
+	# TODO: is v an int...???
+
+	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"%i"%(v+offset))  # used to be %04x, FIXME: maybe do "%i" instead
 
 def parse_FMT21C(dex_object, buffer, offset):
 	val = ord(buffer[0])
@@ -137,7 +143,7 @@ def parse_FMT23X(dex_object, buffer, offset):
 # why is this returning +-?
 def parse_FMT30T(dex_object, buffer, offset):
 	aaaaaaaa,=struct.unpack_from("i",buffer,2)
-	return dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "%x"%(aaaaaaaa+offset) # this used to have a "+" prefix
+	return dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1], "%i" % (aaaaaaaa+offset) # this used to have a "+" prefix
 
 def parse_FMT31C(dex_object, buffer, offset):
 	bbbbbbbb,=struct.unpack_from("I",buffer,2)

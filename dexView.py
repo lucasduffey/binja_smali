@@ -450,21 +450,22 @@ class DEX(Architecture):
 		if instr in ["return-void", "return", "return-wide", "return-object"]:
 			result.add_branch(FunctionReturn)
 
+		# NOTE: ALWAYS GIVE func_point the raw data, it calculates offsets....
 		elif instr in ["goto", "goto/16", "goto/32"]:
 			# "goto" 10T - parse_FMT10T
 			# "goto/16" 20T
 			# "goto/32" 30T
 
 			fn = dex_decode[op][3]
-			val = func_point[fn](self, data[1:], addr)[2] # this might be the thing to jump to.. index out of range???
+			val = func_point[fn](self, data, addr)[2] # this might be the thing to jump to.. index out of range???
 
-			val = int(val, 16)
-			val = int(val)
-			#log(2, "val: %x" % val)
-			#log(2, data.encode("hex"))
-			#log(2, data[1].encode("hex"))
+			dest_addr = int(val)
 
-			result.add_branch(UnconditionalBranch, val)
+			# debugging
+			if 0x1de00 < addr < 0x1dfff:
+				log(2, "addr: %x, dest_addr %x, diff: %x" % (addr, dest_addr, dest_addr-addr))
+
+			result.add_branch(UnconditionalBranch, dest_addr)
 
 		# TODO: implement conditional jumps
 		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
@@ -509,8 +510,12 @@ class DEX(Architecture):
 			for idx, item in enumerate(val):
 				if item in RegisterNames:
 					results += [InstructionTextToken(RegisterToken, item)]
-				else:
+
+				elif "@" in item:
 					results += [InstructionTextToken(TextToken, item)]
+
+				else:
+					results += [InstructionTextToken(IntegerToken, item)] # FIXME: probably wrong...
 
 				if idx < len(val) - 1:
 					results += [InstructionTextToken(TextToken, ", ")]
