@@ -1,6 +1,6 @@
 # installation - create a dexBinja_wrapper.py script in ~/.binaryninja/plugins/
 
-# smaliBinja_wrapper.py
+# smaliBinja_wrapper.py - will be deprecated when binja plugin API is more mature
 from smaliBinja.apkView import *
 from smaliBinja.dexView import *
 from smaliBinja.dexFile import *
@@ -13,6 +13,8 @@ from smaliBinja.dexFile import *
 # binja relevant issues
 * structure UI: https://github.com/Vector35/binaryninja-api/issues/269
 * block highlighting apis: https://github.com/Vector35/binaryninja-api/issues/417
+* split python plugins from UI thread: https://github.com/Vector35/binaryninja-api/issues/390
+* C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
 
 # thanks
 * special thanks to ondreji (https://github.com/ondreji/dex_parser/blob/master/dex.py)
