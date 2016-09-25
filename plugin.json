@@ -9,7 +9,7 @@
 		},
 		"dependencies": {
 			"pip": [],
-			"apt": ["apt", "packages"],
+			"apt": ["apt"],
 			"other": [""]
 		},
 		"version": "0.1 alpha",
