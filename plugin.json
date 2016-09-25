@@ -3,8 +3,8 @@
 		"name": "Smali Architecture Plugin",
 		"type": ["core", "ui", "architecture", "binaryview"],
 		"api": "python2",
-		"description": "Extracts dex file from APK, and dissembles into smalli bytecode.",
-		"longdescription": "Extracts dex file from APK, and dissembles into smalli bytecode.",
+		"description": "Extracts dex file from APK, and dissembles into Smalli bytecode.",
+		"longdescription": "Extracts dex file from APK, and dissembles into Smalli bytecode.",
 		"license": {
 		},
 		"dependencies": {
