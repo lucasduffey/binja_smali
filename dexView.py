@@ -574,6 +574,9 @@ class DEXView(BinaryView, dex_parser):
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length) # TODO: eliminate this step...
 
+		# https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/angr_plugin.py
+		# thread it with "BackgroundTaskThread"
+
 		# TODO: check if this works
 		#global dex_file
 		self.dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached

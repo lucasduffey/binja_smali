@@ -58,7 +58,7 @@ class APKView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, data.file)
-		self.data = data
+		self.data = data # FIXME: data is read only, but this works in NES plugin..
 		self.notification = APKViewUpdateNotification(self) # TODO
 		self.data.register_notification(self.notification)
 

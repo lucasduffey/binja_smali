@@ -1209,7 +1209,7 @@ def get_encoded_method(content):
 	n2 , val3 = get_uleb128(content[n+n1:])
 	return n + n1 + n2, val1, val2, val3
 
-class dex_parser:
+class dex_parser(BackgroundTaskThread):
 	def __init__(self, bv, binary_blob): # was (self, bv, binary_blob)
 		#global DEX_MAGIC
 		#global DEX_OPT_MAGIC

@@ -15,8 +15,7 @@
 		"version": "0.1 alpha",
 		"author": "Lucas Duffey",
 		"minimumBinaryNinjaVersion": {
-			"dev": "1.0.dev-576",
-			"release": "9999"
+			"dev": "1.0.dev-576"
 		}
 	}
 }
