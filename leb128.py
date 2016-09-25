@@ -1,16 +1,14 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-# author: yanfeng.wyf
-# personal email: wuyanfeng@yeah.net
-
+# original author: yanfeng.wyf (wuyanfeng@yeah.net)
 
 import struct
 
 def get_uleb128p1(content):
 	n,value = get_uleb128(content)
 	value -= 1
-	return n,value  
+	return n,value
 
 def get_uleb128(content):
 	value = 0
@@ -26,7 +24,7 @@ def get_uleb128(content):
 
 def get_leb128(content):
 	value = 0
-	
+
 	mask=[0xffffff80,0xffffc000,0xffe00000,0xf0000000,0]
 	bitmask=[0x40,0x40,0x40,0x40,0x8]
 	value = 0

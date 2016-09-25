@@ -17,33 +17,6 @@ class APKViewUpdateNotification(BinaryDataNotification):
 	def __init__(self, view):
 		self.view = view
 
-	# FIXME: don't trust - pulled from NES.py
-	'''
-	def data_written(self, view, offset, length):
-		addr = offset - self.view.rom_offset
-		while length > 0:
-			bank_ofs = addr & 0x3fff
-			if (bank_ofs + length) > 0x4000:
-				to_read = 0x4000 - bank_ofs
-			else:
-				to_read = length
-			if length < to_read:
-				to_read = length
-			if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
-				self.view.notify_data_written(0x8000 + bank_ofs, to_read)
-			elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
-				self.view.notify_data_written(0xc000 + bank_ofs, to_read)
-			length -= to_read
-			addr += to_read
-
-	# FIXME: don't trust - pulled from NES.py
-		def data_inserted(self, view, offset, length):
-			self.view.notify_data_written(0x8000, 0x8000)
-
-	# FIXME: don't trust - pulled from NES.py
-		def data_removed(self, view, offset, length):
-			self.view.notify_data_written(0x8000, 0x8000)
-			'''
 # TODO: this will be used to carve out useful stuff
 class APK():
 	def __init__(self):

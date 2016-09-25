@@ -95,7 +95,7 @@ def parse_FMT21H(dex_object, buffer, offset):
 
 def parse_FMT21S(dex_object, buffer, offset):
 	v, = struct.unpack_from("H",buffer,2)
-	arg1 = "%d"%v 
+	arg1 = "%d"%v
 	return (dex_decode[ord(buffer[0])][4], dex_decode[ord(buffer[0])][1],"v%d"%ord(buffer[1]), arg1)
 
 def parse_FMT21T(dex_object, buffer, offset):
@@ -542,5 +542,5 @@ dex_decode = {
 
 
 if __name__ == "__main__":
-	buffer="\x12\x01\x6a\x01\xc3\x00\x22\x00\x23\x00\x54\x31\x45\x00\x00\x00\x00\x00"
+	buffer = "\x12\x01\x6a\x01\xc3\x00\x22\x00\x23\x00\x54\x31\x45\x00\x00\x00\x00\x00"
 	if LOGGING: print parse_instruction(buffer)
