@@ -859,9 +859,9 @@ class DEXView(BinaryView):
 	def __init__(self, data):
 		print "DEXView::__init__"
 		BinaryView.__init__(self, data.file) # FIXME: is len(data.file.raw) right?
-		self.data = data # FIXME: is this what we can do DexFile() on?
+		self.raw = data # FIXME: is this what we can do DexFile() on?
 		self.notification = DEXViewUpdateNotification(self)
-		self.data.register_notification(self.notification)
+		self.raw.register_notification(self.notification)
 
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length)
@@ -1019,7 +1019,7 @@ class DEXView(BinaryView):
 
 	def perform_read(self, addr, length):
 		# for now...
-		return self.data.read(addr, length)
+		return self.raw.read(addr, length)
 
 	# FIXME
 	#def perform_write(self, addr, value):
