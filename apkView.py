@@ -84,42 +84,42 @@ class APKView(BinaryView):
 			log_error(traceback.format_exc())
 			return False
 
-		# FIXME
-		#def perform_is_valid_offset(self, addr):
-		#	if (addr >= 0x8000) and (addr < 0x10000):
-		#		return True
-		#	return False
+	# FIXME
+	#def perform_is_valid_offset(self, addr):
+	#	if (addr >= 0x8000) and (addr < 0x10000):
+	#		return True
+	#	return False
 
-		# FIXME
-		def perform_read(self, addr, length):
-			return self.dex_blob.read(addr, length)
+	# FIXME
+	def perform_read(self, addr, length):
+		return self.dex_blob.read(addr, length)
 
-		# FIXME
-		#def perform_write(self, addr, value):
-		#	pass
+	# FIXME
+	#def perform_write(self, addr, value):
+	#	pass
 
-		# FIXME
-		#def perform_get_start(self):
-		#	return 0
+	# FIXME
+	#def perform_get_start(self):
+	#	return 0
 
-		# REQUIRED
-		def perform_get_length(self):
-			return 0x10000
-		
-		# REQUIRED
-		def perform_is_executable(self):
-			return True
+	# REQUIRED
+	def perform_get_length(self):
+		return 0x10000
 
-		# FIXME
-		#def perform_get_entry_point(self):
-			#return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
-			#return struct.unpack("<H", "APPLE")[0] # FIXME: being triggered - might crash it...
+	# REQUIRED
+	def perform_is_executable(self):
+		return True
 
-			# how do I find this?
-			#print "apkBinja::perform_get_entry_point: ", global_DexFile.dataOff()
-			#return global_DexFile.dataOff() # unsure if correct
+	# FIXME
+	#def perform_get_entry_point(self):
+		#return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
+		#return struct.unpack("<H", "APPLE")[0] # FIXME: being triggered - might crash it...
 
-		#	return 0 # currently this value will never be used, dexBinja will be used instead
+		# how do I find this?
+		#print "apkBinja::perform_get_entry_point: ", global_DexFile.dataOff()
+		#return global_DexFile.dataOff() # unsure if correct
+
+	#	return 0 # currently this value will never be used, dexBinja will be used instead
 
 # TODO: how do you get apk - to run APK(blah) against it?
 
