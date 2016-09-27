@@ -3,10 +3,7 @@ import struct
 import traceback
 import os
 import zipfile
-import tempfile
-import shutil
 
-#import dexView # TODO: remove this line?
 from dexView import DEXViewBank, DEX # need to provide dexView
 
 # just pull from dexBinja.py forf now
