@@ -46,17 +46,11 @@ class APKView(BinaryView):
 		if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
 			return False
 
-		#tmp_dir_path = tempfile.mkdtemp()
-		#tmp_apk_path = tmp_dir_path + "/binja.apk"
 		apk_size = len(data.file.raw)
-
-		# copy apk to tmp directory
-		#shutil.copyfile(data.file.filename, tmp_apk_path)
-
-		z = zipfile.ZipFile(data.file.filename)
-
+		
 		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*	
 		# there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
+		z = zipfile.ZipFile(data.file.filename)
 		dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
 		
 		# do we just do:
