@@ -60,8 +60,9 @@ class APKView(BinaryView):
 			# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
 
 		dex_file = "classes.dex" # there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
-		dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
-
+		#dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
+		dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
+		
 		#
 		# FIXME: read out to memory instead - return {name: input_zip.read(name) for name in input_zip.namelist()}
 		#
@@ -71,7 +72,7 @@ class APKView(BinaryView):
 		#print "=================="
 
 		# read dex blob into memory
-		dex_blob = open(dex_path).read()
+		#dex_blob = open(dex_path).read()
 
 		# do we just do:
 		# write(addr, data) # start at 0, and write everything?
