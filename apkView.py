@@ -46,34 +46,19 @@ class APKView(BinaryView):
 		if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
 			return False
 
-		tmp_dir_path = tempfile.mkdtemp()
-		tmp_apk_path = tmp_dir_path + "/binja.apk"
+		#tmp_dir_path = tempfile.mkdtemp()
+		#tmp_apk_path = tmp_dir_path + "/binja.apk"
 		apk_size = len(data.file.raw)
 
 		# copy apk to tmp directory
-		shutil.copyfile(data.file.filename, tmp_apk_path)
+		#shutil.copyfile(data.file.filename, tmp_apk_path)
 
-		z = zipfile.ZipFile(tmp_apk_path) # I don't think you can do from memory...
-		#for item in z.filelist:
-		#	print item.filename # also ".orig_filename" might be useful
+		z = zipfile.ZipFile(data.file.filename)
 
-			# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
-
-		dex_file = "classes.dex" # there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
-		#dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
+		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*	
+		# there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
 		
-		#
-		# FIXME: read out to memory instead - return {name: input_zip.read(name) for name in input_zip.namelist()}
-		#
-		
-		#print "=================="
-		#print dex_path
-		#print "=================="
-
-		# read dex blob into memory
-		#dex_blob = open(dex_path).read()
-
 		# do we just do:
 		# write(addr, data) # start at 0, and write everything?
 		fluff_size = apk_size - len(dex_blob)
