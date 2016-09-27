@@ -100,12 +100,13 @@ class APKView(BinaryView):
 		#def perform_get_start(self):
 		#	return 0
 
-		# FIXME
-		#def perform_get_length(self):
-		#	return 0x10000
-
-		#def perform_is_executable(self):
-		#	return True
+		# REQUIRED
+		def perform_get_length(self):
+			return 0x10000
+		
+		# REQUIRED
+		def perform_is_executable(self):
+			return True
 
 		# FIXME
 		#def perform_get_entry_point(self):
