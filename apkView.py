@@ -1,4 +1,6 @@
 from binaryninja import *
+from dexFile import *
+from dexArch import *
 import struct
 import traceback
 import os
@@ -30,7 +32,7 @@ class APKView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, data.file)
-		self.dex_blob = data # FIXME: data is read only, but this works in NES plugin..
+		self.dex_blob = data
 		self.notification = APKViewUpdateNotification(self) # TODO
 		self.dex_blob.register_notification(self.notification)
 
@@ -46,12 +48,12 @@ class APKView(BinaryView):
 			return False
 
 		apk_size = len(data.file.raw)
-		
-		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*	
+
+		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
 		# there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		z = zipfile.ZipFile(data.file.filename)
 		self.dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
-		
+
 		# do we just do:
 		# write(addr, data) # start at 0, and write everything?
 		#fluff_size = apk_size - len(dex_blob)
