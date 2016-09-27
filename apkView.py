@@ -62,6 +62,10 @@ class APKView(BinaryView):
 		dex_file = "classes.dex" # there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		dex_path = z.extract(dex_file, path=tmp_dir_path) # save to disk
 
+		#
+		# FIXME: read out to memory instead - return {name: input_zip.read(name) for name in input_zip.namelist()}
+		#
+		
 		#print "=================="
 		#print dex_path
 		#print "=================="
