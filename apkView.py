@@ -4,7 +4,9 @@ import traceback
 import os
 import zipfile
 
-from dexView import DEXViewBank, DEX # need to provide dexView
+# comment out for now
+#from dexView import DEXViewBank, DEX # need to provide dexView
+
 
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames
