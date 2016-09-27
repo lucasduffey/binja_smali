@@ -28,9 +28,9 @@ class APKView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, data.file)
-		self.raw = data # FIXME: data is read only, but this works in NES plugin..
+		self.dex_blob = data # FIXME: data is read only, but this works in NES plugin..
 		self.notification = APKViewUpdateNotification(self) # TODO
-		self.raw.register_notification(self.notification)
+		self.dex_blob.register_notification(self.notification)
 
 	@classmethod
 	def is_valid_for_data(self, data):
@@ -48,19 +48,20 @@ class APKView(BinaryView):
 		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*	
 		# there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		z = zipfile.ZipFile(data.file.filename)
-		dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
+		self.dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
 		
 		# do we just do:
 		# write(addr, data) # start at 0, and write everything?
-		fluff_size = apk_size - len(dex_blob)
+		#fluff_size = apk_size - len(dex_blob)
 
 		#print "about to overwrite everything with dex_blob"
 
 		# NOTE: this will switch control over to "DEXViewBank"
 
 		# FIXME: replace "data" with "self"??
-		data.write(0, dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
-		data.remove(len(dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
+		# removing - since perform_read will operate off the "data.raw"
+		#data.write(0, dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
+		#data.remove(len(dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 
 		# FIXME
 		# FIXME: "write" will want to overwrite the ACTUAL FILE, when in "hex view" it really should show the file..
@@ -89,7 +90,7 @@ class APKView(BinaryView):
 
 		# FIXME
 		def perform_read(self, addr, length):
-			return self.raw.read(addr, length)
+			return self.dex_blob.read(addr, length)
 
 		# FIXME
 		#def perform_write(self, addr, value):
