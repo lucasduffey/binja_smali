@@ -334,6 +334,10 @@ class dex_class:
 		return typelist
 
 	def update_binja(self, dex_object):
+		#
+		# XXX: this might fail if the object was returned as None
+		#
+
 		offset = self.interfaces_off + 4 # struct.calcsize("I") == 4
 		offset += self.interfacesSize * 2 # struct.calcsize("H") == 2 # replace the next 4 lines
 		#for n in xrange(0, self.interfacesSize):
@@ -1316,15 +1320,20 @@ class dex_parser(BackgroundTaskThread):
 			# FIXME: this would cause an error if we didn't wrap with try/except
 			# it doesn't like how dex_class returns value...
 
-			dex_classes[classId] = dex_class(self, classId) # NOTE: big performance hit here, it complains it doesn't return None
-			dex_classes[classId].update_binja(self)
+			try:
+				dex_classes[classId] = dex_class(self, classId) # NOTE: big performance hit here, it complains it doesn't return None
+				if dex_classes[classId] != None: # not sure if this is necessary
+					dex_classes[classId].update_binja(self)
+			except:
+				pass
 
-
+	# TODO: deprecate? This might be useful though
 	def create_all_header(self):
 		for i in xrange(0, self.class_def_size):
 			str1 = self.getclassname(i)
 			self.create_cpp_header(str1)
 
+	# TODO: deprecate? This might be useful though
 	def create_cpp_header(self,classname="Landroid/app/Activity;"):
 		if self.m_class_name_id.has_key(classname):
 			classid= self.m_class_name_id[classname]
