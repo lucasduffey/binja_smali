@@ -548,3 +548,8 @@ class DEX(Architecture):
 			log(3, "addr: %x" % addr) # are we out of bounds?
 			log(3, "len(data): %i" % len(data))
 			log(3, "op: %s, len: %i, data: %s" % (hex(op), len(data), data.encode("hex"))) # what is "data" type
+
+
+	# error if we don't have
+	def perform_get_instruction_low_level_il(self, data, addr, il):
+		return None
