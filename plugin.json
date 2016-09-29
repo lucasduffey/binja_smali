@@ -6,6 +6,8 @@
 		"description": "Extracts dex from APK, and dissembles into Smalli bytecode.",
 		"longdescription": "Extracts dex from APK, and dissembles into Smalli bytecode.",
 		"license": {
+			"name": "",
+			"text": ""
 		},
 		"dependencies": {
 			"pip": [],
