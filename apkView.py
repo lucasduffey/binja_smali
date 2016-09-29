@@ -56,7 +56,7 @@ class APKView(BinaryView):
 
 		# do we just do:
 		# write(addr, data) # start at 0, and write everything?
-		#fluff_size = apk_size - len(dex_blob)
+		fluff_size = apk_size - len(self.dex_blob)
 
 		#print "about to overwrite everything with dex_blob"
 
@@ -64,8 +64,8 @@ class APKView(BinaryView):
 
 		# FIXME: replace "data" with "self"??
 		# removing - since perform_read will operate off the "data.raw"
-		#data.write(0, dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
-		#data.remove(len(dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
+		data.write(0, self.dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
+		data.remove(len(self.dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 
 		# FIXME
 		# FIXME: "write" will want to overwrite the ACTUAL FILE, when in "hex view" it really should show the file..
