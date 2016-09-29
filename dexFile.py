@@ -164,7 +164,8 @@ class dex_class:
 			# dex_classes[classid]["min_addr"] = 0x0
 
 		if classid >= dex_object.class_def_size:
-			return ""
+			return None
+
 		offset = dex_object.class_defs_off + classid * 32 # struct.calcsize("8I") == 32
 		self.offset = offset
 		fmt = "I"
@@ -1312,7 +1313,8 @@ class dex_parser(BackgroundTaskThread):
 			str1 = self.getclassname(classId) # NOTE: very small performance hit (1.5 seconds for 123 iterations), TODO: caching
 			self.m_class_name_id[str1] = classId # will this be saved for everyone?
 
-			# FIXME: eliminate
+			# FIXME: this would cause an error if we didn't wrap with try/except
+			# it doesn't like how dex_class returns value...
 
 			dex_classes[classId] = dex_class(self, classId) # NOTE: big performance hit here, it complains it doesn't return None
 			dex_classes[classId].update_binja(self)
