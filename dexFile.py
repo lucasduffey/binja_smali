@@ -1279,7 +1279,7 @@ class dex_parser(BackgroundTaskThread):
 		# TODO: split into groups of 25
 		#threads = []
 		chunks = [range(x, x+25) for x in xrange(0, self.class_def_size, 25)]
-		log(2, chunks)
+		#log(2, chunks)
 
 		for array in chunks:
 			t = threading.Thread(target=self.create_all_dex_classes, args=(array,))
