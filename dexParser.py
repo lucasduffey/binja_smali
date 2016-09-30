@@ -1,8 +1,6 @@
-# special thanks yanfeng.wyf (wuyanfeng@yeah.net)
+# special thanks to yanfeng.wyf (https://github.com/ondreji/dex_parser/blob/master/dex.py)
 from binaryninja import *
-#from dexArch import *
 import struct
-
 
 # https://source.android.com/devices/tech/dalvik/instruction-formats.html
 FMT10T = 0
