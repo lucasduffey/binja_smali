@@ -38,8 +38,10 @@ class DEXView(BinaryView, dex_parser):
 
 		# TODO: check if this works
 		#global dex_file
-		self.dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
-		 #= dex_file
+
+		# dex object isn't used AFAIK
+		dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
+		dex.run()
 
 		# BinaryViewType["DEX"].dex_obj = self.dex # does nothing
 		#self.dex = dex_parser.__init__(self, self, raw_binary)

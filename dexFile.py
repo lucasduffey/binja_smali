@@ -1214,12 +1214,17 @@ def get_encoded_method(content):
 
 class dex_parser(BackgroundTaskThread):
 	def __init__(self, bv, binary_blob): # was (self, bv, binary_blob)
+		BackgroundTaskThread.__init__(self, "dex_parser initiated", True)
+
 		#global DEX_MAGIC
 		#global DEX_OPT_MAGIC
 		self.m_javaobject_id = 0
 		self.bv = bv # was self.bv = bv
 		self.m_content = binary_blob # self.m_fd.read()
 
+
+	# for BackgroundTaskThread AFAIK
+	def run(self):
 		# 0.003 seconds START
 		if LOGGING: print "self.m_content[0:4]: ", self.m_content[0:4].encode("hex")
 		if LOGGING: print "DEX_MAGIC: ", DEX_MAGIC.encode("hex")
@@ -1274,15 +1279,24 @@ class dex_parser(BackgroundTaskThread):
 		# threading doesn't seem to help much...
 
 
+		#############################################
+		## THREADING ATTEMPT
+		#############################################
 		# TODO: split into groups of 25
-		#threads = []
+		##threads = []
 		chunks = [range(x, x+25) for x in xrange(0, self.class_def_size, 25)]
-		#log(2, chunks)
+		##log(2, chunks)
 
 		for array in chunks:
 			t = threading.Thread(target=self.create_all_dex_classes, args=(array,))
-			#threads.append(t)
+			##threads.append(t)
 			t.start()
+
+		######################################################################
+		## NON-THREADING ATTEMPT - completely froze the UI w/o threading
+		######################################################################
+		#self.create_all_dex_classes(range(0, self.class_def_size))
+
 
 		#for i in xrange(0, self.class_def_size):
 			# each thread is actually wicked slow... If I can break it into chunks it might be better
