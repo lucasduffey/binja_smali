@@ -1,6 +1,6 @@
 # installation - create a dexBinja_wrapper.py script in ~/.binaryninja/plugins/
 
-# smaliBinja_wrapper.py - will be deprecated when binja plugin API is more mature
+# wrapper.py - will be deprecated when binja plugin API is more mature
 import smaliBinja_python
 
 # about
@@ -13,6 +13,9 @@ import smaliBinja_python
 * block highlighting apis: https://github.com/Vector35/binaryninja-api/issues/417
 * split python plugins from UI thread: https://github.com/Vector35/binaryninja-api/issues/390
 * C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
+
+# wishlist
+* function tray UI should also support objects - have an object tree view
 
 # thanks
 * special thanks to ondreji (https://github.com/ondreji/dex_parser/blob/master/dex.py)
