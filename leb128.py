@@ -1,6 +1,3 @@
-#! /usr/bin/python
-# -*- coding: utf8 -*-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 # original author: yanfeng.wyf (wuyanfeng@yeah.net)
 
 import struct

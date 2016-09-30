@@ -1,5 +1,6 @@
 from binaryninja import *
-from dexFile import *
+from dexParser import *
+from leb128 import *
 
 import threading
 import traceback
@@ -9,9 +10,6 @@ import hashlib # to validate SHA1 signature
 import zlib # to validate adler32 checksum
 import sys
 import os
-
-from leb128 import *
-from dex_ints import *
 
 LOGGING = False # if this is False, it won't add the functions..
 

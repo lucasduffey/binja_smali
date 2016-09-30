@@ -1,5 +1,6 @@
 from binaryninja import *
 from dexFile import *
+from dexParser import *
 import struct
 import traceback
 import hashlib # to validate SHA1 signature
@@ -32,273 +33,6 @@ codes = {
 	# "offset": "length",
 }
 
-'''
-# read from "android dex opcodes" google spreadsheet
-for line in open("data").readlines():
-	opcode, instructionName, operandLength = line.rstrip().split("\t")
-	print  "%s: {\"name\": \"%s\", \"length\": \"%s\"}," % (opcode, instructionName, operandLength)
-'''
-
-# FIXME:
-Instruction = {
-# lenths excludes opcode length?
-	0x0: {"name": "nop", "length": 0},
-	0x1: {"name": "move", "length": 1},
-	0x2: {"name": "move/from16", "length": 3}, # 2 => 3
-	0x3: {"name": "move/16", "length": 5}, # 3 => 5
-	0x4: {"name": "move-wide", "length": 2},
-	0x5: {"name": "move-wide/from16", "length": 3}, # 2 => 3
-	0x6: {"name": "move-wide/16", "length": 5}, # 3 => 5
-	0x7: {"name": "move-object", "length": 1},
-	0x8: {"name": "move-object/from16", "length": 3}, # 2 => 3
-	0x9: {"name": "move-object/16", "length": 5}, # 3 => 5
-	0xa: {"name": "move-result", "length": 1},
-	0xb: {"name": "move-result-wide", "length": 1},
-	0xc: {"name": "move-result-object", "length": 1},
-	0xd: {"name": "move-exception", "length": 1},
-	0xe: {"name": "return-void", "length": 1},
-	0xf: {"name": "return", "length": 1},
-	0x10: {"name": "return-wide", "length": 1},
-	0x11: {"name": "return-object", "length": 1},
-	0x12: {"name": "const/4", "length": 1},
-	0x13: {"name": "const/16", "length": 3},
-	0x14: {"name": "const", "length": 5}, # 3 => 5
-	0x15: {"name": "const/high16", "length": 2},
-	0x16: {"name": "const-wide/16", "length": 3}, # 2 => 3
-	0x17: {"name": "const-wide/32", "length": 5},
-	0x18: {"name": "const-wide", "length": 7},
-	0x19: {"name": "const-wide/high16", "length": 3},
-	0x1a: {"name": "const-string", "length": 3},
-	0x1b: {"name": "const-string-jumbo", "length": 5}, # 31C - it's the only 31C
-	0x1c: {"name": "const-class", "length": 3},
-	0x1d: {"name": "monitor-enter", "length": 1},
-	0x1e: {"name": "monitor-exit", "length": 1},
-	0x1f: {"name": "check-cast", "length": 3},
-	0x20: {"name": "instance-of", "length": 3},
-	0x21: {"name": "array-length", "length": 1},
-	0x22: {"name": "new-instance", "length": 3},
-	0x23: {"name": "new-array", "length": 3},
-	0x24: {"name": "filled-new-array", "length": 5},
-	0x25: {"name": "filled-new-array-range ", "length": 5},
-	0x26: {"name": "fill-array-data", "length": 5},
-	0x27: {"name": "throw", "length": 1},
-	0x28: {"name": "goto", "length": 1},
-	0x29: {"name": "goto/16", "length": 3},
-	0x2a: {"name": "goto/32", "length": 5}, # 3 => 5
-	0x2b: {"name": "packed-switch", "length": 5},
-	0x2c: {"name": "sparse-switch", "length": 5},
-	0x2d: {"name": "cmpl-float", "length": 3},
-	0x2e: {"name": "cmpg-float", "length": 3},
-	0x2f: {"name": "cmpl-double", "length": 3},
-	0x30: {"name": "cmpg-double", "length": 3},
-	0x31: {"name": "cmp-long", "length": 3},
-	0x32: {"name": "if-eq", "length": 3},
-	0x33: {"name": "if-ne", "length": 3},
-	0x34: {"name": "if-lt", "length": 3},
-	0x35: {"name": "if-ge", "length": 3},
-	0x36: {"name": "if-gt", "length": 3},
-	0x37: {"name": "if-le", "length": 3},
-	0x38: {"name": "if-eqz", "length": 3},
-	0x39: {"name": "if-nez", "length": 3},
-	0x3a: {"name": "if-ltz", "length": 3},
-	0x3b: {"name": "if-gez", "length": 3},
-	0x3c: {"name": "if-gtz", "length": 3},
-	0x3d: {"name": "if-lez", "length": 3},
-	0x3e: {"name": "None", "length": 0},
-	0x3f: {"name": "None", "length": 0},
-	0x40: {"name": "None", "length": 0},
-	0x41: {"name": "None", "length": 0},
-	0x42: {"name": "None", "length": 0},
-	0x43: {"name": "None", "length": 0},
-	0x44: {"name": "aget", "length": 3},
-	0x45: {"name": "aget-wide", "length": 3},
-	0x46: {"name": "aget-object", "length": 3},
-	0x47: {"name": "aget-boolean", "length": 3},
-	0x48: {"name": "aget-byte", "length": 3},
-	0x49: {"name": "aget-char", "length": 3},
-	0x4a: {"name": "aget-short", "length": 3},
-	0x4b: {"name": "aput", "length": 3},
-	0x4c: {"name": "aput-wide", "length": 3},
-	0x4d: {"name": "aput-object", "length": 3},
-	0x4e: {"name": "aput-boolean", "length": 3},
-	0x4f: {"name": "aput-byte", "length": 3},
-	0x50: {"name": "aput-char", "length": 3},
-	0x51: {"name": "aput-short", "length": 3},
-	0x52: {"name": "iget", "length": 3},
-	0x53: {"name": "iget-wide", "length": 3},
-	0x54: {"name": "iget-object", "length": 3},
-	0x55: {"name": "iget-boolean", "length": 3},
-	0x56: {"name": "iget-byte", "length": 3},
-	0x57: {"name": "iget-char", "length": 3},
-	0x58: {"name": "iget-short", "length": 3},
-	0x59: {"name": "iput", "length": 3},
-	0x5a: {"name": "iput-wide", "length": 3},
-	0x5b: {"name": "iput-object", "length": 3},
-	0x5c: {"name": "iput-boolean", "length": 3},
-	0x5d: {"name": "iput-byte", "length": 3},
-	0x5e: {"name": "iput-char", "length": 3},
-	0x5f: {"name": "iput-short", "length": 3},
-	0x60: {"name": "sget", "length": 3},
-	0x61: {"name": "sget-wide", "length": 3},
-	0x62: {"name": "sget-object", "length": 3},
-	0x63: {"name": "sget-boolean", "length": 3},
-	0x64: {"name": "sget-byte", "length": 3},
-	0x65: {"name": "sget-char", "length": 3},
-	0x66: {"name": "sget-short", "length": 3},
-	0x67: {"name": "sput", "length": 3},
-	0x68: {"name": "sput-wide", "length": 3},
-	0x69: {"name": "sput-object", "length": 3},
-	0x6a: {"name": "sput-boolean", "length": 3},
-	0x6b: {"name": "sput-byte", "length": 3},
-	0x6c: {"name": "sput-char", "length": 3},
-	0x6d: {"name": "sput-short", "length": 3},
-	0x6e: {"name": "invoke-virtual", "length": 5},
-	0x6f: {"name": "invoke-super", "length": 5},
-	0x70: {"name": "invoke-direct", "length": 5},
-	0x71: {"name": "invoke-static", "length": 5},
-	0x72: {"name": "invoke-interface", "length": 5},
-	0x73: {"name": "None", "length": 0},
-	0x74: {"name": "invoke-virtual/range", "length": 5},
-	0x75: {"name": "invoke-super/range", "length": 5},
-	0x76: {"name": "invoke-direct/range", "length": 5},
-	0x77: {"name": "invoke-static/range", "length": 5},
-	0x78: {"name": "invoke-interface/range", "length": 5},
-	0x79: {"name": "None", "length": 0},
-	0x7a: {"name": "None", "length": 0},
-	0x7b: {"name": "neg-int", "length": 1},
-	0x7c: {"name": "not-int", "length": 1},
-	0x7d: {"name": "neg-long", "length": 1},
-	0x7e: {"name": "not-long", "length": 1},
-	0x7f: {"name": "neg-float", "length": 1},
-	0x80: {"name": "neg-double", "length": 1},
-	0x81: {"name": "int-to-long", "length": 1},
-	0x82: {"name": "int-to-float", "length": 1},
-	0x83: {"name": "int-to-double", "length": 1},
-	0x84: {"name": "long-to-int", "length": 1},
-	0x85: {"name": "long-to-float", "length": 1},
-	0x86: {"name": "long-to-double", "length": 1},
-	0x87: {"name": "float-to-int", "length": 1},
-	0x88: {"name": "float-to-long", "length": 1},
-	0x89: {"name": "float-to-double", "length": 1},
-	0x8a: {"name": "double-to-int", "length": 1},
-	0x8b: {"name": "double-to-long", "length": 1},
-	0x8c: {"name": "double-to-float", "length": 1},
-	0x8d: {"name": "int-to-byte", "length": 1},
-	0x8e: {"name": "int-to-char", "length": 1},
-	0x8f: {"name": "int-to-short", "length": 1},
-	0x90: {"name": "add-int", "length": 3},
-	0x91: {"name": "sub-int", "length": 3},
-	0x92: {"name": "mul-int", "length": 3},
-	0x93: {"name": "div-int", "length": 3},
-	0x94: {"name": "rem-int", "length": 3},
-	0x95: {"name": "and-int", "length": 3},
-	0x96: {"name": "or-int", "length": 3},
-	0x97: {"name": "xor-int", "length": 3},
-	0x98: {"name": "shl-int", "length": 3},
-	0x99: {"name": "shr-int", "length": 3},
-	0x9a: {"name": "ushr-int", "length": 3},
-	0x9b: {"name": "add-long", "length": 3},
-	0x9c: {"name": "sub-long", "length": 3},
-	0x9d: {"name": "mul-long", "length": 3},
-	0x9e: {"name": "div-long", "length": 3},
-	0x9f: {"name": "rem-long", "length": 3},
-	0xa0: {"name": "and-long", "length": 3},
-	0xa1: {"name": "or-long", "length": 3},
-	0xa2: {"name": "xor-long", "length": 3},
-	0xa3: {"name": "shl-long", "length": 3},
-	0xa4: {"name": "shr-long", "length": 3},
-	0xa5: {"name": "ushr-long", "length": 3},
-	0xa6: {"name": "add-float", "length": 3},
-	0xa7: {"name": "sub-float", "length": 3},
-	0xa8: {"name": "mul-float", "length": 3},
-	0xa9: {"name": "div-float", "length": 3},
-	0xaa: {"name": "rem-float", "length": 3},
-	0xab: {"name": "add-double", "length": 3},
-	0xac: {"name": "sub-double", "length": 3},
-	0xad: {"name": "mul-double", "length": 3},
-	0xae: {"name": "div-double", "length": 3},
-	0xaf: {"name": "rem-double", "length": 3},
-	0xb0: {"name": "add-int/2addr", "length": 1},
-	0xb1: {"name": "sub-int/2addr", "length": 1},
-	0xb2: {"name": "mul-int/2addr", "length": 1},
-	0xb3: {"name": "div-int/2addr", "length": 1},
-	0xb4: {"name": "rem-int/2addr", "length": 1},
-	0xb5: {"name": "and-int/2addr", "length": 1},
-	0xb6: {"name": "or-int/2addr", "length": 1},
-	0xb7: {"name": "xor-int/2addr", "length": 1},
-	0xb8: {"name": "shl-int/2addr", "length": 1},
-	0xb9: {"name": "shr-int/2addr", "length": 1},
-	0xba: {"name": "ushr-int/2addr", "length": 1},
-	0xbb: {"name": "add-long/2addr", "length": 1},
-	0xbc: {"name": "sub-long/2addr", "length": 1},
-	0xbd: {"name": "mul-long/2addr", "length": 1},
-	0xbe: {"name": "div-long/2addr", "length": 1},
-	0xbf: {"name": "rem-long/2addr", "length": 1},
-	0xc0: {"name": "and-long/2addr", "length": 1},
-	0xc1: {"name": "or-long/2addr", "length": 1},
-	0xc2: {"name": "xor-long/2addr", "length": 1},
-	0xc3: {"name": "shl-long/2addr", "length": 1},
-	0xc4: {"name": "shr-long/2addr", "length": 1},
-	0xc5: {"name": "ushr-long/2addr", "length": 1},
-	0xc6: {"name": "add-float/2addr", "length": 1},
-	0xc7: {"name": "sub-float/2addr", "length": 1},
-	0xc8: {"name": "mul-float/2addr", "length": 1},
-	0xc9: {"name": "div-float/2addr", "length": 1},
-	0xca: {"name": "rem-float/2addr", "length": 1},
-	0xcb: {"name": "add-double/2addr", "length": 1},
-	0xcc: {"name": "sub-double/2addr", "length": 1},
-	0xcd: {"name": "mul-double/2addr", "length": 1},
-	0xce: {"name": "div-double/2addr", "length": 1},
-	0xcf: {"name": "rem-double/2addr", "length": 1},
-	0xd0: {"name": "add-int/lit16", "length": 3},
-	0xd1: {"name": "sub-int/lit16", "length": 3},
-	0xd2: {"name": "mul-int/lit16", "length": 3},
-	0xd3: {"name": "div-int/lit16", "length": 3},
-	0xd4: {"name": "rem-int/lit16", "length": 3},
-	0xd5: {"name": "and-int/lit16", "length": 3},
-	0xd6: {"name": "or-int/lit16", "length": 3},
-	0xd7: {"name": "xor-int/lit16", "length": 3},
-	0xd8: {"name": "add-int/lit8", "length": 3},
-	0xd9: {"name": "sub-int/lit8", "length": 3},
-	0xda: {"name": "mul-int/lit8", "length": 3},
-	0xdb: {"name": "div-int/lit8", "length": 3},
-	0xdc: {"name": "rem-int/lit8", "length": 3},
-	0xdd: {"name": "and-int/lit8", "length": 3},
-	0xde: {"name": "or-int/lit8", "length": 3},
-	0xdf: {"name": "xor-int/lit8", "length": 3},
-	0xe0: {"name": "shl-int/lit8", "length": 3},
-	0xe1: {"name": "shr-int/lit8", "length": 3},
-	0xe2: {"name": "ushr-int/lit8", "length": 3},
-	0xe3: {"name": "None", "length": 0},
-	0xe4: {"name": "None", "length": 0},
-	0xe5: {"name": "None", "length": 0},
-	0xe6: {"name": "None", "length": 0},
-	0xe7: {"name": "None", "length": 0},
-	0xe8: {"name": "None", "length": 0},
-	0xe9: {"name": "None", "length": 0},
-	0xea: {"name": "None", "length": 0},
-	0xeb: {"name": "None", "length": 0},
-	0xec: {"name": "None", "length": 0},
-	0xed: {"name": "None", "length": 0},
-	0xee: {"name": "execute-inline", "length": 5},
-	0xef: {"name": "None", "length": 0},
-	0xf0: {"name": "invoke-direct-empty", "length": 5},
-	0xf1: {"name": "None", "length": 0},
-	0xf2: {"name": "iget-quick", "length": 3},
-	0xf3: {"name": "iget-wide-quick", "length": 3},
-	0xf4: {"name": "iget-object-quick", "length": 3},
-	0xf5: {"name": "iput-quick", "length": 3},
-	0xf6: {"name": "iput-wide-quick", "length": 3},
-	0xf7: {"name": "iput-object-quick", "length": 3},
-	0xf8: {"name": "invoke-virtual-quick", "length": 5},
-	0xf9: {"name": "invoke-virtual-quick/range", "length": 5},
-	0xfa: {"name": "invoke-super-quick", "length": 5},
-	0xfb: {"name": "invoke-super-quick/range", "length": 5},
-	0xfc: {"name": "None", "length": 0},
-	0xfd: {"name": "None", "length": 0},
-	0xfe: {"name": "None", "length": 0},
-	0xff: {"name": "None", "length": 0}
-}
 
 RegisterNames = [
 	"v0", # I believe 0 == v0
@@ -391,7 +125,7 @@ class DEX(Architecture):
 		if len(data) < 1:
 			return None, None, None, None
 		opcode = ord(data[0])
-		fn = dex_decode[opcode][3]
+		fn = instruction[opcode]["format_idx"]
 
 		#BinaryViewType["DEX"].my_test2()
 		#bv.my_test2()
@@ -399,23 +133,25 @@ class DEX(Architecture):
 		#if opcode >= len(InstructionNames): # was "InstructionNames"
 		#	return None, None, None, None
 
-		instr = Instruction[opcode]["name"] # was "InstructionNames[opcode]"
+		instr = instruction[opcode]["name"] # was "InstructionNames[opcode]"
 		if instr is None:
 			return None, None, None, None
 
+		# XXX FIXME operand != opcode BAD
 		operand = opcode # InstructionOperandTypes[opcode] # TODO - FIXME: pretty sure this will be fine..
 
-		length = 1 + Instruction[opcode]["length"] # was OperandLengths[operand]
+		# XXX: length may be wrong...
+		length = 1 + instruction[opcode]["length"] # was OperandLengths[operand]
 		#log(2, "decode_instruction - opcode: %s, operand: %s, length: %s" % (str(opcode), str(operand), str(length)))
 
 		if len(data) < length:
 			return None, None, None, None
 
-		if Instruction[opcode]["length"] == 0: # was OperandLengths[operand]
+		if instruction[opcode]["length"] == 0: # was OperandLengths[operand], XXX: I messed with it again...
 			value = None
 		#elif operand == REL:
 		#	value = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
-		elif Instruction[opcode]["length"] == 1: # was OperandLengths[operand]
+		elif instruction[opcode]["length"] == 1: # was OperandLengths[operand]
 			value = ord(data[1])
 		else:
 			value = struct.unpack("<H", data[1:3])[0]
@@ -436,6 +172,7 @@ class DEX(Architecture):
 		if instr is None:
 			return None
 
+		# is op the same as operand???
 		op = ord(data[0])
 
 		result = InstructionInfo()
@@ -451,17 +188,19 @@ class DEX(Architecture):
 			# "goto/16" 20T
 			# "goto/32" 30T
 
-			fn = dex_decode[op][3]
-			dest_addr = func_point[fn](self, data, addr)[2] # this might be the thing to jump to.. index out of range???
-			dest_addr = int(dest_addr)
+			fn = instruction[op]["format_idx"]
+			if fn != 5: # XXX - fix this...
+				#log(2, "fn: %i" % fn) # "5"
+				dest_addr = func_point[fn](self, data, addr)[2]
+				dest_addr = int(dest_addr)
 
-			result.add_branch(UnconditionalBranch, dest_addr)
+				result.add_branch(UnconditionalBranch, dest_addr)
 
 		# TODO: implement conditional jumps
 
 		# fmt22t: "if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le"  # returns tuple of 5 items
 		elif instr in ["if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le"]:
-			fn = dex_decode[op][3]
+			fn = instruction[op]["format_idx"]
 			results = func_point[fn](self, data, addr) # FIXME: "dest_addr" is not correct
 
 			reg1 = results[2] # this is register... not a string....
@@ -472,11 +211,9 @@ class DEX(Architecture):
 			result.add_branch(TrueBranch, dest_addr)
 			result.add_branch(FalseBranch, addr + 4) # +4 AFAIK??
 
-
-
 		# fmt21t: "if-eqz", "if-ltz", "if-gez", "if-gtz", "if-lez  # returns tuple of 3 items
 		elif instr in ["if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]:
-			fn = dex_decode[op][3]
+			fn = instruction[op]["format_idx"]
 			results = func_point[fn](self, data, addr) # FIXME: "dest_addr" is not correct
 
 			reg1 = results[2]
@@ -512,7 +249,7 @@ class DEX(Architecture):
 		#try:
 		op = ord(data[0]) # is this really the op (opcode)? the first byte that indicates the "function" to be performed?
 
-		fn = dex_decode[op][3]
+		fn = instruction[op]["format_idx"]
 		start = len(data) # I'm not sure why this isn't just passed as "dex_length"
 
 		try:
