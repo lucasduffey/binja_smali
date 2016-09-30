@@ -721,7 +721,7 @@ def parse_debug_info(lex_object,offset):
 			offset += n
 			if LOGGING: print "line=%d  pc=%x"% (current_line,current_pc)
 		elif bytecode == 2:
-			n,val = get_leb128(lex_object.m_content[offset:offset+5])
+			n,val = get_sleb128(lex_object.m_content[offset:offset+5])
 
 			current_line += val
 			offset += n
