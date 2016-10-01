@@ -26,4 +26,5 @@ echo "import smaliBinja_python" > wrapper.py
 * function tray UI should also support objects - have an object tree view
 
 # thanks
-* special thanks to ondreji (https://github.com/ondreji/dex_parser/blob/master/dex.py)
+* https://github.com/ondreji/dex_parser/blob/master/dex.py
+* https://github.com/androguard/androguard
