@@ -1275,10 +1275,6 @@ class dex_parser(BackgroundTaskThread):
 			print self.get_proto_name(i)
 		'''
 
-		# FIXME: this is where to thread...
-		# threading doesn't seem to help much...
-
-
 		#############################################
 		## THREADING ATTEMPT
 		#############################################

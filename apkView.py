@@ -1,14 +1,13 @@
 from binaryninja import *
+from androguard.core.bytecodes import apk
+from androguard.util import read
+from xml.dom import minidom
 from dexFile import *
 from dexArch import *
 import struct
 import traceback
 import os
 import zipfile
-
-# comment out for now
-#from dexView import DEXViewBank, DEX # need to provide dexView
-
 
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames
@@ -23,7 +22,27 @@ class APK():
 	def __init__(self):
 		pass
 
-#global_DexFile = False
+# FIXME: should probably have an AndroidManifest class
+#	* before doing so - check if androguard already has these capabilities
+def get_entry_point(AndroidManifest):
+	entry_point = ""
+
+	# AndroidManifest.package is important for constucting entry point
+	package = AndroidManifest.getAttribute('package')
+
+	for activity in AndroidManifest.getElementsByTagName("activity"):
+		intent_filter = activity.getElementsByTagName("intent-filter")
+
+		# TODO: should there ever be more than one intent_filter????
+		if len(intent_filter) != 0:
+			action = intent_filter[0].getElementsByTagName("action")[0]
+			action_name = action.getAttribute("android:name") # NOTHING....
+
+			# check if it's the entry point
+			if action_name == "android.intent.action.MAIN":
+				entry_point = package + activity.getAttribute("android:name")
+
+	return entry_point
 
 # see NESView Example
 class APKView(BinaryView):
@@ -47,12 +66,31 @@ class APKView(BinaryView):
 		if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
 			return False
 
-		apk_size = len(data.file.raw)
+		apk_size = len(data.file.raw) # TODO: deprecate
 
 		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
 		# there might be more dex files - the assumption is if the number of classes exceeds 65k there are more files...
 		z = zipfile.ZipFile(data.file.filename)
 		self.dex_blob = z.read("classes.dex") # TODO: need to support classes1.dex, and others...
+		# TODO: return False if "classes.dex" isn't present
+
+		self.BinaryAndroidManifest = z.read("AndroidManifest.xml") # android uses binary xml format
+
+		##########################################
+		# androguard magic
+		##########################################
+		ap = apk.AXMLPrinter(self.BinaryAndroidManifest)
+		dom = minidom.parseString(ap.get_buff())
+
+		# XML AndroidManifest
+		self.AndroidManifest = dom.getElementsByTagName("manifest")[0]
+		self.entry_point = get_entry_point(self.AndroidManifest) # TODO: check if androguard has this functionality and/or implement my own AndroidManifest class
+
+		FileMetadata["entry_point"] = self.entry_point
+		# TODO: how do we hand off entry_point to dexArch...
+		#	* wait for API where you can save it to the file
+		#	* FileMetadata
+
 
 		# do we just do:
 		# write(addr, data) # start at 0, and write everything?

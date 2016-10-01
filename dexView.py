@@ -33,6 +33,8 @@ class DEXView(BinaryView, dex_parser):
 		raw_binary_length = len(data.file.raw)
 		raw_binary = data.read(0, raw_binary_length) # TODO: eliminate this step...
 
+		#log(3, self.entry_point) # populated by apkView - it's coming out as "0"....
+
 		# https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/angr_plugin.py
 		# thread it with "BackgroundTaskThread"
 
