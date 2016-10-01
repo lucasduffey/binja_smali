@@ -1,4 +1,4 @@
-# installation - create a dexBinja_wrapper.py script in ~/.binaryninja/plugins/
+# installation - create a wrapper.py script in ~/.binaryninja/plugins/
 
 # wrapper.py - will be deprecated when binja plugin API is more mature
 import smaliBinja_python
@@ -9,6 +9,7 @@ import smaliBinja_python
 * dexFile.py - this deals with the dex file structure
 
 # binja relevant issues
+* container format support: https://github.com/Vector35/binaryninja-api/issues/133
 * structure UI: https://github.com/Vector35/binaryninja-api/issues/269
 * block highlighting apis: https://github.com/Vector35/binaryninja-api/issues/417
 * split python plugins from UI thread: https://github.com/Vector35/binaryninja-api/issues/390
