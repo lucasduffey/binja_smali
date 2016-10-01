@@ -112,7 +112,6 @@ class DEXViewBank(DEXView):
 DEXViewBank.register()
 DEX.register()
 
-
 # Architecture.register
 
 '''

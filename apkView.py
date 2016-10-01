@@ -9,6 +9,8 @@ import traceback
 import os
 import zipfile
 
+#from dexView import *
+
 # just pull from dexBinja.py forf now
 #InstructionNames = dexBinja.InstructionNames
 #InstructionIL = dexBinja.InstructionIL
@@ -51,21 +53,11 @@ class APKView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, data.file)
-		self.dex_blob = data
-		self.notification = APKViewUpdateNotification(self) # TODO
-		self.dex_blob.register_notification(self.notification)
+		self.raw = data
+		self.notification = APKViewUpdateNotification(self)
+		self.raw.register_notification(self.notification)
 
-	@classmethod
-	def is_valid_for_data(self, data):
-		# data == binaryninja.BinaryView
-
-		hdr = data.read(0, 16)
-		if len(hdr) < 16:
-				return False
-		# magic - https://en.wikipedia.org/wiki/List_of_file_signatures
-		if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
-			return False
-
+		#########################################
 		apk_size = len(data.file.raw) # TODO: deprecate
 
 		# useful items: AndroidManifest.xml, classes.dex, maybe classes2.dex, lib/*
@@ -84,33 +76,31 @@ class APKView(BinaryView):
 
 		# XML AndroidManifest
 		self.AndroidManifest = dom.getElementsByTagName("manifest")[0]
-		self.entry_point = get_entry_point(self.AndroidManifest) # TODO: check if androguard has this functionality and/or implement my own AndroidManifest class
+		self.entry_point_class = get_entry_point(self.AndroidManifest) # TODO: check if androguard has this functionality and/or implement my own AndroidManifest class
 
-		FileMetadata["entry_point"] = self.entry_point
-		# TODO: how do we hand off entry_point to dexArch...
-		#	* wait for API where you can save it to the file
-		#	* FileMetadata
+		# TODO: how do we hand off entry_point to dexArch... - wait for container support or API where you can save it to database
 
-
-		# do we just do:
-		# write(addr, data) # start at 0, and write everything?
+		# NOTE: overwriting everything with the DEX - this will switch control over to "DEXViewBank" until binja implementes container support
 		fluff_size = apk_size - len(self.dex_blob)
-
-		#print "about to overwrite everything with dex_blob"
-
-		# NOTE: this will switch control over to "DEXViewBank"
-
-		# FIXME: replace "data" with "self"??
-		# removing - since perform_read will operate off the "data.raw"
 		data.write(0, self.dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
 		data.remove(len(self.dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 
-		# FIXME
-		# FIXME: "write" will want to overwrite the ACTUAL FILE, when in "hex view" it really should show the file..
-		# FIXME
 
-		# FIXME: we don't want to overwrite the hex view - or do we? the real goal is to have "dalvik executable" mode point to something useful like OnCreate
-		# FIXME: obviously this ^^ isn't correct
+
+	@classmethod
+	def is_valid_for_data(self, data):
+		# data == binaryninja.BinaryView
+
+		hdr = data.read(0, 16)
+		if len(hdr) < 16:
+				return False
+		# magic - https://en.wikipedia.org/wiki/List_of_file_signatures
+		if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
+			return False
+
+		#
+		# TODO: need to make sure we have classes.dex and AndroidManifest.xml inside
+		#
 
 		return True
 
@@ -124,6 +114,9 @@ class APKView(BinaryView):
 			log_error(traceback.format_exc())
 			return False
 
+	def dex(self):
+		return self.dex_blob
+
 	# FIXME
 	#def perform_is_valid_offset(self, addr):
 	#	if (addr >= 0x8000) and (addr < 0x10000):
@@ -132,7 +125,7 @@ class APKView(BinaryView):
 
 	# FIXME
 	def perform_read(self, addr, length):
-		return self.dex_blob.read(addr, length)
+		return self.raw.read(addr, length)
 
 	# FIXME
 	#def perform_write(self, addr, value):
@@ -163,6 +156,8 @@ class APKView(BinaryView):
 
 # TODO: how do you get apk - to run APK(blah) against it?
 
+
+banks = []
 class APKViewBank(APKView):
 	name = "APK"
 	long_name = "android APK"
@@ -170,25 +165,8 @@ class APKViewBank(APKView):
 	def __init__(self, data):
 		APKView.__init__(self, data)
 
-		# TODO: since APK is effectively a zip file
-		#	* WARNING: not exactly zip - if you unzip the AndroidManifest.xml is corrupted or something
-		#	* extract it
-
-		# unzipped = unzip(binary_blob)
-		'''
-		contents:
-			AndroidManifest.xml
-			classes2.dex
-			classes.dex
-			instant-run.zip
-			META-INF/
-			res/
-			resources.arsc
-		'''
+		#
+		# waiting for binja container format support: https://github.com/Vector35/binaryninja-api/issues/133
+		#
 
 APKViewBank.register()
-
-
-# also register DEX - but how do
-#DEXViewBank.register()
-#DEX.register()
