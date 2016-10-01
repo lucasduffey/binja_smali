@@ -1,7 +1,9 @@
-# installation - create a wrapper.py script in ~/.binaryninja/plugins/
-
-# wrapper.py - will be deprecated when binja plugin API is more mature
+# installation
+```
+# create a wrapper.py script in ~/.binaryninja/plugins/
+# will be deprecated in favor of plugin.json when binja plugin API is more mature
 import smaliBinja_python
+```
 
 # about
 * apkView.py - carves out the dex file, then overwrites the view with it
