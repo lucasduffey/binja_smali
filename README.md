@@ -24,6 +24,7 @@ echo "import smaliBinja_python" > wrapper.py
 
 # wishlist
 * function tray UI should also support objects - have an object tree view
+* how will decompiled view be handled?
 
 # thanks
 * https://github.com/ondreji/dex_parser/blob/master/dex.py
