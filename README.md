@@ -1,4 +1,4 @@
-# installation
+# linux installation
 ```
 # setup
 cd ~/.binaryninja/plugins/
