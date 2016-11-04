@@ -1,10 +1,9 @@
 # installation
 ```
-# This will be deprecated in favor of plugin.json when binja plugin system is stable
-
+# setup
 cd ~/.binaryninja/plugins/
 git clone https://github.com/lucasduffey/binja_smali
-echo "import binja_smali" > wrapper.py
+echo "import binja_smali" > wrapper.py # only required for "binja stable branch", will be deprecated when plugin system is live.
 ```
 
 # about
