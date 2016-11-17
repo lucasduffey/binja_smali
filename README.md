@@ -15,6 +15,7 @@ echo "import binja_smali" > wrapper.py
 
 # binja relevant issues
 * [MAJOR] architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
+* [MAJOR] SessionData doesn't persist. This would save the string table.
 * [MEDIUM] container format support: https://github.com/Vector35/binaryninja-api/issues/133
 * [MINOR] structure UI: https://github.com/Vector35/binaryninja-api/issues/269
 * [MINOR] C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
