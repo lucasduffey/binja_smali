@@ -18,8 +18,7 @@ echo "import binja_smali" > wrapper.py
 * structure UI: https://github.com/Vector35/binaryninja-api/issues/269
 * C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
 * decompiled source code view: https://github.com/Vector35/binaryninja-api/issues/541
-* binary ninja only passes opcodes to the Architecture class - it can't access binaryView data, or pull string tables and other misc. data for dissembling purposes.
-
+* architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
 
 # (semi-)fixed binja issues
 * split python plugins from UI thread: https://github.com/Vector35/binaryninja-api/issues/390
