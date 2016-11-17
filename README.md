@@ -14,11 +14,11 @@ echo "import binja_smali" > wrapper.py
 * dexFile.py - this deals with the dex file structure
 
 # binja relevant issues
-* container format support: https://github.com/Vector35/binaryninja-api/issues/133
-* structure UI: https://github.com/Vector35/binaryninja-api/issues/269
-* C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
-* decompiled source code view: https://github.com/Vector35/binaryninja-api/issues/541
-* architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
+* [MAJOR] architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
+* [MEDIUM] container format support: https://github.com/Vector35/binaryninja-api/issues/133
+* [MINOR] structure UI: https://github.com/Vector35/binaryninja-api/issues/269
+* [MINOR] C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
+* [MINOR] decompiled source code view: https://github.com/Vector35/binaryninja-api/issues/541
 
 # (semi-)fixed binja issues
 * split python plugins from UI thread: https://github.com/Vector35/binaryninja-api/issues/390
