@@ -13,7 +13,7 @@ echo "import binja_smali" > wrapper.py
 * dexView.py - responsible for rendering the dexView + dex arch in binary ninja
 * dexFile.py - this deals with the dex file structure
 
-# binja relevant issues
+# upstream binja issues
 * [MAJOR] architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
 * [MAJOR] SessionData doesn't persist. This would save the string table.
 * [MEDIUM] container format support: https://github.com/Vector35/binaryninja-api/issues/133
