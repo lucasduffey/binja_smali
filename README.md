@@ -3,9 +3,6 @@
 # setup
 cd ~/.binaryninja/plugins/
 git clone https://github.com/lucasduffey/binja_smali
-
-# binja stable branch requirement, will be deprecated when plugin system is live.
-echo "import binja_smali" > wrapper.py
 ```
 
 # about
