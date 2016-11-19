@@ -1213,6 +1213,7 @@ def get_encoded_method(content):
 	return n + n1 + n2, val1, val2, val3
 
 class dex_parser(BackgroundTaskThread):
+	# __init__ isn't threaded AFAIK, so keep heavy lifting out if it.
 	def __init__(self, bv, binary_blob): # was (self, bv, binary_blob)
 		BackgroundTaskThread.__init__(self, "dex_parser initiated", True)
 
