@@ -1,7 +1,7 @@
 {
 	"plugin": {
 		"name": "Smali Architecture Plugin",
-		"type": ["core", "ui", "architecture", "binaryview"],
+		"type": ["architecture", "binaryview"],
 		"api": "python2",
 		"description": "Extracts dex from APK, and disassembles into Smali bytecode.",
 		"longdescription": "Extracts dex from APK, and disassembles into Smali bytecode.",
