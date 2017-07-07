@@ -16,7 +16,7 @@ git clone https://github.com/lucasduffey/binja_smali
 * [MEDIUM] container format support: https://github.com/Vector35/binaryninja-api/issues/133
 * [MINOR] structure UI: https://github.com/Vector35/binaryninja-api/issues/269
 * [MINOR] C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
-* [MINOR] function tray UI should support objects - have object tree view https://github.com/Vector35/binaryninja-api/issues/305
+* [MINOR] function tray UI tree view https://github.com/Vector35/binaryninja-api/issues/728
 * [MINOR] decompiled source code view: https://github.com/Vector35/binaryninja-api/issues/541
 ```
 decompiled source code view workarounds:
