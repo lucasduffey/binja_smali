@@ -13,7 +13,7 @@ git clone https://github.com/lucasduffey/binja_smali
 # upstream binja issues
 * [MAJOR] architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
 * [MAJOR] SessionData doesn't persist. This would save the string table.
-* [MEDIUM] container format support: https://github.com/Vector35/binaryninja-api/issues/133
+* [MAJOR] container format support: https://github.com/Vector35/binaryninja-api/issues/133
 * [MINOR] structure UI: https://github.com/Vector35/binaryninja-api/issues/269
 * [MINOR] C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
 * [MINOR] function tray UI tree view https://github.com/Vector35/binaryninja-api/issues/728
