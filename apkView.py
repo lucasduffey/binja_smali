@@ -117,7 +117,13 @@ class APKView(BinaryView):
 		# data == binaryninja.BinaryView
 
 		# TODO: maybe use androguard's apk.APK.is_valid_APK
-		return apk.APK(data.file.filename).is_valid_APK()
+		try:
+			is_valid = apk.APK(data.file.filename).is_valid_APK()
+
+			return is_valid
+
+		except:
+			return False
 
 		# hdr = data.read(0, 16)
 		# if len(hdr) < 16:
