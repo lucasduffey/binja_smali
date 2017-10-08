@@ -17,21 +17,25 @@ class DEXViewUpdateNotification(BinaryDataNotification):
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers
-class DEXView(BinaryView, dex_parser):
+class DEXView(BinaryView):#, dex_parser):
 	name = "DEX"
 	long_name = "Dalvik Executable"
 
 	# data == BinaryView datatype
 	def __init__(self, data):
-		# print "DEXView::__init__"
+		print("DEXView::__init__")
+		self.raw = data
+		self.data = data
 
-		BinaryView.__init__(self, data.file) # FIXME: is len(data.file.raw) right?
-		self.raw = data # FIXME: is this what we can do DexFile() on?
-		self.notification = DEXViewUpdateNotification(self)
-		self.raw.register_notification(self.notification)
+		#return # even putting this doesn't prevent crash
 
-		raw_binary_length = len(data.file.raw)
-		raw_binary = data.read(0, raw_binary_length) # TODO: eliminate this step...
+		BinaryView.__init__(self, parent_view = data, file_metadata = data.file) # data.file)
+		# self.raw = data # FIXME: is this what we can do DexFile() on?
+		# self.notification = DEXViewUpdateNotification(self)
+		# self.raw.register_notification(self.notification)
+
+		# raw_binary_length = len(data.file.raw)
+		# raw_binary = data.read(0, raw_binary_length) # TODO: eliminate this step...
 
 		#log(3, self.entry_point) # populated by apkView - it's coming out as "0"....
 
@@ -42,15 +46,16 @@ class DEXView(BinaryView, dex_parser):
 		#global dex_file
 
 		# dex object isn't used AFAIK
-		dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached
-		dex.run()
+		#dex = dex_parser(self, raw_binary) # FIXME: is there a way to avoid re-analysis if it's been cached # TODO: implement
+		#dex.run() # TODO: implement
 
 		# BinaryViewType["DEX"].dex_obj = self.dex # does nothing
 		#self.dex = dex_parser.__init__(self, self, raw_binary)
 
+	# TODO: need a better mechanism, maybe provided by androguard
 	@classmethod
 	def is_valid_for_data(self, data):
-		#print "DEXView::is_valid_for_data"
+		print("DEXView::is_valid_for_data")
 
 		hdr = data.read(0, 16)
 		if len(hdr) < 16:
@@ -62,14 +67,16 @@ class DEXView(BinaryView, dex_parser):
 		return True
 
 	def init(self):
-		try:
-			# TODO: look at NES.py
-			#self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
-
-			return True
-		except:
-			log_error(traceback.format_exc())
-			return False
+		print("DEXView::init")
+		return True
+		# try:
+		# 	# TODO: look at NES.py
+		# 	#self.add_entry_point(Architecture['dex'].standalone_platform, self.perform_get_entry_point())
+		#
+		# 	return True
+		# except:
+		# 	log_error(traceback.format_exc())
+		# 	return False
 
 	# FIXME
 	#def perform_is_valid_offset(self, addr):
@@ -77,9 +84,10 @@ class DEXView(BinaryView, dex_parser):
 	#			return True
 	#	return False
 
-	def perform_read(self, addr, length):
-		# for now...
-		return self.raw.read(addr, length)
+	# NESView didn't have perform_read...
+	# def perform_read(self, addr, length):
+	# 	# for now...
+	# 	return self.raw.read(addr, length) # TODO: make sure there isn't better way...
 
 	# FIXME
 	#def perform_write(self, addr, value):
@@ -91,8 +99,8 @@ class DEXView(BinaryView, dex_parser):
 	#   return 0
 
 	# FIXME
-	def perform_get_length(self):
-		return 0x10000 # FIXME: wrong
+	# def perform_get_length(self):
+	# 	return 0x10000 # FIXME: wrong
 
 	def perform_is_executable(self):
 		return True
@@ -102,15 +110,15 @@ class DEXView(BinaryView, dex_parser):
 		# complicated because this is called without self really existing
 		#   * not really sure what self provides...
 
-class DEXViewBank(DEXView):
-	name = "DEX"
-	long_name = "Dalvik Executable"
-
-	def __init__(self, data):
-		DEXView.__init__(self, data)
-
-DEXViewBank.register()
-DEX.register()
+# class DEXViewBank(DEXView):
+# 	name = "DEX"
+# 	long_name = "Dalvik Executable"
+#
+# 	def __init__(self, data):
+# 		DEXView.__init__(self, data)
+#
+# DEXViewBank.register()
+#DEX.register()
 
 # Architecture.register
 

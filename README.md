@@ -11,13 +11,11 @@ git clone https://github.com/lucasduffey/binja_smali
 * dexFile.py - this deals with the dex file structure
 
 # upstream binja issues
-* [CRITICAL] architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551
-* [CRITICAL] SessionData doesn't persist. This would save the string table.
-* [CRITICAL] container format support: https://github.com/Vector35/binaryninja-api/issues/133
-* [LOW] structure UI: https://github.com/Vector35/binaryninja-api/issues/269
-* [LOW] C++ plugin docs: https://github.com/Vector35/binaryninja-api/issues/452
+* [CRITICAL] architecture doesn't have reference to the BinaryView https://github.com/Vector35/binaryninja-api/issues/551 (might have workaround)
+* [CRITICAL] SessionData doesn't persist. This would save the string table. (might have workaround)
+* [CRITICAL] container format support: https://github.com/Vector35/binaryninja-api/issues/133 (might have workaround)
 * [LOW] function tray UI tree view https://github.com/Vector35/binaryninja-api/issues/728
-* [LOW] decompiled source code view: https://github.com/Vector35/binaryninja-api/issues/541
+* [LOW] decompiled source code view: https://github.com/Vector35/binaryninja-api/issues/541 (workaround documented below)
 ```
 decompiled source code view workarounds:
 * show_plain_text_report

@@ -6,6 +6,7 @@ from androguard.core.bytecodes import apk
 from androguard.util import read
 from xml.dom import minidom
 from dexFile import *
+from dexView import *
 from dexArch import *
 import struct
 import traceback
@@ -91,7 +92,7 @@ class APKView(BinaryView):
 
 		#log.log_error("entry_point_class: " + self.entry_point_class)
 		#log.log_error("get_main_activity: " + self.apk.get_main_activity())
-		return
+		#return
 
 		# XXX: binja core blocker: You can't take raw data and make a BinaryView with it
 		#	* Container formats support: https://github.com/Vector35/binaryninja-api/issues/133
@@ -100,53 +101,57 @@ class APKView(BinaryView):
 		# create a new binary view with this data
 
 		# obviously long-term we want to merge them all
-		# XXX: currently binja doesn't let you make a view with extracted blobs
-		for dex_blob in self.apk.get_all_dex():
-			pass
+		# XXX: currently binja doesn't let you make a view with extracted blobs so the perform_read just reads from self.dex_blob
+		dex_banks = []
 
-			# dexView.register()
+		dex_count = 0
+		for dex_blob_z in self.apk.get_all_dex():
+			class DEXViewBank(DEXView):
+				bank = dex_count
+				name = "DEX Bank %i" % dex_count
+				long_name = "Dalvik Executable (bank %i) " % dex_count
 
-		#NOTE: overwriting everything with the DEX - this will switch control over to "DEXViewBank" until binja implementes container support
-		fluff_size = apk_size - len(self.dex_blob)
-		data.write(0, self.dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
-		data.remove(len(self.dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
+				def __init__(self, data_data):
+					DEXView.__init__(self, data_data) # TODO: usually it gets "data". It crashes with either
+
+			dex_banks.append(DEXViewBank)
+			DEXViewBank.register() # TODO; this might be the best thing to do. each dexView can have it's own perform_read
+			dex_count += 1
+
+
+		print("dex_count: " + str(dex_count)) # TODO: request len() option for get_all_dex generator
+
+		# XXX: I don't trust dex_parser. Need to troubleshoot it
+		#dex = dex_parser(self.data, self.dex_blob) # this is causing it to fail, need to structure it better. self.dex_parser() would be better
+		# ^^ NO: perform it on the dexViewBank or whatever
+
+		# #NOTE: overwriting everything with the DEX - this will switch control over to "DEXViewBank" until binja implementes container support
+		# fluff_size = apk_size - len(self.dex_blob)
+		# data.write(0, self.dex_blob + "\xff" * fluff_size) # zero the rest, but next line will remove it
+		# data.remove(len(self.dex_blob), fluff_size) # remove excess stuff, starting after dex_blob - this may leave an extra free byte
 
 
 	@classmethod
 	def is_valid_for_data(self, data):
 		# data == binaryninja.BinaryView
 
-		# TODO: maybe use androguard's apk.APK.is_valid_APK
 		try:
 			is_valid = apk.APK(data.file.filename).is_valid_APK()
 
 			return is_valid
 
 		except:
+			# log.log_error("apkView.py - apk.APK failed to run is_valid_APK")
 			return False
-
-		# hdr = data.read(0, 16)
-		# if len(hdr) < 16:
-		# 		return False
-		# # magic - https://en.wikipedia.org/wiki/List_of_file_signatures
-		# if hdr[0:4] != "PK\x03\x04": # zip file formats (zip, jar, odt, docx, apk, etc..}
-		# 	return False
-		#
-		# #
-		# # TODO: need to make sure we have classes.dex and AndroidManifest.xml inside
-		# #
-		#
-		# return True
 
 
 	def init(self):
-		try:
-			# TODO: look at NES.py
-
-			return True
-		except:
-			log_error(traceback.format_exc())
-			return False
+		return True
+		# try:
+		# 	return True
+		# except:
+		# 	log_error(traceback.format_exc())
+		# 	return False
 
 	def dex(self):
 		return self.dex_blob
@@ -159,6 +164,7 @@ class APKView(BinaryView):
 
 	# FIXME
 	def perform_read(self, addr, length):
+		#return self.dex_blob[addr:addr+length] # XXX: read from dex blob instead, very important to keep. Maybe I should create viewbanks for dex, and do this there.
 		return self.raw.read(addr, length)
 
 	# FIXME
@@ -177,21 +183,6 @@ class APKView(BinaryView):
 	def perform_is_executable(self):
 		return True
 
-	# FIXME
-	#def perform_get_entry_point(self):
-		#return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0] # FIXME: being triggered
-		#return struct.unpack("<H", "APPLE")[0] # FIXME: being triggered - might crash it...
-
-		# how do I find this?
-		#print "apkBinja::perform_get_entry_point: ", global_DexFile.dataOff()
-		#return global_DexFile.dataOff() # unsure if correct
-
-	#	return 0 # currently this value will never be used, dexBinja will be used instead
-
-# TODO: how do you get apk - to run APK(blah) against it?
-
-
-banks = []
 class APKViewBank(APKView):
 	name = "APK"
 	long_name = "android APK"
@@ -201,7 +192,7 @@ class APKViewBank(APKView):
 
 		#
 		# waiting for binja container format support: https://github.com/Vector35/binaryninja-api/issues/133
-		#
+		#	* I think I can get around this for now
 
 APKViewBank.register()
 
