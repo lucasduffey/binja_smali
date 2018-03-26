@@ -13,7 +13,6 @@ class DEXViewUpdateNotification(BinaryDataNotification):
 	def __init__(self, view):
 		self.view = view
 
-
 # see NESView Example
 # pretty sure this is triggered when we do the "write" call...
 # https://github.com/JesusFreke/smali/wiki/Registers
@@ -24,8 +23,8 @@ class DEXView(BinaryView):#, dex_parser):
 	# data == BinaryView datatype
 	def __init__(self, data):
 		print("DEXView::__init__")
-		self.raw = data
-		self.data = data
+		#{}{}{}self.raw = data
+		#{}{}{}self.data = data
 
 		#return # even putting this doesn't prevent crash
 

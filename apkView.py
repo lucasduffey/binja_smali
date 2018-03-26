@@ -3,7 +3,7 @@ import binaryninja
 from binaryninja import log
 # http://androguard.readthedocs.io/en/latest/
 from androguard.core.bytecodes import apk
-from androguard.util import read
+from androguard.util import read # XXX: FAIL - this will not work
 from xml.dom import minidom
 from dexFile import *
 from dexView import *
@@ -12,6 +12,7 @@ import struct
 import traceback
 import os
 import zipfile
+from pprint import pprint
 
 #from dexView import *
 
@@ -65,9 +66,14 @@ class APKView(BinaryView):
 		self.data = data # hmm...
 
 		print("self.data.file.filename: ", self.data.file.filename)
-		self.apk = apk.APK(self.data.file.filename)
+
+		# binja issue: https://github.com/Vector35/binaryninja-api/issues/946
+		tmp_raw = bv.file.raw.read(0, len(bv.file.raw)) # not sure if self.raw is the same
+		#self.apk = apk.APK(self.data.file.filename) # filename could be bndb file..
+		self.apk = apk.APK(tmp_raw, raw=True)
 
 		print("APKView __init__")
+		#print(1)
 
 		#########################################
 		apk_size = len(data.file.raw) # TODO: deprecate for androguard feature if possible
@@ -78,6 +84,8 @@ class APKView(BinaryView):
 		# XXX: pretty sure self.z is no longer needed
 		#self.z = zipfile.ZipFile(self.data.file.filename) # TODO: replace with handroguard? TODO: Need to port "extract_dex" first
 
+		#print(2)
+
 		self.BinaryAndroidManifest = self.apk.get_android_manifest_axml()
 		self.dex_blob = self.apk.get_dex() # TODO: self.apk.get_all_dex() can be used to get all dex files
 
@@ -85,6 +93,8 @@ class APKView(BinaryView):
 		# androguard magic
 		##########################################
 		dom = minidom.parseString(self.BinaryAndroidManifest.get_buff()) # TODO: simplify..
+
+		print(self.apk)
 
 		# XML AndroidManifest
 		self.AndroidManifest = dom.getElementsByTagName("manifest")[0]
@@ -104,21 +114,32 @@ class APKView(BinaryView):
 		# XXX: currently binja doesn't let you make a view with extracted blobs so the perform_read just reads from self.dex_blob
 		dex_banks = []
 
+		#all_dex = self.apk.get_all_dex()
+		#print("all_dex: " + str(all_dex))
+
+		pprint(dir(self.apk))
+
 		dex_count = 0
-		for dex_blob_z in self.apk.get_all_dex():
+		for dex_blob in self.apk.get_all_dex(): # TODO: store it
+			print("[%s] in self.apk.get_all_dex loop" % __file__)
 			class DEXViewBank(DEXView):
+				print("inside 1")
 				bank = dex_count
 				name = "DEX Bank %i" % dex_count
 				long_name = "Dalvik Executable (bank %i) " % dex_count
 
-				def __init__(self, data_data):
-					DEXView.__init__(self, data_data) # TODO: usually it gets "data". It crashes with either
+				# AFAIK "data_data" type is bv
+				def __init__(self, data):
+					DEXView.__init__(self, data)
 
-			dex_banks.append(DEXViewBank)
-			DEXViewBank.register() # TODO; this might be the best thing to do. each dexView can have it's own perform_read
+			# TODO: wait for binja container support
+			# dex_banks.append(DEXViewBank)
+			# DEXViewBank.register()
+
 			dex_count += 1
 
 
+		log.log_info("dex_count: " + str(dex_count))
 		print("dex_count: " + str(dex_count)) # TODO: request len() option for get_all_dex generator
 
 		# XXX: I don't trust dex_parser. Need to troubleshoot it
@@ -136,7 +157,10 @@ class APKView(BinaryView):
 		# data == binaryninja.BinaryView
 
 		try:
-			is_valid = apk.APK(data.file.filename).is_valid_APK()
+			# use raw, because data.file.filename can point to the bndb file, and no API to get original file
+			# binja issue: https://github.com/Vector35/binaryninja-api/issues/946
+			raw = bv.file.raw.read(0, len(bv.file.raw))
+			is_valid = apk.APK(raw, raw=True).is_valid_APK()
 
 			return is_valid
 
@@ -183,6 +207,28 @@ class APKView(BinaryView):
 	def perform_is_executable(self):
 		return True
 
+	# def create_new_dex_viewbank(self, dex_count):
+	# 	print("[create_new_dex_viewbank]")
+	#
+	# 	class DEXViewBank(DEXView):
+	# 		print("inside 1")
+	# 		bank = dex_count
+	# 		name = "DEX Bank %i" % dex_count
+	# 		long_name = "Dalvik Executable (bank %i) " % dex_count
+	#
+	# 		# AFAIK "data_data" type is bv
+	# 		def __init__(self, data):
+	# 			#print("[DEXViewBank __init__]")
+	# 			print(type(data))
+	# 			DEXView.__init__(self, data)
+	#
+	# 	return DEXViewBank
+
+		# print(1)
+		# dex_banks.append(DEXViewBank) # was "DEXViewBank"
+		# print(2)
+		# DEXViewBank.register() # TODO; this might be the best thing to do. each dexView can have it's own perform_read
+
 class APKViewBank(APKView):
 	name = "APK"
 	long_name = "android APK"
@@ -194,9 +240,24 @@ class APKViewBank(APKView):
 		# waiting for binja container format support: https://github.com/Vector35/binaryninja-api/issues/133
 		#	* I think I can get around this for now
 
+# for now, just do this. Binja doesn't really support better ways to make more dex banks...
+class DEXViewBank(DEXView):
+	print("inside 1")
+	bank = dex_count
+	name = "DEX Bank %i" % dex_count
+	long_name = "Dalvik Executable (bank %i) " % dex_count
+
+	# AFAIK "data_data" type is bv
+	def __init__(self, data):
+		DEXView.__init__(self, data)
+
+# TODO: wait for binja container support
+# dex_banks.append(DEXViewBank)
+# DEXViewBank.register()
+
 APKViewBank.register()
 
 
 if __name__ == "__main__":
-
+	# for now, apkView will just create a bank of DexView?
 	print("working")
